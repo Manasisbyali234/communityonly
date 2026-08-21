@@ -62,7 +62,9 @@ export default function CreateHelpRequestScreen() {
 
     const confirmed = await confirmAction({
       title: 'Submit Help Request?',
-      message: 'Your request will be submitted for Admin review. It will become visible in Community Help once approved.',
+      message: urgency === 'URGENT'
+        ? 'Urgent requests are published immediately so the community can respond without delay.'
+        : 'Your request will be submitted for Admin review. It will become visible in Community Help once approved.',
       confirmText: 'Submit Request',
       cancelText: 'Cancel',
       isDestructive: false,
@@ -83,8 +85,13 @@ export default function CreateHelpRequestScreen() {
         userLocation: location.trim(),
         userPhone: user?.phoneNumber,
       });
-      showToast('Help request submitted for admin review.', 'success');
-      router.replace('/community-help/my-requests' as any);
+      showToast(
+        urgency === 'URGENT'
+          ? 'Urgent help request published to the community.'
+          : 'Help request submitted for admin review.',
+        'success'
+      );
+      router.replace(urgency === 'URGENT' ? '/community-help' as any : '/community-help/my-requests' as any);
     } catch {
       showToast('Failed to submit help request.', 'error');
     }

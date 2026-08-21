@@ -31,7 +31,10 @@ function resolveIntendedRoute(raw: string | null): string | null {
   // Strip leading slash for matching
   const path = raw.startsWith('/') ? raw.slice(1) : raw;
   // These are top-level routes, not nested under (tabs)
-  const topLevelScreens = ['create', 'chat', 'story', 'jobs', 'matrimony', 'krushi-mitra', 'market-rates', 'price-calculator', 'download'];
+  const topLevelScreens = [
+    'create', 'chat', 'story', 'jobs', 'matrimony', 'business', 'community-help',
+    'our-people', 'krushi-mitra', 'market-rates', 'price-calculator', 'download',
+  ];
   const tabScreens = ['explore', 'communities', 'profile', 'notifications', 'settings'];
   const base = path.split('?')[0].split('/')[0];
   if (topLevelScreens.includes(base)) return `/${path}`;
@@ -121,7 +124,13 @@ function RootLayoutContent() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const inAdminGroup = segments[0] === '(admin)';
-    const inAppGroup = segments[0] === '(tabs)' || segments[0] === 'create' || segments[0] === 'chat' || segments[0] === 'story' || segments[0] === 'community' || segments[0] === 'krushi-mitra' || segments[0] === 'market-rates' || segments[0] === 'jobs';
+    // Keep every authenticated, top-level feature route in the application. If a
+    // route is omitted here, the auth guard immediately replaces it with the
+    // tab home screen, making perfectly valid buttons and filters appear broken.
+    const inAppGroup =
+      segments[0] === '(tabs)' ||
+      ['create', 'chat', 'story', 'community', 'krushi-mitra', 'market-rates',
+        'jobs', 'matrimony', 'business', 'community-help', 'our-people'].includes(segments[0] ?? '');
 
     const navigate = (path: string) => {
       if (lastRedirect.current === path) return;
