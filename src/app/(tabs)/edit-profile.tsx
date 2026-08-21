@@ -1,0 +1,769 @@
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  Modal,
+} from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+
+import { useTheme } from '../../theme';
+import { useAuthStore } from '../../store/authStore';
+import { useToastStore } from '../../store/toastStore';
+import { useConfirmStore } from '../../store/confirmStore';
+import { apiClient, API_BASE_URL } from '../../api/client';
+import Input from '../../components/common/Input';
+import Button from '../../components/common/Button';
+import Avatar from '../../components/common/Avatar';
+import { pickImage, uploadProfilePhoto, uploadCoverPhoto, PickedImage } from '../../utils/imagePicker';
+
+const BASE = API_BASE_URL.replace('/api/v1', '');
+const toAbsUrl = (url?: string | null) =>
+  url && url.startsWith('/') ? `${BASE}${url}` : url;
+
+const profileSchema = z.object({
+  displayName: z.string().min(2, 'Name must be at least 2 characters').max(30, 'Name must be under 30 characters'),
+  bio: z.string().max(160, 'Bio must be under 160 characters').optional(),
+  avatarUrl: z.string().url('Enter a valid image URL').or(z.literal('')).optional(),
+  village: z.string().max(50, 'Village must be under 50 characters').optional(),
+  occupation: z.string().max(50, 'Occupation must be under 50 characters').optional(),
+  languages: z.string().max(100, 'Languages must be under 100 characters').optional(),
+  interests: z.string().max(100, 'Interests must be under 100 characters').optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
+
+const LANGUAGE_SUGGESTIONS = ['Kannada', 'English', 'Kodava', 'Tulu', 'Hindi', 'Tamil'];
+const INTEREST_SUGGESTIONS = ['Agriculture', 'Community Service', 'Culture & Arts', 'Sports', 'Business', 'Technology', 'Education'];
+
+export default function EditProfile() {
+  const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { user, updateProfile } = useAuthStore();
+  const showToast = useToastStore((state) => state.showToast);
+
+  const G = colors.primary;
+  const BG = colors.background;
+  const SURF = colors.surface;
+  const BORDER = colors.border;
+  const TEXT = colors.text;
+  const TEXT2 = colors.textSecondary;
+  const TEXT3 = colors.textMuted;
+
+  // Sync latest profile from server on mount
+  useEffect(() => {
+    apiClient.get('/users/me').then((res) => {
+      const fresh = res.data?.data ?? res.data;
+      if (fresh) updateProfile(fresh);
+    }).catch(() => {});
+  }, [updateProfile]);
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      displayName: user?.displayName || '',
+      bio: user?.bio || '',
+      avatarUrl: user?.avatarUrl || '',
+      village: user?.village || '',
+      occupation: user?.occupation || '',
+      languages: user?.languages || '',
+      interests: user?.interests || '',
+    },
+  });
+
+  const bioValue = watch('bio') || '';
+  const currentLanguages = watch('languages') || '';
+  const currentInterests = watch('interests') || '';
+
+  const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
+  const [pickedImage, setPickedImage] = useState<PickedImage | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const [localCoverUri, setLocalCoverUri] = useState<string | null>(null);
+  const [pickedCover, setPickedCover] = useState<PickedImage | null>(null);
+  const [coverRemoved, setCoverRemoved] = useState(false);
+
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+
+  const handlePickFromGallery = async () => {
+    setShowPhotoOptions(false);
+    setPhotoError(null);
+    try {
+      const picked = await pickImage();
+      if (picked) {
+        setLocalAvatarUri(picked.localUri);
+        setPickedImage(picked);
+      }
+    } catch {
+      setPhotoError('Failed to select photo. Please try a valid image.');
+    }
+  };
+
+  const handlePickFromCamera = async () => {
+    setShowPhotoOptions(false);
+    setPhotoError(null);
+    if (Platform.OS === 'web') {
+      setPhotoError('Camera is not supported on web. Please choose from gallery.');
+      return;
+    }
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        setPhotoError('Camera permission is required. Please enable it in device settings.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.9 });
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        const mime = asset.mimeType ?? 'image/jpeg';
+        const ext = mime.split('/')[1] ?? 'jpg';
+        const name = asset.fileName ?? `avatar_${Date.now()}.${ext}`;
+        setLocalAvatarUri(asset.uri);
+        setPickedImage({ localUri: asset.uri, filename: name, mimeType: mime });
+      }
+    } catch {
+      setPhotoError('Failed to open camera. Please check camera permissions in settings.');
+    }
+  };
+
+  const handlePickCover = async () => {
+    try {
+      const picked = await pickImage();
+      if (picked) {
+        setLocalCoverUri(picked.localUri);
+        setPickedCover(picked);
+        setCoverRemoved(false);
+      }
+    } catch (_) {}
+  };
+
+  const handleRemoveCover = () => {
+    setLocalCoverUri(null);
+    setPickedCover(null);
+    setCoverRemoved(true);
+  };
+
+  const handleAddLanguageSuggestion = (lang: string) => {
+    const list = currentLanguages ? currentLanguages.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    if (!list.includes(lang)) {
+      list.push(lang);
+      setValue('languages', list.join(', '), { shouldValidate: true });
+    }
+  };
+
+  const handleAddInterestSuggestion = (interest: string) => {
+    const list = currentInterests ? currentInterests.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    if (!list.includes(interest)) {
+      list.push(interest);
+      setValue('interests', list.join(', '), { shouldValidate: true });
+    }
+  };
+
+  const onSubmit = async (data: ProfileFormValues) => {
+    const ok = await useConfirmStore.getState().confirm({
+      title: 'Save profile changes?',
+      message: 'Your updated profile information will be saved.',
+      confirmText: 'Save',
+      cancelText: 'Cancel',
+      isDestructive: false,
+      icon: 'person-outline',
+    });
+    if (!ok) return;
+
+    try {
+      let avatarUrl: string | undefined = data.avatarUrl || undefined;
+      if (pickedImage) {
+        const uploaded = await uploadProfilePhoto(pickedImage);
+        if (uploaded) {
+          avatarUrl = toAbsUrl(uploaded) ?? undefined;
+        } else {
+          showToast('Photo upload failed, saving other changes.', 'error');
+        }
+      }
+
+      let coverImage: string | null | undefined = undefined;
+      if (pickedCover) {
+        const uploaded = await uploadCoverPhoto(pickedCover);
+        if (uploaded) {
+          coverImage = toAbsUrl(uploaded);
+        }
+      } else if (coverRemoved) {
+        coverImage = null;
+      }
+
+      const res = await apiClient.put('/users/me', {
+        displayName: data.displayName,
+        bio: data.bio || undefined,
+        avatarUrl: avatarUrl || undefined,
+        ...(coverImage !== undefined ? { coverImage } : {}),
+        village: data.village || undefined,
+        occupation: data.occupation || undefined,
+        languages: data.languages || undefined,
+        interests: data.interests || undefined,
+      });
+
+      const updated = res.data?.data ?? res.data;
+      if (avatarUrl) updated.avatarUrl = avatarUrl;
+      if (coverImage !== undefined) updated.coverImage = coverImage;
+      updateProfile(updated);
+      router.replace('/(tabs)/profile');
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.message || 'Failed to update profile. Try again.';
+      showToast(msg, 'error');
+      console.error('Edit profile error:', e?.response?.data ?? e);
+    }
+  };
+
+  if (!user) return null;
+
+  const currentCoverUri = localCoverUri || (!coverRemoved ? user.coverImage : null);
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.keyboardView, { backgroundColor: BG }]}
+    >
+      {/* ── Top Navbar ──────────────────────────────────────────────── */}
+      <View style={[styles.navbar, { paddingTop: insets.top + 6, backgroundColor: SURF, borderBottomColor: BORDER }]}>
+        <TouchableOpacity
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')}
+          style={styles.navBtn}
+        >
+          <Ionicons name="arrow-back" size={22} color={TEXT} />
+        </TouchableOpacity>
+        <Text style={[styles.navTitle, { color: TEXT }]}>Edit Profile</Text>
+        <TouchableOpacity
+          onPress={handleSubmit(onSubmit)}
+          disabled={isSubmitting}
+          style={styles.saveHeaderBtn}
+        >
+          <Text style={[styles.saveHeaderBtnText, { color: G }]}>Save</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(100, insets.bottom + 40) }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Cover & Avatar Header Masthead ──────────────────────────── */}
+        <View style={styles.mastheadSection}>
+          {/* Cover Container */}
+          <View style={styles.coverBox}>
+            {currentCoverUri ? (
+              <ExpoImage
+                source={{ uri: currentCoverUri }}
+                style={styles.coverImg}
+                contentFit="cover"
+              />
+            ) : (
+              <TouchableOpacity onPress={handlePickCover} style={[styles.coverFallback, { backgroundColor: G + '15' }]}>
+                <Ionicons name="image-outline" size={32} color={G} />
+                <Text style={[styles.coverFallbackText, { color: G }]}>Add Cover Photo</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Action Icons Group (Icon-only) */}
+            <View style={styles.coverActionIconsRow}>
+              {currentCoverUri ? (
+                <TouchableOpacity
+                  onPress={handleRemoveCover}
+                  activeOpacity={0.8}
+                  style={[styles.coverIconBtn, { backgroundColor: 'rgba(239, 68, 68, 0.85)' }]}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#FFF" />
+                </TouchableOpacity>
+              ) : null}
+
+              <TouchableOpacity
+                onPress={handlePickCover}
+                activeOpacity={0.8}
+                style={[styles.coverIconBtn, { backgroundColor: 'rgba(0, 0, 0, 0.65)' }]}
+              >
+                <Ionicons name="camera" size={16} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Overlapping Avatar Container */}
+          <View style={styles.avatarOverlapContainer}>
+            <TouchableOpacity onPress={() => setShowPhotoOptions(true)} activeOpacity={0.85} style={styles.avatarWrap}>
+              <Avatar
+                url={localAvatarUri ?? user.avatarUrl}
+                name={user.displayName}
+                size={92}
+              />
+              <View style={[styles.avatarCameraBadge, { backgroundColor: G }]}>
+                <Ionicons name="camera" size={15} color="#FFF" />
+              </View>
+            </TouchableOpacity>
+            {photoError ? (
+              <Text style={styles.errorBannerText}>{photoError}</Text>
+            ) : null}
+          </View>
+        </View>
+
+        {/* ── Form Section Groups ─────────────────────────────────────── */}
+        <View style={styles.formContainer}>
+          {/* Group 1: Basic Identity */}
+          <View style={[styles.formCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="person-outline" size={17} color={G} />
+              <Text style={[styles.cardTitle, { color: TEXT }]}>Basic Details</Text>
+            </View>
+
+            <Controller
+              control={control}
+              name="displayName"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Full Name *"
+                  placeholder="Enter your full name"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  leftIcon="person-outline"
+                  error={errors.displayName?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="bio"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View>
+                  <Input
+                    label="Bio"
+                    placeholder="Share a short bio about yourself..."
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    multiline
+                    numberOfLines={3}
+                    leftIcon="document-text-outline"
+                    error={errors.bio?.message}
+                    containerStyle={{ minHeight: 90 }}
+                  />
+                  <Text style={[styles.charCounter, { color: bioValue.length > 150 ? '#EF4444' : TEXT3 }]}>
+                    {bioValue.length}/160
+                  </Text>
+                </View>
+              )}
+            />
+          </View>
+
+          {/* Group 2: Community & Roots */}
+          <View style={[styles.formCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="home-outline" size={17} color={G} />
+              <Text style={[styles.cardTitle, { color: TEXT }]}>Community & Roots</Text>
+            </View>
+
+            <Controller
+              control={control}
+              name="village"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Native Place / Village"
+                  placeholder="e.g. Somwarpet, Kodagu"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  leftIcon="location-outline"
+                  error={errors.village?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="occupation"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Profession / Occupation"
+                  placeholder="e.g. Planter, Software Engineer"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  leftIcon="briefcase-outline"
+                  error={errors.occupation?.message}
+                />
+              )}
+            />
+          </View>
+
+          {/* Group 3: Languages & Passions */}
+          <View style={[styles.formCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="sparkles-outline" size={17} color={G} />
+              <Text style={[styles.cardTitle, { color: TEXT }]}>Languages & Interests</Text>
+            </View>
+
+            <Controller
+              control={control}
+              name="languages"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View>
+                  <Input
+                    label="Languages Known"
+                    placeholder="e.g. Kannada, English, Kodava"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    leftIcon="language-outline"
+                    error={errors.languages?.message}
+                  />
+                  {/* Quick suggestion tags */}
+                  <View style={styles.suggestionRow}>
+                    <Text style={[styles.suggestionLabel, { color: TEXT3 }]}>Suggestions:</Text>
+                    {LANGUAGE_SUGGESTIONS.map((lang) => (
+                      <TouchableOpacity
+                        key={lang}
+                        onPress={() => handleAddLanguageSuggestion(lang)}
+                        style={[styles.suggestionPill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}
+                      >
+                        <Text style={[styles.suggestionText, { color: TEXT2 }]}>+ {lang}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="interests"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={{ marginTop: 12 }}>
+                  <Input
+                    label="Interests & Passions"
+                    placeholder="e.g. Agriculture, Community, Sports"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    leftIcon="heart-outline"
+                    error={errors.interests?.message}
+                  />
+                  {/* Quick suggestion tags */}
+                  <View style={styles.suggestionRow}>
+                    <Text style={[styles.suggestionLabel, { color: TEXT3 }]}>Suggestions:</Text>
+                    {INTEREST_SUGGESTIONS.map((interest) => (
+                      <TouchableOpacity
+                        key={interest}
+                        onPress={() => handleAddInterestSuggestion(interest)}
+                        style={[styles.suggestionPill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}
+                      >
+                        <Text style={[styles.suggestionText, { color: TEXT2 }]}>+ {interest}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            />
+          </View>
+
+          {/* ── Main Save Button CTA ─────────────────────────────────── */}
+          <Button
+            title="Save Profile Changes"
+            onPress={handleSubmit(onSubmit)}
+            loading={isSubmitting}
+            variant="primary"
+            size="lg"
+            style={styles.saveBtn}
+          />
+        </View>
+      </ScrollView>
+
+      {/* ── Photo Picker Bottom Sheet Modal ───────────────────────────── */}
+      <Modal
+        visible={showPhotoOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPhotoOptions(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPhotoOptions(false)}
+        >
+          <View style={[styles.photoSheet, { backgroundColor: SURF }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={[styles.photoSheetTitle, { color: TEXT }]}>Change Profile Picture</Text>
+            <TouchableOpacity style={[styles.photoSheetBtn, { borderColor: BORDER }]} onPress={handlePickFromCamera}>
+              <View style={[styles.photoSheetIconBox, { backgroundColor: G + '14' }]}>
+                <Ionicons name="camera-outline" size={20} color={G} />
+              </View>
+              <Text style={[styles.photoSheetBtnText, { color: TEXT }]}>Take Photo with Camera</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.photoSheetBtn, { borderColor: BORDER }]} onPress={handlePickFromGallery}>
+              <View style={[styles.photoSheetIconBox, { backgroundColor: '#3B82F614' }]}>
+                <Ionicons name="images-outline" size={20} color="#3B82F6" />
+              </View>
+              <Text style={[styles.photoSheetBtnText, { color: TEXT }]}>Choose from Photo Gallery</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.photoSheetCancel, { borderColor: BORDER }]} onPress={() => setShowPhotoOptions(false)}>
+              <Text style={[styles.photoSheetCancelText, { color: TEXT2 }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  keyboardView: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+
+  // Top App Bar
+  navbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    zIndex: 10,
+  },
+  navBtn: { padding: 6 },
+  navTitle: { fontSize: 17, fontWeight: '700' },
+  saveHeaderBtn: { paddingVertical: 6, paddingHorizontal: 10 },
+  saveHeaderBtnText: { fontSize: 15, fontWeight: '700' },
+
+  // Masthead Section
+  mastheadSection: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    marginBottom: 8,
+  },
+  coverBox: {
+    width: '100%',
+    height: 140,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  coverImg: {
+    width: '100%',
+    height: '100%',
+  },
+  coverFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  coverFallbackText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  coverActionIconsRow: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 10,
+  },
+  coverIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+
+  // Avatar Overlap
+  avatarOverlapContainer: {
+    alignItems: 'center',
+    marginTop: -44,
+  },
+  avatarWrap: {
+    position: 'relative',
+    borderRadius: 48,
+    borderWidth: 3,
+    borderColor: '#FFF',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
+      android: { elevation: 4 },
+    }),
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  changeAvatarLink: {
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  changeAvatarText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  errorBannerText: {
+    color: '#EF4444',
+    fontSize: 11.5,
+    marginTop: 4,
+  },
+
+  // Form Container
+  formContainer: {
+    paddingHorizontal: 16,
+    gap: 16,
+    marginTop: 12,
+  },
+  formCard: {
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 16,
+    gap: 12,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  charCounter: {
+    fontSize: 11,
+    textAlign: 'right',
+    marginTop: 4,
+    marginRight: 4,
+    fontWeight: '500',
+  },
+
+  // Suggestions
+  suggestionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  suggestionLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  suggestionPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 8,
+  },
+  suggestionText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Save CTA
+  saveBtn: {
+    marginTop: 8,
+    marginBottom: 20,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  photoSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 28,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  photoSheetTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  photoSheetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 10,
+  },
+  photoSheetIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoSheetBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  photoSheetCancel: {
+    alignItems: 'center',
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginTop: 4,
+  },
+  photoSheetCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});
