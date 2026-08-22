@@ -13,8 +13,7 @@ import Button from '../../components/common/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiClient } from '../../api/client';
-import axios from 'axios';
-import { getApiBaseUrl } from '../../api/config';
+import { adminApiClient } from '../../api/adminClient';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -50,10 +49,26 @@ export default function Login() {
 
       if (user.role?.toUpperCase() === 'ADMIN') {
         try {
-          // Use plain axios — no auth header needed, /admin-auth/login is public
-          const adminRes = await axios.post(`${getApiBaseUrl()}/admin-auth/login`, { email: data.email, password: data.password });
+          // AsyncStorage hydration on native can otherwise finish after this
+          // login and replace the new admin session with stale empty state.
+          if (!useAdminStore.persist.hasHydrated()) {
+            await new Promise<void>((resolve) => {
+              const unsubscribe = useAdminStore.persist.onFinishHydration(() => {
+                unsubscribe();
+                resolve();
+              });
+            });
+          }
+
+          // The user login above has already verified the credentials. Exchange that
+          // authenticated admin access token for the separate admin-panel session.
+          const adminRes = await apiClient.post('/admin-auth/session');
           const { token, admin, expiresAt } = adminRes.data.data;
           adminLogin(admin, token, expiresAt);
+          // Set this immediately as well as persisting it. This prevents the
+          // dashboard's first parallel requests from being sent before the
+          // native persistence/interceptor path observes the new token.
+          adminApiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
         } catch (e: any) {
           showToast(e.response?.data?.message ?? 'Admin session failed', 'error');
           return;

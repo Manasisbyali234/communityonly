@@ -12,7 +12,7 @@ import { useToastStore } from '../../store/toastStore';
 import { confirmAction } from '../../store/confirmStore';
 import {
   BUSINESS_CATEGORIES, useSubmitBusinessMutation,
-  useUpdateBusinessMutation, useBusinessQuery, Business,
+  useUpdateBusinessMutation, useBusinessQuery, Business, BusinessSubmission,
 } from '../../api/business';
 
 function FormSection({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
@@ -202,6 +202,21 @@ export default function SubmitBusinessScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  const submission: BusinessSubmission = {
+    businessName: form.businessName.trim(),
+    category: form.category,
+    description: form.description.trim(),
+    productsServices: form.productsServices.trim(),
+    location: form.location.trim(),
+    address: form.address.trim() || undefined,
+    website: form.website.trim() || undefined,
+    whatsapp: form.whatsapp.trim() || undefined,
+    phone: form.phone.trim() || undefined,
+    email: form.email.trim() || undefined,
+    offers: form.offers.trim() || undefined,
+    photos: [],
+  };
+
   const validate = () => {
     if (!form.businessName.trim()) { showToast('Business Name is required.', 'error'); return false; }
     if (!form.ownerName.trim()) { showToast('Owner Name is required.', 'error'); return false; }
@@ -228,14 +243,9 @@ export default function SubmitBusinessScreen() {
 
     try {
       if (isEdit && editId) {
-        await updateMutation.mutateAsync({ id: editId, data: { ...form, userId: user?.id ?? '' } });
+        await updateMutation.mutateAsync({ id: editId, data: submission });
       } else {
-        await submitMutation.mutateAsync({
-          ...form,
-          userId: user?.id ?? '',
-          photos: [],
-          submittedAt: new Date().toISOString(),
-        });
+        await submitMutation.mutateAsync(submission);
       }
       router.replace('/business/my-businesses' as any);
     } catch {

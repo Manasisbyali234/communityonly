@@ -31,12 +31,9 @@ export const useAdminStore = create<AdminAuthState>()(
       isAuthenticated: false,
       login: (admin, token, expiresAt) => set({ admin, token, expiresAt: expiresAt ?? null, isAuthenticated: true }),
       logout: () => set({ admin: null, token: null, expiresAt: null, isAuthenticated: false }),
-      isTokenValid: () => {
-        const { token, expiresAt } = get();
-        if (!token) return false;
-        if (!expiresAt) return true; // legacy sessions without expiresAt — assume valid
-        return new Date(expiresAt) > new Date();
-      },
+      // The API validates the session expiry. Device clock skew must not log a
+      // mobile admin out before the server considers the session expired.
+      isTokenValid: () => Boolean(get().token),
     }),
     {
       name: 'admin-auth-storage',
