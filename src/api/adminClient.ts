@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getApiBaseUrl } from './config';
 import { useAdminStore } from '../store/adminStore';
+import { useAuthStore } from '../store/authStore';
 import { router } from 'expo-router';
 
 export const adminApiClient = axios.create({
@@ -22,8 +23,11 @@ adminApiClient.interceptors.request.use(async (config) => {
     router.replace('/(auth)/login' as any);
     return Promise.reject(new Error('Admin session expired'));
   }
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // Prefer the regular authenticated user token. The API validates that its
+  // owner is an active ADMIN, and it is available immediately on native apps.
+  const accessToken = useAuthStore.getState().token ?? token;
+  if (accessToken && config.headers) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
   return config;
 });
