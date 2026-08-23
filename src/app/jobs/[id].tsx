@@ -62,9 +62,13 @@ export default function JobDetailScreen() {
 
   const daysLeft = useMemo(() => {
     if (!job?.lastDate) return null;
-    const diff = new Date(job.lastDate).getTime() - Date.now();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return days;
+    const deadline = new Date(job.lastDate);
+    deadline.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return Math.round((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   }, [job?.lastDate]);
 
   const pickResume = async () => {
@@ -103,6 +107,10 @@ export default function JobDetailScreen() {
   };
 
   const handleApply = () => {
+    if (isApplicationClosed) {
+      showToast('Applications for this position are closed.', 'error');
+      return;
+    }
     if (!user) {
       router.push('/(auth)/login' as any);
       return;
@@ -111,6 +119,11 @@ export default function JobDetailScreen() {
   };
 
   const submitApplication = async () => {
+    if (isApplicationClosed) {
+      setShowResumeModal(false);
+      showToast('Applications for this position are closed.', 'error');
+      return;
+    }
     if (!resumeFile) {
       showToast('Please upload your resume to apply.', 'error');
       return;
@@ -198,7 +211,7 @@ export default function JobDetailScreen() {
     );
   }
 
-  const isClosed = job.status === 'CLOSED';
+  const isApplicationClosed = job.status === 'CLOSED' || (daysLeft !== null && daysLeft < 0);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -268,7 +281,7 @@ export default function JobDetailScreen() {
               style={[
                 styles.statusBadge,
                 {
-                  backgroundColor: isClosed
+                  backgroundColor: isApplicationClosed
                     ? isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2'
                     : isDark ? 'rgba(45, 106, 45, 0.2)' : (colors.primaryContainer || '#E8F5E9'),
                 },
@@ -277,16 +290,16 @@ export default function JobDetailScreen() {
               <View
                 style={[
                   styles.statusDot,
-                  { backgroundColor: isClosed ? '#DC2626' : colors.primary },
+                  { backgroundColor: isApplicationClosed ? '#DC2626' : colors.primary },
                 ]}
               />
               <Text
                 style={[
                   styles.statusBadgeText,
-                  { color: isClosed ? '#DC2626' : colors.primary },
+                  { color: isApplicationClosed ? '#DC2626' : colors.primary },
                 ]}
               >
-                {isClosed ? 'Applications Closed' : 'Actively Hiring'}
+                {isApplicationClosed ? 'Applications Closed' : 'Actively Hiring'}
               </Text>
             </View>
 
@@ -587,7 +600,7 @@ export default function JobDetailScreen() {
                 style={[
                   styles.daysLeftBadge,
                   {
-                    backgroundColor: daysLeft <= 0
+                    backgroundColor: daysLeft < 0
                       ? '#FEE2E2'
                       : daysLeft <= 5
                       ? '#FEF3C7'
@@ -599,11 +612,11 @@ export default function JobDetailScreen() {
                   style={[
                     styles.daysLeftText,
                     {
-                      color: daysLeft <= 0 ? '#DC2626' : daysLeft <= 5 ? '#B45309' : '#15803D',
+                      color: daysLeft < 0 ? '#DC2626' : daysLeft <= 5 ? '#B45309' : '#15803D',
                     },
                   ]}
                 >
-                  {daysLeft <= 0 ? 'Ended' : `${daysLeft}d left`}
+                  {daysLeft < 0 ? 'Ended' : daysLeft === 0 ? 'Last day' : `${daysLeft}d left`}
                 </Text>
               </View>
             ) : null}
@@ -681,18 +694,22 @@ export default function JobDetailScreen() {
               </Text>
             </View>
           </View>
-        ) : isClosed ? (
+        ) : isApplicationClosed ? (
           <View
             style={[
-              styles.closedBanner,
+              styles.primaryApplyBtn,
               {
                 backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
                 borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : '#FCA5A5',
+                borderWidth: 1,
               },
             ]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: true }}
+            accessibilityLabel="Application closed"
           >
             <Ionicons name="alert-circle-outline" size={20} color="#DC2626" />
-            <Text style={styles.closedBannerText}>This position is no longer accepting applications</Text>
+            <Text style={styles.closedBannerText}>Application Closed</Text>
           </View>
         ) : (
           <View style={styles.applyBtnRow}>
