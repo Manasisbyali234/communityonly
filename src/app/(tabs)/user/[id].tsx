@@ -291,6 +291,20 @@ export default function UserProfileScreen() {
                 bg: '#8B5CF614',
               },
               {
+                label: 'Helped',
+                value: (user.helpCount || 0).toString(),
+                icon: 'heart',
+                color: '#DC2626',
+                bg: '#DC262614',
+              },
+              {
+                label: 'Events Attended',
+                value: (user.attendedEventCount || 0).toString(),
+                icon: 'calendar',
+                color: '#0891B2',
+                bg: '#0891B214',
+              },
+              {
                 label: 'Member',
                 value: memberSinceYear.toString(),
                 icon: 'ribbon',
@@ -302,7 +316,7 @@ export default function UserProfileScreen() {
                 key={stat.label}
                 style={[
                   styles.statBlock,
-                  index < arr.length - 1 && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: BORDER },
+                  index % 3 !== 2 && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: BORDER },
                 ]}
               >
                 <View style={[styles.statIconBadge, { backgroundColor: stat.bg }]}>
@@ -649,6 +663,7 @@ const styles = StyleSheet.create({
   // Stats Card
   statsCardWrapper: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: 12,
@@ -667,7 +682,7 @@ const styles = StyleSheet.create({
     }),
   },
   statBlock: {
-    flex: 1,
+    width: '33.333%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 2,

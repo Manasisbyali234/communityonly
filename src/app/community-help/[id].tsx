@@ -195,7 +195,13 @@ export default function HelpRequestDetailScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status banner if resolved or pending */}
+        {/* Approval completes moderation; the request remains active until its owner closes it. */}
+        {request.status === 'APPROVED' && (
+          <View style={styles.resolvedBanner}>
+            <Ionicons name="checkmark-circle" size={18} color="#059669" />
+            <Text style={styles.resolvedBannerText}>Status: Resolved — your request has been approved and published.</Text>
+          </View>
+        )}
         {request.status === 'RESOLVED' && (
           <View style={styles.resolvedBanner}>
             <Ionicons name="checkmark-circle" size={18} color="#059669" />

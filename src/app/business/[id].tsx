@@ -11,7 +11,7 @@ import { useTheme } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import {
-  useBusinessQuery, useBusinessReviewsQuery, useSubmitReviewMutation, useContactBusinessMutation, BusinessReview,
+  useBusinessQuery, useBusinessReviewsQuery, useSubmitReviewMutation, BusinessReview,
 } from '../../api/business';
 import { shareUrl } from '../../utils/shareUtils';
 
@@ -92,7 +92,6 @@ export default function BusinessDetailScreen() {
   const { data: business, isLoading } = useBusinessQuery(id);
   const { data: reviews = [] } = useBusinessReviewsQuery(id);
   const submitReview = useSubmitReviewMutation(id);
-  const contactBusiness = useContactBusinessMutation();
 
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -129,18 +128,11 @@ export default function BusinessDetailScreen() {
 
   const handleContactBusiness = async () => {
     if (!business) return;
-    try {
-      await contactBusiness.mutateAsync({
-        businessId: business.id,
-        senderName: user?.displayName ?? 'A community member',
-      });
-      showToast('The business owner has been notified of your contact request.', 'success');
-      if (business.phone) handleCall();
-      else if (business.whatsapp) handleWhatsApp();
-      else if (business.email) handleEmail();
-    } catch {
-      showToast('Could not notify the business owner. Please try again.', 'error');
+    if (!user) {
+      router.push('/(auth)/login' as any);
+      return;
     }
+    router.push(`/chat/new?participantId=${business.userId}` as any);
   };
 
   const handleSubmitReview = async () => {
@@ -454,15 +446,10 @@ export default function BusinessDetailScreen() {
         <TouchableOpacity
           style={[styles.contactCTA, { backgroundColor: colors.primary }]}
           onPress={handleContactBusiness}
-          disabled={contactBusiness.isPending}
           activeOpacity={0.85}
         >
-          {contactBusiness.isPending ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <Ionicons name="chatbubble-ellipses" size={19} color="#FFF" />
-          )}
-          <Text style={styles.contactCTAText}>{contactBusiness.isPending ? 'Notifying…' : 'Contact Business'}</Text>
+          <Ionicons name="chatbubble-ellipses" size={19} color="#FFF" />
+          <Text style={styles.contactCTAText}>Contact Business</Text>
         </TouchableOpacity>
       </View>
 

@@ -15,6 +15,8 @@ export interface User {
   followersCount?: number;
   followingCount?: number;
   communitiesCount?: number;
+  helpCount?: number;
+  attendedEventCount?: number;
   joinedAt?: string;
   isOnline?: boolean;
   lastSeenAt?: string | null;
