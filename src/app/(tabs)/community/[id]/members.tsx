@@ -7,12 +7,14 @@ import { useCommunityMembersQuery } from '../../../../api/community';
 import Avatar from '../../../../components/common/Avatar';
 import Skeleton from '../../../../components/feedback/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../../../../store/authStore';
 
 export default function CommunityMembers() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, spacing, typography, roundness } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const currentUserId = useAuthStore((state) => state.user?.id);
 
   const { data: members = [], isLoading } = useCommunityMembersQuery(id || '');
   const [searchText, setSearchText] = useState('');
@@ -37,12 +39,14 @@ export default function CommunityMembers() {
           @{item.username}
         </Text>
       </View>
+      {item.id !== currentUserId && (
       <TouchableOpacity
         onPress={() => router.push({ pathname: '/chat/[id]', params: { id: `chat_${item.username}` } })}
         style={[styles.messageBtn, { backgroundColor: colors.inputBg, borderRadius: roundness.sm }]}
       >
         <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.text} />
       </TouchableOpacity>
+      )}
     </View>
   );
 

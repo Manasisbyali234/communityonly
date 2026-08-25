@@ -182,6 +182,7 @@ export default function HomeFeed() {
   ), [handleCommentPress, handleForwardPress]);
 
   const joinedCommunities = useMemo(() => communities.filter((c) => c.isJoined), [communities]);
+  const profileLocation = user?.village?.trim();
 
   // ── Skeleton ──────────────────────────────────────────────────────────────
   const renderSkeletonLoader = () => (
@@ -598,7 +599,9 @@ export default function HomeFeed() {
             <Text style={[styles.appBarTitle, { color: colors.text, fontSize: isSmallScreen ? 15 : 18 }]}>
               {joinedCommunities[0]?.name ?? 'Community'}
             </Text>
-            <Text style={[styles.appBarSub, { color: colors.textMuted }]}>Kodagu District</Text>
+            <Text style={[styles.appBarSub, { color: colors.textMuted }]} numberOfLines={1}>
+              {profileLocation ? `Profile location: ${profileLocation}` : 'Profile location not set'}
+            </Text>
           </View>
         </View>
 

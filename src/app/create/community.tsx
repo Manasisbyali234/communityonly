@@ -23,7 +23,7 @@ import { useConfirmStore } from '../../store/confirmStore';
 import * as ImagePicker from 'expo-image-picker';
 import { apiClient, SOCKET_URL } from '../../api/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { communityKeys } from '../../api/community';
+import { communityKeys, useMyCommunitiesRequestsQuery } from '../../api/community';
 import { feedKeys } from '../../api/feed';
 import Button from '../../components/common/Button';
 type InputFieldProps = {
@@ -68,6 +68,7 @@ export default function CreateCommunity() {
   const showToast = useToastStore((state) => state.showToast);
 
   const queryClient = useQueryClient();
+  const { data: myRequests = [] } = useMyCommunitiesRequestsQuery();
 
   const PRESET_CATEGORIES = ['Design', 'Tech', 'Travel', 'Fitness', 'Education', 'Health', 'Business', 'Art', 'Music', 'Sports', 'Others'];
   const [name, setName] = useState('');
@@ -177,6 +178,12 @@ export default function CreateCommunity() {
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
+    const duplicateRequest = myRequests.find((request: any) => request.name?.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
+    if (duplicateRequest) {
+      showToast(`Your community "${duplicateRequest.name}" is already ${String(duplicateRequest.status ?? 'pending').toLowerCase()} review. Track it in Communities.`, 'error');
+      return;
+    }
+
     const ok = await useConfirmStore.getState().confirm({
       title: 'Create community?',
       message: 'Your community will be created and submitted for review.',
@@ -213,12 +220,8 @@ export default function CreateCommunity() {
         );
       }
 
-      // Add feed posts
-      if (newCommunityId && feedPosts.length > 0) {
-        await Promise.all(
-          feedPosts.map((p) => apiClient.post('/posts', { content: p.content, communityId: newCommunityId }))
-        );
-      }
+      // New communities are pending moderation. Posting here used to turn a
+      // successful creation into a confusing failure state.
 
       await queryClient.invalidateQueries({ queryKey: communityKeys.list() });
       await queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
@@ -245,7 +248,7 @@ export default function CreateCommunity() {
           Request Submitted!
         </Text>
         <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 32 }}>
-          Your community creation request has been submitted successfully. It is awaiting admin approval. You can create and manage community posts only after the community is approved by the admin.
+          Your community creation request has been submitted successfully and is awaiting admin approval. You can track its status in Communities. Posts drafted here are not published until the community is approved.
         </Text>
         <TouchableOpacity
           onPress={goBack}

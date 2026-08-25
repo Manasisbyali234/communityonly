@@ -58,9 +58,12 @@ export function useStoriesFeedQuery() {
       return (res.data.data ?? [])
         .map((group) => ({
           ...group,
-          stories: group.stories.filter((s) => new Date(s.expiresAt) > now),
+          stories: group.stories
+            .filter((s) => new Date(s.expiresAt) > now)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
         }))
-        .filter((group) => group.stories.length > 0);
+        .filter((group) => group.stories.length > 0)
+        .sort((a, b) => new Date(b.stories[0].createdAt).getTime() - new Date(a.stories[0].createdAt).getTime());
     },
     staleTime: 0,
     refetchInterval: 60_000, // re-check every 60s to drop newly expired stories

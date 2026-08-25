@@ -130,7 +130,12 @@ export default function EditProfile() {
         setPhotoError('Camera permission is required. Please enable it in device settings.');
         return;
       }
-      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.9 });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.9,
+        cameraType: ImagePicker.CameraType.front,
+      });
       if (!result.canceled && result.assets?.[0]) {
         const asset = result.assets[0];
         const mime = asset.mimeType ?? 'image/jpeg';
@@ -175,6 +180,14 @@ export default function EditProfile() {
       list.push(interest);
       setValue('interests', list.join(', '), { shouldValidate: true });
     }
+  };
+
+  const removeLanguage = (language: string) => {
+    setValue('languages', currentLanguages.split(',').map((s) => s.trim()).filter((s) => s && s !== language).join(', '), { shouldValidate: true });
+  };
+
+  const removeInterest = (interest: string) => {
+    setValue('interests', currentInterests.split(',').map((s) => s.trim()).filter((s) => s && s !== interest).join(', '), { shouldValidate: true });
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
@@ -445,6 +458,16 @@ export default function EditProfile() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                  {currentLanguages ? (
+                    <View style={styles.selectedRow}>
+                      {currentLanguages.split(',').map((language) => language.trim()).filter(Boolean).map((language) => (
+                        <TouchableOpacity key={language} onPress={() => removeLanguage(language)} style={[styles.selectedPill, { backgroundColor: G + '16', borderColor: G + '35' }]} accessibilityLabel={`Remove ${language}`}>
+                          <Text style={[styles.selectedPillText, { color: G }]}>{language}</Text>
+                          <Ionicons name="close-circle" size={16} color={G} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
               )}
             />
@@ -476,6 +499,16 @@ export default function EditProfile() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                  {currentInterests ? (
+                    <View style={styles.selectedRow}>
+                      {currentInterests.split(',').map((interest) => interest.trim()).filter(Boolean).map((interest) => (
+                        <TouchableOpacity key={interest} onPress={() => removeInterest(interest)} style={[styles.selectedPill, { backgroundColor: G + '16', borderColor: G + '35' }]} accessibilityLabel={`Remove ${interest}`}>
+                          <Text style={[styles.selectedPillText, { color: G }]}>{interest}</Text>
+                          <Ionicons name="close-circle" size={16} color={G} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
               )}
             />
@@ -701,6 +734,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  selectedRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  selectedPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 16, paddingHorizontal: 9, paddingVertical: 5 },
+  selectedPillText: { fontSize: 12, fontWeight: '600' },
 
   // Save CTA
   saveBtn: {

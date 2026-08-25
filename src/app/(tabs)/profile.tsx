@@ -37,8 +37,8 @@ type ProfileTab = 'posts' | 'updates' | 'events' | 'family' | 'about';
 const COVER_HEIGHT = 190;
 
 const TABS: { id: ProfileTab; label: string; icon: string }[] = [
-  { id: 'posts', label: 'Posts', icon: 'grid-outline' },
   { id: 'about', label: 'About', icon: 'person-outline' },
+  { id: 'posts', label: 'Posts', icon: 'grid-outline' },
   { id: 'events', label: 'Events', icon: 'calendar-outline' },
   { id: 'family', label: 'Family', icon: 'people-outline' },
   { id: 'updates', label: 'Updates', icon: 'megaphone-outline' },
@@ -116,7 +116,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { width: SW } = useWindowDimensions();
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('about');
   const [bioExpanded, setBioExpanded] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -679,6 +679,7 @@ export default function ProfileScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.detailLabel, { color: TEXT3 }]}>Account Handle</Text>
                     <Text style={[styles.detailValue, { color: TEXT }]}>@{user?.username || 'user'}</Text>
+                    <Text style={[styles.detailHint, { color: TEXT3 }]}>Your unique public username. People can use it to find and mention you; it is not your password.</Text>
                   </View>
                 </View>
               </View>
@@ -1051,6 +1052,7 @@ const styles = StyleSheet.create({
   detailIconContainer: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   detailLabel: { fontSize: 11.5, fontWeight: '500' },
   detailValue: { fontSize: 14, fontWeight: '600', marginTop: 1 },
+  detailHint: { fontSize: 12, lineHeight: 17, marginTop: 3 },
   detailActionLink: { fontSize: 12.5, fontWeight: '600', marginTop: 2 },
 
   // About Tab Enhancements
