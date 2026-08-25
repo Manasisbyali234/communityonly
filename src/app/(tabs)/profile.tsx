@@ -395,6 +395,22 @@ export default function ProfileScreen() {
                 onPress: () => router.push('/jobs/my-applications' as any),
               },
               {
+                label: 'Helped',
+                value: (user?.helpCount || 0).toString(),
+                icon: 'heart',
+                color: '#DC2626',
+                bg: '#DC262614',
+                onPress: undefined,
+              },
+              {
+                label: 'Events Attended',
+                value: (user?.attendedEventCount || 0).toString(),
+                icon: 'calendar',
+                color: '#0891B2',
+                bg: '#0891B214',
+                onPress: undefined,
+              },
+              {
                 label: 'Member',
                 value: (user?.joinedAt || user?.createdAt) ? new Date(user.joinedAt || user.createdAt!).getFullYear().toString() : '—',
                 icon: 'ribbon',
@@ -407,7 +423,7 @@ export default function ProfileScreen() {
                 key={stat.label}
                 style={[
                   styles.statBlock,
-                  index < arr.length - 1 && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: BORDER },
+                  index % 3 !== 2 && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: BORDER },
                 ]}
                 onPress={stat.onPress}
                 disabled={!stat.onPress}
@@ -979,6 +995,7 @@ const styles = StyleSheet.create({
   // Stats Card
   statsCardWrapper: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: 12,
@@ -997,7 +1014,7 @@ const styles = StyleSheet.create({
     }),
   },
   statBlock: {
-    flex: 1,
+    width: '33.333%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 2,

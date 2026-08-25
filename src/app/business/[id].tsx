@@ -13,6 +13,7 @@ import { useToastStore } from '../../store/toastStore';
 import {
   useBusinessQuery, useBusinessReviewsQuery, useSubmitReviewMutation, BusinessReview,
 } from '../../api/business';
+import { useStartConversationMutation } from '../../api/chat';
 import { shareUrl } from '../../utils/shareUtils';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -92,6 +93,7 @@ export default function BusinessDetailScreen() {
   const { data: business, isLoading } = useBusinessQuery(id);
   const { data: reviews = [] } = useBusinessReviewsQuery(id);
   const submitReview = useSubmitReviewMutation(id);
+  const startConversation = useStartConversationMutation();
 
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -132,7 +134,16 @@ export default function BusinessDetailScreen() {
       router.push('/(auth)/login' as any);
       return;
     }
-    router.push(`/chat/new?participantId=${business.userId}` as any);
+    if (business.userId === user.id) {
+      showToast('This is your business listing.', 'error');
+      return;
+    }
+    try {
+      const conversation = await startConversation.mutateAsync({ participantId: business.userId });
+      router.push(`/chat/${conversation.id}` as any);
+    } catch {
+      showToast('Could not open a chat with this business. Please try again.', 'error');
+    }
   };
 
   const handleSubmitReview = async () => {
@@ -446,10 +457,11 @@ export default function BusinessDetailScreen() {
         <TouchableOpacity
           style={[styles.contactCTA, { backgroundColor: colors.primary }]}
           onPress={handleContactBusiness}
+          disabled={startConversation.isPending}
           activeOpacity={0.85}
         >
-          <Ionicons name="chatbubble-ellipses" size={19} color="#FFF" />
-          <Text style={styles.contactCTAText}>Contact Business</Text>
+          {startConversation.isPending ? <ActivityIndicator size="small" color="#FFF" /> : <Ionicons name="chatbubble-ellipses" size={19} color="#FFF" />}
+          <Text style={styles.contactCTAText}>{startConversation.isPending ? 'Opening chat…' : 'Contact Business'}</Text>
         </TouchableOpacity>
       </View>
 

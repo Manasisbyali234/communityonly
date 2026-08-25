@@ -57,6 +57,7 @@ export default function UserProfileScreen() {
   const { data: user, isLoading: userLoading } = useUserQuery(id);
   const { data: userPosts = [], isLoading: postsLoading } = useUserPostsQuery(id);
   const currentUser = useAuthStore((s) => s.user);
+  const isOwnProfile = currentUser?.id === user?.id;
   const { data: connStatus = 'NONE' } = useConnectionStatusQuery(id, currentUser?.id);
   const sendRequest = useSendConnectionRequestMutation();
 
@@ -194,25 +195,29 @@ export default function UserProfileScreen() {
 
             {/* Actions group on right */}
             <View style={styles.topActionGroup}>
-              <Button
-                title={connStatus === 'ACCEPTED' ? 'Connected' : connStatus === 'PENDING_SENT' ? 'Pending' : 'Connect'}
-                icon={connStatus === 'ACCEPTED' ? 'checkmark-circle' : connStatus === 'PENDING_SENT' ? 'time-outline' : 'person-add'}
-                variant={connStatus === 'ACCEPTED' ? 'secondary' : 'primary'}
-                size="sm"
-                loading={sendRequest.isPending}
-                disabled={connStatus !== 'NONE' || sendRequest.isPending}
-                onPress={handleConnect}
-              />
-              <Pressable
-                accessibilityLabel="Message user"
-                style={({ pressed }) => [
-                  styles.iconUtilityButton,
-                  { borderColor: BORDER, backgroundColor: pressed ? colors.elevation1 : SURF },
-                ]}
-                onPress={() => router.push(`/chat/new?participantId=${user.id}` as any)}
-              >
-                <Ionicons name="chatbubble-ellipses-outline" size={17} color={TEXT} />
-              </Pressable>
+              {!isOwnProfile && (
+                <>
+                  <Button
+                    title={connStatus === 'ACCEPTED' ? 'Connected' : connStatus === 'PENDING_SENT' ? 'Pending' : 'Connect'}
+                    icon={connStatus === 'ACCEPTED' ? 'checkmark-circle' : connStatus === 'PENDING_SENT' ? 'time-outline' : 'person-add'}
+                    variant={connStatus === 'ACCEPTED' ? 'secondary' : 'primary'}
+                    size="sm"
+                    loading={sendRequest.isPending}
+                    disabled={connStatus !== 'NONE' || sendRequest.isPending}
+                    onPress={handleConnect}
+                  />
+                  <Pressable
+                    accessibilityLabel="Message user"
+                    style={({ pressed }) => [
+                      styles.iconUtilityButton,
+                      { borderColor: BORDER, backgroundColor: pressed ? colors.elevation1 : SURF },
+                    ]}
+                    onPress={() => router.push(`/chat/new?participantId=${user.id}` as any)}
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={17} color={TEXT} />
+                  </Pressable>
+                </>
+              )}
               <Pressable
                 accessibilityLabel="Share profile"
                 style={({ pressed }) => [
