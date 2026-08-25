@@ -14,13 +14,22 @@ export interface PickedImage {
   mimeType: string;
 }
 
-export async function pickImage(): Promise<PickedImage | null> {
+export interface PickImageOptions {
+  aspect?: [number, number];
+  onPermissionDenied?: () => void;
+}
+
+export async function pickImage(options?: PickImageOptions): Promise<PickedImage | null> {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== 'granted') return null;
+  if (status !== 'granted') {
+    options?.onPermissionDenied?.();
+    return null;
+  }
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: true,
+    aspect: options?.aspect,
     quality: 0.8,
   });
 

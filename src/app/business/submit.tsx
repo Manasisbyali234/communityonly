@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  StyleSheet, Text, View, ScrollView, TouchableOpacity,
+  StyleSheet, Text, View, ScrollView, TouchableOpacity, Image,
   TextInput, ActivityIndicator, Modal, Platform, Pressable, KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import {
   BUSINESS_CATEGORIES, useSubmitBusinessMutation,
   useUpdateBusinessMutation, useBusinessQuery, Business, BusinessSubmission,
 } from '../../api/business';
+import { pickImage, PickedImage, uploadImage } from '../../utils/imagePicker';
 
 function FormSection({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   const { colors } = useTheme();
@@ -111,13 +112,17 @@ function CategoryPicker({ value, onChange }: { value: string; onChange: (c: stri
 }
 
 // Preview card
-function PreviewCard({ data, colors, isDark }: { data: Partial<Business>; colors: any; isDark: boolean }) {
+function PreviewCard({ data, logoUri, colors, isDark }: { data: Partial<Business>; logoUri?: string | null; colors: any; isDark: boolean }) {
   return (
     <View style={[styles.previewCard, { backgroundColor: colors.cardBg, borderColor: colors.primary }]}>
       <View style={styles.previewHeader}>
-        <View style={[styles.previewLogo, { backgroundColor: isDark ? 'rgba(45,106,45,0.2)' : colors.primaryContainer }]}>
-          <Ionicons name="storefront" size={26} color={colors.primary} />
-        </View>
+        {logoUri ? (
+          <Image source={{ uri: logoUri }} style={[styles.previewLogo, { borderColor: colors.border }]} />
+        ) : (
+          <View style={[styles.previewLogo, { backgroundColor: isDark ? 'rgba(45,106,45,0.2)' : colors.primaryContainer }]}>
+            <Ionicons name="storefront" size={26} color={colors.primary} />
+          </View>
+        )}
         <View style={{ flex: 1 }}>
           <Text style={[styles.previewBizName, { color: colors.text }]} numberOfLines={1}>
             {data.businessName || 'Your Business Name'}
@@ -177,6 +182,9 @@ export default function SubmitBusinessScreen() {
     offers: '',
   });
   const [showPreview, setShowPreview] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<PickedImage | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   // Prefill on edit
   React.useEffect(() => {
@@ -195,6 +203,8 @@ export default function SubmitBusinessScreen() {
         email: existingBusiness.email ?? '',
         offers: existingBusiness.offers ?? '',
       });
+      setLogoUrl(existingBusiness.logoUrl ?? null);
+      setProfilePhoto(null);
     }
   }, [existingBusiness]);
 
@@ -202,7 +212,7 @@ export default function SubmitBusinessScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  const submission: BusinessSubmission = {
+  const buildSubmission = (submittedLogoUrl: string | null): BusinessSubmission => ({
     businessName: form.businessName.trim(),
     category: form.category,
     description: form.description.trim(),
@@ -215,7 +225,25 @@ export default function SubmitBusinessScreen() {
     email: form.email.trim() || undefined,
     offers: form.offers.trim() || undefined,
     photos: [],
+    ...(isEdit ? { logoUrl: submittedLogoUrl } : submittedLogoUrl ? { logoUrl: submittedLogoUrl } : {}),
+  });
+
+  const handlePickProfilePhoto = async () => {
+    try {
+      const picked = await pickImage({ aspect: [1, 1] });
+      if (picked) setProfilePhoto(picked);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Unable to open your photo library. Please try again.';
+      showToast(message, 'error');
+    }
   };
+
+  const handleRemoveProfilePhoto = () => {
+    setProfilePhoto(null);
+    setLogoUrl(null);
+  };
+
+  const displayedLogoUri = profilePhoto?.localUri ?? logoUrl;
 
   const validate = () => {
     if (!form.businessName.trim()) { showToast('Business Name is required.', 'error'); return false; }
@@ -242,18 +270,31 @@ export default function SubmitBusinessScreen() {
     if (!confirmed) return;
 
     try {
+      let submittedLogoUrl = logoUrl;
+      if (profilePhoto) {
+        setIsUploadingPhoto(true);
+        const uploadedUrl = await uploadImage(profilePhoto);
+        if (!uploadedUrl) throw new Error('The business photo could not be uploaded.');
+        submittedLogoUrl = uploadedUrl;
+        setLogoUrl(uploadedUrl);
+        setProfilePhoto(null);
+      }
+      const submission = buildSubmission(submittedLogoUrl);
       if (isEdit && editId) {
         await updateMutation.mutateAsync({ id: editId, data: submission });
       } else {
         await submitMutation.mutateAsync(submission);
       }
       router.replace('/business/my-businesses' as any);
-    } catch {
-      showToast('Failed to submit. Please try again.', 'error');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Failed to submit. Please try again.';
+      showToast(message, 'error');
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
-  const isPending = submitMutation.isPending || updateMutation.isPending;
+  const isPending = submitMutation.isPending || updateMutation.isPending || isUploadingPhoto;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -302,6 +343,38 @@ export default function SubmitBusinessScreen() {
 
           {/* Section 1 – Basic Info */}
           <FormSection title="Basic Information" icon="storefront-outline">
+            <View style={styles.photoFieldWrap}>
+              <View style={styles.photoLabelRow}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary, marginBottom: 0 }]}>Business Profile Photo</Text>
+                <Text style={[styles.optionalLabel, { color: colors.textMuted }]}>Optional</Text>
+              </View>
+              <Text style={[styles.photoHelperText, { color: colors.textMuted }]}>Use a logo or storefront image to help customers recognize your business.</Text>
+              <View style={styles.photoUploadRow}>
+                {displayedLogoUri ? (
+                  <Image source={{ uri: displayedLogoUri }} style={[styles.photoPreview, { borderColor: colors.border }]} />
+                ) : (
+                  <View style={[styles.photoPlaceholder, { backgroundColor: isDark ? 'rgba(45,106,45,0.16)' : colors.primaryContainer, borderColor: colors.border }]}>
+                    <Ionicons name="image-outline" size={27} color={colors.primary} />
+                  </View>
+                )}
+                <View style={styles.photoActions}>
+                  <TouchableOpacity
+                    style={[styles.photoActionButton, { backgroundColor: isDark ? 'rgba(45,106,45,0.16)' : colors.primaryContainer, borderColor: colors.primary + '40' }]}
+                    onPress={handlePickProfilePhoto}
+                    disabled={isPending}
+                  >
+                    <Ionicons name={displayedLogoUri ? 'refresh-outline' : 'cloud-upload-outline'} size={16} color={colors.primary} />
+                    <Text style={[styles.photoActionText, { color: colors.primary }]}>{displayedLogoUri ? 'Change Photo' : 'Upload Photo'}</Text>
+                  </TouchableOpacity>
+                  {displayedLogoUri ? (
+                    <TouchableOpacity style={styles.removePhotoButton} onPress={handleRemoveProfilePhoto} disabled={isPending}>
+                      <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      <Text style={styles.removePhotoText}>Remove</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            </View>
             <FormField label="Business Name" required value={form.businessName} onChangeText={(v) => setField('businessName', v)} placeholder="e.g. Gowda Organic Farm" />
             <FormField label="Owner Name" required value={form.ownerName} onChangeText={(v) => setField('ownerName', v)} placeholder="Your full name" />
             <CategoryPicker value={form.category} onChange={(v) => setField('category', v)} />
@@ -359,7 +432,7 @@ export default function SubmitBusinessScreen() {
             <Text style={[styles.previewSheetSub, { color: colors.textSecondary }]}>
               This is how your listing will appear in the Business Directory after approval.
             </Text>
-            <PreviewCard data={form} colors={colors} isDark={isDark} />
+            <PreviewCard data={form} logoUri={displayedLogoUri} colors={colors} isDark={isDark} />
             <TouchableOpacity
               style={[styles.previewDoneBtn, { backgroundColor: colors.primary }]}
               onPress={() => setShowPreview(false)}
@@ -415,6 +488,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15,
   },
   fieldInputMulti: { minHeight: 80, paddingTop: 12 },
+
+  // Business photo
+  photoFieldWrap: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4 },
+  photoLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  optionalLabel: { fontSize: 11.5, fontWeight: '500' },
+  photoHelperText: { fontSize: 12, lineHeight: 17, marginTop: 6 },
+  photoUploadRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
+  photoPreview: { width: 72, height: 72, borderRadius: 14, borderWidth: 1 },
+  photoPlaceholder: { width: 72, height: 72, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  photoActions: { flex: 1, alignItems: 'flex-start', gap: 5 },
+  photoActionButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
+  photoActionText: { fontSize: 12.5, fontWeight: '700' },
+  removePhotoButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 2, paddingVertical: 4 },
+  removePhotoText: { color: '#DC2626', fontSize: 12, fontWeight: '600' },
 
   // Category Picker
   pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },

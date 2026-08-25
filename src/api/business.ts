@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from './client';
+import { API_BASE_URL } from './config';
 
 export type BusinessStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DRAFT' | 'WITHDRAWN';
 export const BUSINESS_CATEGORIES = ['Agriculture & Farming', 'Construction & Real Estate', 'Education & Coaching', 'Food & Beverages', 'Healthcare & Wellness', 'IT & Technology', 'Retail & Shopping', 'Services', 'Transport & Logistics', 'Manufacturing', 'Other'] as const;
@@ -7,20 +8,28 @@ export type BusinessCategory = typeof BUSINESS_CATEGORIES[number];
 export interface Business { id: string; userId: string; ownerName: string; ownerAvatarUrl?: string; businessName: string; category: BusinessCategory | string; description: string; productsServices: string; location: string; address?: string; website?: string; whatsapp?: string; phone?: string; email?: string; logoUrl?: string; coverUrl?: string; photos: string[]; offers?: string; status: BusinessStatus; rejectionReason?: string | null; approvedAt?: string | null; rejectedAt?: string | null; submittedAt: string; createdAt: string; reviewCount?: number; averageRating?: number; isVerified: boolean; reviews?: BusinessReview[]; }
 export interface BusinessReview { id: string; businessId: string; userId: string; reviewerName: string; rating: number; comment: string; createdAt: string; }
 export interface BusinessFilters { category?: string; location?: string; search?: string; }
-export type BusinessSubmission = Pick<Business, 'businessName' | 'category' | 'description' | 'productsServices' | 'location' | 'address' | 'website' | 'whatsapp' | 'phone' | 'email' | 'offers'> & { photos?: string[] };
+export type BusinessSubmission = Pick<Business, 'businessName' | 'category' | 'description' | 'productsServices' | 'location' | 'address' | 'website' | 'whatsapp' | 'phone' | 'email' | 'offers'> & { photos?: string[]; logoUrl?: string | null };
 const unwrap = <T,>(res: any) => (res.data?.data ?? res.data) as T;
+const toAbsoluteUrl = (url?: string | null) =>
+  url?.startsWith('/') ? `${API_BASE_URL.replace('/api/v1', '')}${url}` : url ?? undefined;
+const normalizeBusiness = (business: Business): Business => ({
+  ...business,
+  logoUrl: toAbsoluteUrl(business.logoUrl),
+  coverUrl: toAbsoluteUrl(business.coverUrl),
+  photos: (business.photos ?? []).map((photo) => toAbsoluteUrl(photo) ?? photo),
+});
 const invalidate = (qc: ReturnType<typeof useQueryClient>) => { qc.invalidateQueries({ queryKey: ['businesses'] }); qc.invalidateQueries({ queryKey: ['admin-businesses'] }); };
 
-export function usePublicBusinessesQuery(filters?: BusinessFilters) { return useQuery({ queryKey: ['businesses', 'public', filters], queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses', { params: filters })) }); }
-export function useBusinessQuery(id: string) { return useQuery({ queryKey: ['business', id], queryFn: async () => unwrap<Business>(await apiClient.get(`/businesses/${id}`)), enabled: !!id }); }
-export function useMyBusinessesQuery() { return useQuery({ queryKey: ['businesses', 'mine'], queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses/mine')) }); }
-export function useBusinessReviewsQuery(businessId: string) { return useQuery({ queryKey: ['business-reviews', businessId], queryFn: async () => (unwrap<Business>(await apiClient.get(`/businesses/${businessId}`)).reviews ?? []) as BusinessReview[], enabled: !!businessId }); }
-export function useSubmitBusinessMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async (payload: BusinessSubmission) => unwrap<Business>(await apiClient.post('/businesses', payload)), onSuccess: () => invalidate(qc) }); }
-export function useUpdateBusinessMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async ({ id, data }: { id: string; data: BusinessSubmission }) => unwrap<Business>(await apiClient.patch(`/businesses/${id}`, data)), onSuccess: (_, value) => { invalidate(qc); qc.invalidateQueries({ queryKey: ['business', value.id] }); } }); }
+export function usePublicBusinessesQuery(filters?: BusinessFilters) { return useQuery({ queryKey: ['businesses', 'public', filters], queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses', { params: filters })).map(normalizeBusiness) }); }
+export function useBusinessQuery(id: string) { return useQuery({ queryKey: ['business', id], queryFn: async () => normalizeBusiness(unwrap<Business>(await apiClient.get(`/businesses/${id}`))), enabled: !!id }); }
+export function useMyBusinessesQuery() { return useQuery({ queryKey: ['businesses', 'mine'], queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses/mine')).map(normalizeBusiness) }); }
+export function useBusinessReviewsQuery(businessId: string) { return useQuery({ queryKey: ['business-reviews', businessId], queryFn: async () => (normalizeBusiness(unwrap<Business>(await apiClient.get(`/businesses/${businessId}`))).reviews ?? []) as BusinessReview[], enabled: !!businessId }); }
+export function useSubmitBusinessMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async (payload: BusinessSubmission) => normalizeBusiness(unwrap<Business>(await apiClient.post('/businesses', payload))), onSuccess: () => invalidate(qc) }); }
+export function useUpdateBusinessMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async ({ id, data }: { id: string; data: BusinessSubmission }) => normalizeBusiness(unwrap<Business>(await apiClient.patch(`/businesses/${id}`, data))), onSuccess: (_, value) => { invalidate(qc); qc.invalidateQueries({ queryKey: ['business', value.id] }); } }); }
 export function useDeleteBusinessMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async (id: string) => { await apiClient.delete(`/businesses/${id}`); }, onSuccess: () => invalidate(qc) }); }
 export function useSubmitReviewMutation(businessId: string) { const qc = useQueryClient(); return useMutation({ mutationFn: async (payload: { rating: number; comment: string; reviewerName: string }) => unwrap<BusinessReview>(await apiClient.post(`/businesses/${businessId}/reviews`, payload)), onSuccess: () => { qc.invalidateQueries({ queryKey: ['business-reviews', businessId] }); qc.invalidateQueries({ queryKey: ['business', businessId] }); } }); }
 export function useContactBusinessMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async ({ businessId }: { businessId: string; senderName: string }) => unwrap(await apiClient.post(`/businesses/${businessId}/contact`)), onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }) }); }
-export function useAdminBusinessesQuery(status?: BusinessStatus | 'ALL') { return useQuery({ queryKey: ['admin-businesses', status], queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses/admin', { params: status && status !== 'ALL' ? { status } : {} })) }); }
+export function useAdminBusinessesQuery(status?: BusinessStatus | 'ALL') { return useQuery({ queryKey: ['admin-businesses', status], queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses/admin', { params: status && status !== 'ALL' ? { status } : {} })).map(normalizeBusiness) }); }
 export function useAdminApproveBusinessMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async (id: string) => unwrap(await apiClient.patch(`/businesses/${id}/moderate`, { status: 'APPROVED' })), onSuccess: () => invalidate(qc) }); }
 export function useAdminRejectBusinessMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async ({ id, reason }: { id: string; reason: string }) => unwrap(await apiClient.patch(`/businesses/${id}/moderate`, { status: 'REJECTED', reason })), onSuccess: () => invalidate(qc) }); }
 export function useAdminDeleteBusinessMutation() { return useDeleteBusinessMutation(); }

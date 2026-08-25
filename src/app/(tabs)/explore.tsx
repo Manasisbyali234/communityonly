@@ -50,7 +50,13 @@ function resolveTab(raw: string | string[] | undefined): ExploreTab {
 
 const TRENDING_SEARCHES: string[] = [];
 
-const EVENT_FILTERS = ['All', 'Upcoming', 'Today', 'This Week', 'Past', 'My Events'];
+const EVENT_FILTERS = ['All', 'Upcoming', 'Today', 'This Week', 'My Events'];
+
+/** A single-day event is complete once its start time passes; multi-day events stay visible until they end. */
+function hasEventEnded(event: { startsAt?: string; endsAt?: string }, now = new Date()) {
+  const endAt = new Date(event.endsAt || event.startsAt || '');
+  return !Number.isNaN(endAt.getTime()) && endAt < now;
+}
 
 const COMMUNITY_TYPES = ['All', 'Village', 'Youth', 'Women', 'Farmers', 'Temple', 'Sports', 'Education'];
 
@@ -266,12 +272,12 @@ export default function ExploreScreen() {
   const filteredEvents = events.filter((e: any) => {
     const now = new Date();
     const start = new Date(e.startsAt);
+    if (hasEventEnded(e, now)) return false;
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
     const weekEnd = new Date(now); weekEnd.setDate(now.getDate() + 7);
     const filterMatch = selectedEventFilter === 'All' ||
       (selectedEventFilter === 'Upcoming' && start >= now) ||
-      (selectedEventFilter === 'Past' && start < now) ||
       (selectedEventFilter === 'Today' && start >= todayStart && start <= todayEnd) ||
       (selectedEventFilter === 'This Week' && start >= now && start <= weekEnd) ||
       (selectedEventFilter === 'My Events' && (e.creatorId === currentUser?.id || e.isInterested || e.userRsvpStatus === 'GOING'));
@@ -697,6 +703,7 @@ export default function ExploreScreen() {
         );
         const displayEvents = selectedEventFilter === 'My Events'
           ? myCreatedEvents.filter((e: any) => {
+              if (hasEventEnded(e)) return false;
               if (!debouncedSearch) return true;
               const q = debouncedSearch.toLowerCase();
               return e.title.toLowerCase().includes(q) || e.location?.toLowerCase().includes(q);
@@ -778,7 +785,11 @@ export default function ExploreScreen() {
                   >
                     <View style={styles.bizCardLeft}>
                       <View style={[styles.bizCardLogo, { backgroundColor: colors.primaryContainer }]}>
-                        <Ionicons name="storefront-outline" size={20} color={G} />
+                        {b.logoUrl ? (
+                          <ExpoImage source={{ uri: b.logoUrl }} style={styles.bizCardLogoImage} contentFit="cover" />
+                        ) : (
+                          <Ionicons name="storefront-outline" size={20} color={G} />
+                        )}
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.bizCardName, { color: TEXT }]} numberOfLines={1}>{b.businessName}</Text>
@@ -1595,7 +1606,8 @@ const styles = StyleSheet.create({
     ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6 }, android: { elevation: 1 } }),
   },
   bizCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  bizCardLogo: { width: 42, height: 42, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  bizCardLogo: { width: 42, height: 42, borderRadius: 11, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  bizCardLogoImage: { width: '100%', height: '100%' },
   bizCardName: { fontSize: 14.5, fontWeight: '700', marginBottom: 2 },
   bizCardCategory: { fontSize: 12, marginBottom: 3 },
   bizCardLocRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },

@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import {
   StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -39,7 +40,11 @@ function BusinessStatusCard({ business, onView, onEdit, onDelete, colors, isDark
       {/* Card Header */}
       <View style={styles.cardHeader}>
         <View style={[styles.cardLogoWrap, { backgroundColor: isDark ? 'rgba(45,106,45,0.15)' : colors.primaryContainer }]}>
-          <Ionicons name="storefront" size={22} color={colors.primary} />
+          {business.logoUrl ? (
+            <Image source={{ uri: business.logoUrl }} style={styles.cardLogo} contentFit="cover" />
+          ) : (
+            <Ionicons name="storefront" size={22} color={colors.primary} />
+          )}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.cardBizName, { color: colors.text }]} numberOfLines={1}>
@@ -248,7 +253,8 @@ const styles = StyleSheet.create({
     ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }, android: { elevation: 2 } }),
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingBottom: 10 },
-  cardLogoWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  cardLogoWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  cardLogo: { width: '100%', height: '100%' },
   cardBizName: { fontSize: 15.5, fontWeight: '700' },
   cardCategory: { fontSize: 12.5, fontWeight: '500', marginTop: 1 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },

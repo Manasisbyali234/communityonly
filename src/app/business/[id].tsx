@@ -215,8 +215,8 @@ export default function BusinessDetailScreen() {
 
         {/* Cover Image */}
         <View style={styles.coverWrap}>
-          {business.coverUrl ? (
-            <Image source={{ uri: business.coverUrl }} style={styles.coverImage} contentFit="cover" />
+          {business.coverUrl || business.logoUrl ? (
+            <Image source={{ uri: business.coverUrl || business.logoUrl }} style={styles.coverImage} contentFit="cover" />
           ) : (
             <View style={[styles.coverImage, styles.coverFallback, { backgroundColor: catColor + '22' }]}>
               <Ionicons name="storefront" size={60} color={catColor} />

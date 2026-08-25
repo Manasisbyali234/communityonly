@@ -45,8 +45,8 @@ export default function HelpRequestDetailScreen() {
 
   const catConfig = HELP_CATEGORIES.find((c) => c.id === request?.category);
   const isUrgent = request?.urgency === 'URGENT';
-  const isMyRequest = request?.userId === 'current-user';
-  const hasOfferedHelp = request?.helpers.some((h) => h.helperId === 'current-user') ?? false;
+  const isMyRequest = !!user && request?.userId === user.id;
+  const hasOfferedHelp = !!user && (request?.helpers.some((h) => h.helperId === user.id) ?? false);
 
   const handleOfferHelpPrompt = async () => {
     if (!user) {

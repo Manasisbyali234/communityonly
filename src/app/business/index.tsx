@@ -78,6 +78,8 @@ function BusinessCard({ business, onPress, colors, isDark }: {
       <View style={styles.cardBannerWrap}>
         {business.coverUrl ? (
           <Image source={{ uri: business.coverUrl }} style={styles.cardBanner} contentFit="cover" />
+        ) : business.logoUrl ? (
+          <Image source={{ uri: business.logoUrl }} style={styles.cardBanner} contentFit="cover" />
         ) : (
           <View style={[styles.cardBanner, styles.cardBannerFallback, { backgroundColor: catColor + '20' }]}>
             <Ionicons name={catIcon as any} size={36} color={catColor} />
@@ -105,7 +107,9 @@ function BusinessCard({ business, onPress, colors, isDark }: {
             {business.logoUrl ? (
               <Image source={{ uri: business.logoUrl }} style={styles.cardLogo} contentFit="cover" />
             ) : (
-              <Ionicons name={catIcon as any} size={22} color={catColor} />
+              <View style={[styles.cardLogo, { alignItems: 'center', justifyContent: 'center' }]}>
+                <Ionicons name={catIcon as any} size={22} color={catColor} />
+              </View>
             )}
           </View>
           <View style={{ flex: 1 }}>
@@ -443,7 +447,7 @@ const styles = StyleSheet.create({
   cardBody: { padding: 14, gap: 6 },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 2 },
   cardLogoWrap: {
-    width: 42, height: 42, borderRadius: 12, borderWidth: 1,
+    width: 52, height: 52, borderRadius: 14, borderWidth: 1,
     overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
   },
   cardLogo: { width: '100%', height: '100%' },
