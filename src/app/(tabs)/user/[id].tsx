@@ -27,14 +27,16 @@ import Avatar from '../../../components/common/Avatar';
 import { useAuthStore } from '../../../store/authStore';
 import { useConnectionStatusQuery, useSendConnectionRequestMutation } from '../../../api/connections';
 import { shareUrl } from '../../../utils/shareUtils';
+import { useUserJoinedEventsQuery } from '../../../api/event';
 import { Share } from 'react-native';
 
 const { width: SW } = Dimensions.get('window');
 const COVER_HEIGHT = 175;
 
-type ProfileTab = 'posts' | 'about';
+type ProfileTab = 'posts' | 'events' | 'about';
 const TABS: { id: ProfileTab; label: string; icon: string }[] = [
   { id: 'posts', label: 'Posts', icon: 'grid-outline' },
+  { id: 'events', label: 'Events', icon: 'calendar-outline' },
   { id: 'about', label: 'About', icon: 'person-outline' },
 ];
 
@@ -56,6 +58,7 @@ export default function UserProfileScreen() {
 
   const { data: user, isLoading: userLoading } = useUserQuery(id);
   const { data: userPosts = [], isLoading: postsLoading } = useUserPostsQuery(id);
+  const { data: joinedEvents = [], isLoading: eventsLoading } = useUserJoinedEventsQuery(id);
   const currentUser = useAuthStore((s) => s.user);
   const isOwnProfile = currentUser?.id === user?.id;
   const { data: connStatus = 'NONE' } = useConnectionStatusQuery(id, currentUser?.id);
@@ -411,6 +414,54 @@ export default function UserProfileScreen() {
             )
           )}
 
+          {/* EVENTS TAB */}
+          {activeTab === 'events' && (
+            eventsLoading ? (
+              <View style={{ gap: 12 }}>
+                {[1, 2].map((item) => <Skeleton key={item} width="100%" height={98} borderRadius={16} />)}
+              </View>
+            ) : joinedEvents.length > 0 ? (
+              <View style={{ gap: 12 }}>
+                {joinedEvents.map((event) => (
+                  <TouchableOpacity
+                    key={event.id}
+                    style={[styles.modernCard, styles.joinedEventCard, { backgroundColor: SURF, borderColor: BORDER }]}
+                    onPress={() => router.push(`/events/${event.id}` as any)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.eventIconWrap, { backgroundColor: '#0891B214' }]}>
+                      <Ionicons name="calendar" size={22} color="#0891B2" />
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={[styles.joinedEventTitle, { color: TEXT }]} numberOfLines={2}>{event.title}</Text>
+                      <View style={styles.joinedEventMeta}>
+                        <Ionicons name="time-outline" size={13} color={TEXT3} />
+                        <Text style={[styles.joinedEventMetaText, { color: TEXT3 }]}>
+                          {new Date(event.startsAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                      {event.location ? (
+                        <View style={styles.joinedEventMeta}>
+                          <Ionicons name="location-outline" size={13} color={TEXT3} />
+                          <Text style={[styles.joinedEventMetaText, { color: TEXT3 }]} numberOfLines={1}>{event.location}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={TEXT3} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <View style={[styles.modernCard, styles.emptyCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+                <View style={[styles.emptyIconCircle, { backgroundColor: '#0891B214' }]}>
+                  <Ionicons name="calendar-outline" size={32} color="#0891B2" />
+                </View>
+                <Text style={[styles.emptyTitle, { color: TEXT }]}>No Events Joined Yet</Text>
+                <Text style={[styles.emptySubtitle, { color: TEXT3 }]}>{user.displayName} has not joined any events yet.</Text>
+              </View>
+            )
+          )}
+
           {/* ABOUT TAB */}
           {activeTab === 'about' && (
             <View style={{ gap: 14 }}>
@@ -733,6 +784,11 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     padding: 16,
   },
+  joinedEventCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  eventIconWrap: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  joinedEventTitle: { fontSize: 15, fontWeight: '800', lineHeight: 20 },
+  joinedEventMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  joinedEventMetaText: { flexShrink: 1, fontSize: 12.5, fontWeight: '500' },
   cardSectionHeader: { fontSize: 15, fontWeight: '700', marginBottom: 14, letterSpacing: -0.2 },
 
   // Details Tab

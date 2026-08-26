@@ -42,7 +42,19 @@ export const eventKeys = {
   list: () => [...eventKeys.all, 'list'] as const,
   myEvents: (userId: string) => [...eventKeys.all, 'mine', userId] as const,
   detail: (id: string) => [...eventKeys.all, 'detail', id] as const,
+  userJoined: (userId: string) => [...eventKeys.all, 'user-joined', userId] as const,
 };
+
+export function useUserJoinedEventsQuery(userId: string) {
+  return useQuery<Event[]>({
+    queryKey: eventKeys.userJoined(userId),
+    enabled: !!userId,
+    queryFn: async () => {
+      const res = await apiClient.get<ApiResponse<PaginatedResponse<Event>>>(`/users/${userId}/events`);
+      return (res.data.data.data ?? []).map(normalizeEvent);
+    },
+  });
+}
 
 export function useEventsQuery() {
   const localEvents = useEventStore((s) => s.localEvents);

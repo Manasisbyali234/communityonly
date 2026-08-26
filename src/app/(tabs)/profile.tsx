@@ -376,7 +376,7 @@ export default function ProfileScreen() {
                 icon: 'people',
                 color: G,
                 bg: G + '14',
-                onPress: undefined,
+                onPress: () => router.push('/chat' as any),
               },
               {
                 label: 'Following',
@@ -384,7 +384,7 @@ export default function ProfileScreen() {
                 icon: 'person-add',
                 color: '#3B82F6',
                 bg: '#3B82F614',
-                onPress: undefined,
+                onPress: () => router.push('/(tabs)/explore?tab=members' as any),
               },
               {
                 label: 'Applied',
@@ -400,7 +400,7 @@ export default function ProfileScreen() {
                 icon: 'heart',
                 color: '#DC2626',
                 bg: '#DC262614',
-                onPress: undefined,
+                onPress: () => router.push('/community-help/my-requests' as any),
               },
               {
                 label: 'Events Attended',
@@ -408,7 +408,7 @@ export default function ProfileScreen() {
                 icon: 'calendar',
                 color: '#0891B2',
                 bg: '#0891B214',
-                onPress: undefined,
+                onPress: () => router.push('/(tabs)/explore?tab=events' as any),
               },
               {
                 label: 'Member',
@@ -416,7 +416,7 @@ export default function ProfileScreen() {
                 icon: 'ribbon',
                 color: '#F59E0B',
                 bg: '#F59E0B14',
-                onPress: undefined,
+                onPress: () => router.push('/edit-profile' as any),
               },
             ].map((stat, index, arr) => (
               <TouchableOpacity
@@ -631,31 +631,51 @@ export default function ProfileScreen() {
                 </View>
 
                 <View style={styles.metricsGrid}>
-                  <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
+                  <TouchableOpacity
+                    style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}
+                    onPress={() => router.push('/(tabs)/explore?tab=communities' as any)}
+                    activeOpacity={0.7}
+                    accessibilityLabel="View communities"
+                  >
                     <View style={[styles.metricIconBg, { backgroundColor: G + '14' }]}>
                       <Ionicons name="globe" size={16} color={G} />
                     </View>
                     <Text style={[styles.metricValue, { color: TEXT }]}>{user?.communitiesCount ?? 0}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]}>Communities</Text>
-                  </View>
+                  </TouchableOpacity>
 
-                  <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
+                  <TouchableOpacity
+                    style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}
+                    onPress={() => router.push('/(tabs)/explore?tab=events' as any)}
+                    activeOpacity={0.7}
+                    accessibilityLabel="View events"
+                  >
                     <View style={[styles.metricIconBg, { backgroundColor: '#3B82F614' }]}>
                       <Ionicons name="calendar" size={16} color="#3B82F6" />
                     </View>
                     <Text style={[styles.metricValue, { color: TEXT }]}>{myEvents.length}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]}>Events Joined</Text>
-                  </View>
+                  </TouchableOpacity>
 
-                  <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
+                  <TouchableOpacity
+                    style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}
+                    onPress={() => router.push('/chat' as any)}
+                    activeOpacity={0.7}
+                    accessibilityLabel="View connections"
+                  >
                     <View style={[styles.metricIconBg, { backgroundColor: '#8B5CF614' }]}>
                       <Ionicons name="people" size={16} color="#8B5CF6" />
                     </View>
                     <Text style={[styles.metricValue, { color: TEXT }]}>{typeof connectionCount === 'number' ? connectionCount : (connectionCount as any)?.count ?? 0}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]}>Connections</Text>
-                  </View>
+                  </TouchableOpacity>
 
-                  <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
+                  <TouchableOpacity
+                    style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}
+                    onPress={() => router.push('/edit-profile' as any)}
+                    activeOpacity={0.7}
+                    accessibilityLabel="Edit profile"
+                  >
                     <View style={[styles.metricIconBg, { backgroundColor: '#F59E0B14' }]}>
                       <Ionicons name="ribbon" size={16} color="#F59E0B" />
                     </View>
@@ -665,7 +685,7 @@ export default function ProfileScreen() {
                         : '2026'}
                     </Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]}>Member Since</Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               </View>
 
