@@ -12,14 +12,12 @@ import { fmtDateTime, fmtDate } from '../../utils/adminUtils';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 
-type FilterType = 'ALL' | 'ACTIVE' | 'VERIFIED' | 'SUSPENDED' | 'ADMINS';
+type FilterType = 'ALL' | 'ACTIVE' | 'ADMINS';
 
 const FILTERS: { id: FilterType; label: string; countKey?: string }[] = [
-  { id: 'ALL',       label: 'All Members' },
-  { id: 'ACTIVE',    label: 'Active' },
-  { id: 'VERIFIED',  label: 'Verified ⭐' },
-  { id: 'SUSPENDED', label: 'Suspended' },
-  { id: 'ADMINS',    label: 'Admins & Staff' },
+  { id: 'ALL',    label: 'All Members' },
+  { id: 'ACTIVE', label: 'Active' },
+  { id: 'ADMINS', label: 'Admins & Staff' },
 ];
 
 const MOCK_USERS = [
@@ -132,7 +130,6 @@ export default function AdminUsers() {
   // Inspector / Edit Profile modal
   const [inspectUser, setInspectUser] = useState<any | null>(null);
   const [editRole, setEditRole] = useState<'USER' | 'MODERATOR' | 'ADMIN'>('USER');
-  const [editVerified, setEditVerified] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const load = useCallback(async () => {
@@ -140,8 +137,6 @@ export default function AdminUsers() {
     try {
       const params: any = { skip, take: 20, q: search || undefined };
       if (filter === 'ACTIVE') params.status = 'active';
-      if (filter === 'SUSPENDED') params.status = 'blocked';
-      if (filter === 'VERIFIED') params.isVerified = true;
       if (filter === 'ADMINS') params.role = 'ADMIN';
 
       const res = await adminApiClient.get('/admin-panel/users', { params }).catch(() => null);
@@ -152,8 +147,6 @@ export default function AdminUsers() {
         // Fallback to local mock data for testing/demo
         let list = [...MOCK_USERS];
         if (filter === 'ACTIVE') list = list.filter((u) => u.isActive && !u.isBanned);
-        if (filter === 'SUSPENDED') list = list.filter((u) => u.isBanned || !u.isActive);
-        if (filter === 'VERIFIED') list = list.filter((u) => u.isVerified);
         if (filter === 'ADMINS') list = list.filter((u) => u.role === 'ADMIN' || u.role === 'MODERATOR');
         if (search) {
           const q = search.toLowerCase();
@@ -183,16 +176,13 @@ export default function AdminUsers() {
   // Stats calculation
   const statsOverview = useMemo(() => {
     const totalCount = total || users.length;
-    const verifiedCount = users.filter((u) => u.isVerified).length;
-    const suspendedCount = users.filter((u) => u.isBanned).length;
     const activeCount = users.filter((u) => u.isActive && !u.isBanned).length;
-    return { totalCount, verifiedCount, suspendedCount, activeCount };
+    return { totalCount, activeCount };
   }, [users, total]);
 
   const openInspector = (u: any) => {
     setInspectUser(u);
     setEditRole(u.role || 'USER');
-    setEditVerified(!!u.isVerified);
   };
 
   const handleSaveUserRoles = async () => {
@@ -201,13 +191,12 @@ export default function AdminUsers() {
     try {
       await adminApiClient.put(`/admin-panel/users/${inspectUser.id}/role`, {
         role: editRole,
-        isVerified: editVerified,
       }).catch(() => null);
 
       // Update local state
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === inspectUser.id ? { ...u, role: editRole, isVerified: editVerified } : u
+          u.id === inspectUser.id ? { ...u, role: editRole } : u
         )
       );
       showToast(`User settings for @${inspectUser.username} updated.`, 'success');
@@ -301,25 +290,6 @@ export default function AdminUsers() {
             </View>
           </View>
 
-          <View style={s.statBox}>
-            <View style={[s.statIconWrap, { backgroundColor: '#FEF9C3' }]}>
-              <Feather name="shield" size={16} color="#D97706" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.statNumber}>{statsOverview.verifiedCount}</Text>
-              <Text style={s.statLabel} numberOfLines={1}>Verified</Text>
-            </View>
-          </View>
-
-          <View style={s.statBox}>
-            <View style={[s.statIconWrap, { backgroundColor: '#FEE2E2' }]}>
-              <Feather name="slash" size={16} color="#DC2626" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.statNumber}>{statsOverview.suspendedCount}</Text>
-              <Text style={s.statLabel} numberOfLines={1}>Suspended</Text>
-            </View>
-          </View>
         </View>
 
         {/* Search & Filter Toolbar */}
@@ -374,9 +344,7 @@ export default function AdminUsers() {
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={s.userNameText} numberOfLines={1}>{u.displayName}</Text>
-                        {u.isVerified && (
-                          <Ionicons name="shield-checkmark" size={14} color="#16A34A" />
-                        )}
+
                       </View>
                       <Text style={s.userHandleText}>@{u.username}</Text>
                     </View>
@@ -493,7 +461,7 @@ export default function AdminUsers() {
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <Text style={s.userNameText} numberOfLines={1}>{u.displayName}</Text>
-                            {u.isVerified && <Ionicons name="shield-checkmark" size={13} color="#16A34A" />}
+
                           </View>
                           <Text style={s.userHandleText}>@{u.username}</Text>
                         </View>
@@ -657,29 +625,6 @@ export default function AdminUsers() {
                       </TouchableOpacity>
                     ))}
                   </View>
-
-                  {/* Verification Toggle */}
-                  <TouchableOpacity
-                    style={[
-                      s.verifyToggleRow,
-                      editVerified && { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
-                    ]}
-                    onPress={() => setEditVerified((prev) => !prev)}
-                  >
-                    <Ionicons
-                      name={editVerified ? 'shield-checkmark' : 'shield-outline'}
-                      size={20}
-                      color={editVerified ? '#16A34A' : C.textMuted}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.verifyTitle, editVerified && { color: '#166534' }]}>
-                        Verified Community Member Badge
-                      </Text>
-                      <Text style={s.verifySub}>
-                        Displays a green verification badge on the user’s posts, directory listings, and matrimony profile.
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
 
                   {/* Modal Action Buttons */}
                   <View style={s.modalActionsRow}>
@@ -847,13 +792,6 @@ const s = StyleSheet.create({
   roleOptionChipActive: { backgroundColor: C.accent, borderColor: C.accent },
   roleOptionText: { fontSize: 12, fontWeight: '700', color: C.textSecond },
   roleOptionTextActive: { color: '#FFF' },
-
-  verifyToggleRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: C.bg, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: C.border, marginTop: 2,
-  },
-  verifyTitle: { fontSize: 12.5, fontWeight: '700', color: C.textPrimary },
-  verifySub: { fontSize: 11, color: C.textMuted, marginTop: 1, lineHeight: 14 },
 
   modalActionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   modalBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },

@@ -101,10 +101,22 @@ export default function AdminMatrimonyProfiles() {
     p.user?.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const FILTER_CHIPS = [
+    { key: 'PENDING',  label: 'Pending',  dot: '#f59e0b' },
+    { key: 'APPROVED', label: 'Approved', dot: '#22c55e' },
+    { key: 'REJECTED', label: 'Rejected', dot: '#ef4444' },
+    { key: 'CHATS',    label: 'Chats' },
+  ] as const;
+
   return (
     <AdminShell title="Matrimony Profiles">
-      {/* Status tabs */}
-      <View style={s.tabs}>
+      {/* Status tabs — horizontally scrollable */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={s.tabsScroll}
+        contentContainerStyle={s.tabsContent}
+      >
         {STATUS_TABS.map(tab => (
           <TouchableOpacity
             key={tab}
@@ -114,11 +126,44 @@ export default function AdminMatrimonyProfiles() {
             <Text style={[s.tabText, activeTab === tab && s.tabTextActive]}>{tab}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
-      <View style={s.toolbar}>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search by name, city, email..." />
-      </View>
+      {/* Mobile search + filter card */}
+      {isMobile ? (
+        <View style={s.filterCard}>
+          <View style={s.searchRow}>
+            <Feather name="search" size={14} color={C.textMuted} style={{ marginRight: 8 }} />
+            <TextInput
+              style={s.searchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search by name, city, email..."
+              placeholderTextColor={C.textMuted}
+            />
+            {search ? (
+              <TouchableOpacity onPress={() => setSearch('')}>
+                <Feather name="x" size={14} color={C.textMuted} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ gap: 8 }}>
+            {FILTER_CHIPS.map(f => (
+              <TouchableOpacity
+                key={f.key}
+                style={[s.chip, activeTab === f.key && s.chipActive]}
+                onPress={() => setActiveTab(f.key)}
+              >
+                {f.dot && <View style={[s.chipDot, { backgroundColor: f.dot }]} />}
+                <Text style={[s.chipText, activeTab === f.key && s.chipTextActive]}>{f.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      ) : (
+        <View style={s.toolbar}>
+          <SearchBar value={search} onChangeText={setSearch} placeholder="Search by name, city, email..." />
+        </View>
+      )}
 
       {loading ? <LoadingOverlay /> : filtered.length === 0 ? (
         <View style={s.card}>
@@ -347,15 +392,71 @@ function ActionBtn({ icon, label, onPress, color, bg }: { icon: any; label: stri
 }
 
 const s = StyleSheet.create({
-  tabs: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  tabsScroll: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    flexGrow: 0,
+  },
+  tabsContent: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
   tab: {
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8,
-    backgroundColor: C.bg, borderWidth: 1, borderColor: C.border,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb',
   },
-  tabActive: { backgroundColor: C.accent, borderColor: C.accent },
-  tabText: { fontSize: 12, fontWeight: '700', color: C.textSecond },
+  tabActive: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
+  tabText: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
   tabTextActive: { color: '#fff' },
   toolbar: { marginBottom: 14 },
+  filterCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 4,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: '#0f172a',
+    paddingVertical: 9,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    gap: 5,
+  },
+  chipActive: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
+  chipDot: { width: 7, height: 7, borderRadius: 4 },
+  chipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  chipTextActive: { color: '#fff' },
   card: {
     backgroundColor: C.white, borderRadius: 12, overflow: 'hidden',
     borderWidth: 1, borderColor: C.border, marginBottom: 20,

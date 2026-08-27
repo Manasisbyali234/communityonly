@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Image, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, Image, ScrollView, Alert, Platform, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import AdminShell from '../../components/admin/AdminShell';
-import { SearchBar, SectionCard, Skeleton, EmptyState, Pagination, ActionBtn, TableRow, T, COL, MobileCard, MobileCardRow, useIsMobile } from '../../components/admin/AdminUI';
+import { SearchBar, SectionCard, Skeleton, EmptyState, Pagination, ActionBtn, TableRow, T, COL, MobileCard, MobileCardRow, useIsMobile, C } from '../../components/admin/AdminUI';
 import { adminApiClient } from '../../api/adminClient';
 import { fmtDate } from '../../utils/adminUtils';
 import { useToastStore } from '../../store/toastStore';
@@ -131,25 +132,76 @@ export default function AdminCommunities() {
     }
   };
 
-  const tabStyle = (active: boolean) => ({
-    paddingHorizontal: 18, paddingVertical: 10, marginRight: 8,
-    borderRadius: 8, backgroundColor: active ? '#6366f1' : 'transparent',
-    borderWidth: 1, borderColor: active ? '#6366f1' : '#e5e7eb',
-  });
-  const tabTextStyle = (active: boolean) => ({ color: active ? '#fff' : '#6b7280', fontWeight: '600' as const, fontSize: 14 });
+  // Mobile filter state
+  const [mobileFilter, setMobileFilter] = useState<'pending' | 'approved_live' | 'all' | 'rejected'>('pending');
+  const [mobileSearch, setMobileSearch] = useState('');
+
+  const MOBILE_FILTERS: { key: typeof mobileFilter; label: string; dot?: string }[] = [
+    { key: 'pending',      label: 'Pending Approval',  dot: '#f59e0b' },
+    { key: 'approved_live', label: 'Approved & Live',  dot: '#22c55e' },
+    { key: 'all',          label: 'All Events' },
+    { key: 'rejected',     label: 'Rejected' },
+  ];
 
   return (
     <AdminShell title="Communities">
-      <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
-        <View style={tabStyle(tab === 'pending')}>
-          <Text style={tabTextStyle(tab === 'pending')} onPress={() => setTab('pending')}>
-            Pending Approvals {pending.length > 0 ? `(${pending.length})` : ''}
+      {/* ── Tabs ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={ms.tabsScroll}
+        contentContainerStyle={ms.tabsContent}
+      >
+        <TouchableOpacity
+          style={[ms.tab, tab === 'pending' && ms.tabActive]}
+          onPress={() => setTab('pending')}
+        >
+          <Text style={[ms.tabText, tab === 'pending' && ms.tabTextActive]}>
+            Pending Approvals{pending.length > 0 ? ` (${pending.length})` : ''}
           </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[ms.tab, tab === 'approved' && ms.tabActive]}
+          onPress={() => setTab('approved')}
+        >
+          <Text style={[ms.tabText, tab === 'approved' && ms.tabTextActive]}>Approved Communities</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* ── Mobile search + filter card ── */}
+      {isMobile && (
+        <View style={ms.filterCard}>
+          {/* Search row */}
+          <View style={ms.searchRow}>
+            <Feather name="search" size={14} color={C.textMuted} style={{ marginRight: 8 }} />
+            <TextInput
+              style={ms.searchInput}
+              value={tab === 'approved' ? q : mobileSearch}
+              onChangeText={tab === 'approved' ? setQ : setMobileSearch}
+              placeholder="Search events by title, venue, or community"
+              placeholderTextColor={C.textMuted}
+            />
+            {(tab === 'approved' ? q : mobileSearch) ? (
+              <TouchableOpacity onPress={() => tab === 'approved' ? setQ('') : setMobileSearch('')}>
+                <Feather name="x" size={14} color={C.textMuted} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {/* Filter chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ gap: 8 }}>
+            {MOBILE_FILTERS.map((f) => (
+              <TouchableOpacity
+                key={f.key}
+                style={[ms.chip, mobileFilter === f.key && ms.chipActive]}
+                onPress={() => setMobileFilter(f.key)}
+              >
+                {f.dot && <View style={[ms.chipDot, { backgroundColor: f.dot }]} />}
+                <Text style={[ms.chipText, mobileFilter === f.key && ms.chipTextActive]}>{f.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
-        <View style={tabStyle(tab === 'approved')}>
-          <Text style={tabTextStyle(tab === 'approved')} onPress={() => setTab('approved')}>Approved Communities</Text>
-        </View>
-      </View>
+      )}
 
       {tab === 'pending' && (
         <SectionCard>
@@ -232,9 +284,11 @@ export default function AdminCommunities() {
 
       {tab === 'approved' && (
         <SectionCard>
-          <View style={T.toolbar}>
-            <SearchBar value={q} onChangeText={setQ} placeholder="Search communities…" />
-          </View>
+          {!isMobile && (
+            <View style={T.toolbar}>
+              <SearchBar value={q} onChangeText={setQ} placeholder="Search communities…" />
+            </View>
+          )}
 
           {isMobile ? (
             <View style={{ padding: 12 }}>
@@ -315,3 +369,96 @@ export default function AdminCommunities() {
     </AdminShell>
   );
 }
+
+const ms = StyleSheet.create({
+  tabsScroll: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    flexGrow: 0,
+  },
+  tabsContent: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+  },
+  tabActive: {
+    backgroundColor: '#6366f1',
+    borderColor: '#6366f1',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  tabTextActive: {
+    color: '#fff',
+  },
+  filterCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 4,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: '#0f172a',
+    paddingVertical: 9,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    gap: 5,
+  },
+  chipActive: {
+    backgroundColor: '#6366f1',
+    borderColor: '#6366f1',
+  },
+  chipDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  chipTextActive: {
+    color: '#fff',
+  },
+});

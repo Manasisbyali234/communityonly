@@ -131,11 +131,13 @@ function CompanyCard({ employer, onPress }: { employer: Employer; onPress?: () =
         </View>
 
         {/* Bio / Description */}
-        {employer.description ? (
-          <Text style={styles.description} numberOfLines={2}>
-            {employer.description}
-          </Text>
-        ) : null}
+        <View style={styles.descriptionArea}>
+          {employer.description ? (
+            <Text style={styles.description} numberOfLines={2}>
+              {employer.description}
+            </Text>
+          ) : null}
+        </View>
 
         {/* Footer */}
         <View style={styles.cardFooter}>
@@ -469,13 +471,17 @@ const styles = StyleSheet.create({
   },
   tabletGridWrapper: {
     gap: 12,
+    alignItems: 'stretch',
   },
   companyCardWrapper: {
     flex: 1,
+    alignSelf: 'stretch',
   },
 
   // Card Structure
   companyCard: {
+    flex: 1,
+    flexDirection: 'column',
     backgroundColor: CARD,
     borderRadius: 14,
     padding: 14,
@@ -491,7 +497,14 @@ const styles = StyleSheet.create({
       android: {
         elevation: 1.5,
       },
+      web: {
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+      },
     }),
+  },
+  descriptionArea: {
+    flex: 1,
+    minHeight: 36,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -563,7 +576,6 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: TEXT_SECONDARY,
     lineHeight: 18,
-    marginBottom: 10,
   },
 
   // Card Footer & Badges
@@ -571,6 +583,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 10,
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: BORDER,
