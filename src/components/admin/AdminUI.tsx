@@ -192,10 +192,10 @@ export function EmptyState({ message = 'No records found' }: { message?: string 
   );
 }
 const es = StyleSheet.create({
-  wrap: { alignItems: 'center', paddingVertical: 60 },
+  wrap: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 24 },
   iconWrap: { marginBottom: 12 },
-  title: { color: C.textPrimary, fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  text: { color: C.textMuted, fontSize: 13 },
+  title: { color: C.textPrimary, fontSize: 15, fontWeight: '700', marginBottom: 4, textAlign: 'center' },
+  text: { color: C.textMuted, fontSize: 13, textAlign: 'center', maxWidth: 260 },
 });
 
 // ── Pagination ────────────────────────────────────────────────────────────────

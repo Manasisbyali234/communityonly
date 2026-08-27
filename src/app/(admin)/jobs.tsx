@@ -94,11 +94,11 @@ export default function AdminJobs() {
     <AdminShell title="Jobs">
       {/* ── Toolbar ── */}
       <View style={[s.toolbar, isMobile && s.toolbarMobile]}>
-        <View style={s.searchWrap}>
+        <View style={[s.searchWrap, isMobile && { minWidth: 0 }]}>
           <SearchBar value={search} onChangeText={setSearch} placeholder="Search companies..." />
         </View>
         <View style={[s.btnRow, isMobile && s.btnRowMobile]}>
-          <TouchableOpacity style={s.outlineBtn} onPress={() => router.push('/(admin)/employers' as any)}>
+          <TouchableOpacity style={[s.outlineBtn, isMobile && { flex: 1 }]} onPress={() => router.push('/(admin)/employers' as any)}>
             <Feather name="briefcase" size={14} color={C.accent} />
             <Text style={s.outlineBtnText} numberOfLines={1}>Manage Employers</Text>
           </TouchableOpacity>
@@ -281,7 +281,7 @@ const s = StyleSheet.create({
   btnRowMobile: {
     flexDirection: 'row',
     gap: 8,
-    alignItems: 'center',
+    alignItems: 'stretch',
     flexShrink: 0,
   },
 
@@ -289,6 +289,7 @@ const s = StyleSheet.create({
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
     backgroundColor: C.accent,
     paddingHorizontal: 14,
@@ -300,6 +301,7 @@ const s = StyleSheet.create({
   outlineBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -307,7 +309,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.accent,
     backgroundColor: C.bg,
-    flexShrink: 1,
+    flex: 1,
     minWidth: 0,
   },
   outlineBtnText: { color: C.accent, fontWeight: '700', fontSize: 13, flexShrink: 1 },
