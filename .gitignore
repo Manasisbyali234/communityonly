@@ -1,0 +1,30 @@
+# @generated expo-cli sync-2b81b286409207a5da26e14c78851eb30d8ccbdb
+expo-env.d.ts
+# @end expo-cli
+
+# Node dependencies
+node_modules/
+
+# Expo files
+.expo/
+dist/
+web-build/
+
+# macOS files
+.DS_Store
+__MACOSX/
+
+# Android build artifacts
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+*.keystore
+!/android/app/*.keystore
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
