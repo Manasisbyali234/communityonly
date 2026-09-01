@@ -227,7 +227,7 @@ export default function JobsScreen() {
           activeOpacity={0.75}
         >
           <Ionicons name="reader-outline" size={15} color={PRIMARY} />
-          <Text style={styles.applicationsBtnText}>My Apps</Text>
+          <Text style={styles.applicationsBtnText}>My Applications</Text>
         </TouchableOpacity>
       </View>
 

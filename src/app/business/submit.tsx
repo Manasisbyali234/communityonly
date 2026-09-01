@@ -153,12 +153,22 @@ function PreviewCard({ data, logoUri, colors, isDark }: { data: Partial<Business
 }
 
 export default function SubmitBusinessScreen() {
-  const { id: editId } = useLocalSearchParams<{ id?: string }>();
+  const { id: editId, from } = useLocalSearchParams<{ id?: string; from?: string }>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const showToast = useToastStore((s) => s.showToast);
+
+  const handleBack = () => {
+    if (from === 'my-businesses') {
+      router.replace('/business/my-businesses' as any);
+    } else if (from === 'directory' || from === 'business-hub') {
+      router.replace('/(tabs)/business' as any);
+    } else {
+      router.replace('/(tabs)/explore?tab=business' as any);
+    }
+  };
 
   const { data: existingBusiness } = useBusinessQuery(editId ?? '');
 
@@ -302,7 +312,8 @@ export default function SubmitBusinessScreen() {
       <View style={[styles.header, { backgroundColor: colors.cardBg, borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
-          onPress={() => router.back()}
+          onPress={handleBack}
+          accessibilityLabel="Go back"
         >
           <Ionicons name="arrow-back" size={19} color={colors.primary} />
         </TouchableOpacity>

@@ -54,16 +54,16 @@ const QUICK_ACTIONS = [
     bg: '#F2FAF2',
     border: '#DCF5DC',
     shadow: '#22C55E',
-    route: '/krushi-mitra',
+    route: '/(tabs)/krushi-mitra',
   },
-    {
+  {
     id: 'recruitment',
     label: 'Jobs',
     image: require('../../../assets/images/quick-actions/recruitment.png'),
     bg: '#F6F3FF',
     border: '#E9E3FE',
     shadow: '#8B5CF6',
-    route: '/jobs',
+    route: '/(tabs)/jobs',
   },
   {
     id: 'matrimony',
@@ -72,7 +72,7 @@ const QUICK_ACTIONS = [
     bg: '#FFF0F3',
     border: '#FDDCE4',
     shadow: '#F43F5E',
-    route: '/matrimony',
+    route: '/(tabs)/matrimony',
   },
   {
     id: 'business',
@@ -81,7 +81,7 @@ const QUICK_ACTIONS = [
     bg: '#F2FAF2',
     border: '#C6E6C6',
     shadow: '#2D6A2D',
-    route: '/business',
+    route: '/(tabs)/business',
   },
   {
     id: 'events',
@@ -99,7 +99,7 @@ const QUICK_ACTIONS = [
     bg: '#FFF1F2',
     border: '#FECDD3',
     shadow: '#E11D48',
-    route: '/community-help',
+    route: '/(tabs)/community-help',
   },
   {
     id: 'our-people',
@@ -108,7 +108,7 @@ const QUICK_ACTIONS = [
     bg: '#FFFBEB',
     border: '#FDE68A',
     shadow: '#D97706',
-    route: '/our-people',
+    route: '/(tabs)/our-people',
   },
 ];
 
@@ -145,6 +145,7 @@ export default function HomeFeed() {
   useNotificationSocket();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [featuredTab, setFeaturedTab] = useState<'communities' | 'our-people'>('communities');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [commentSheetVisible, setCommentSheetVisible] = useState(false);
   const [forwardSheetVisible, setForwardSheetVisible] = useState(false);
@@ -233,28 +234,62 @@ export default function HomeFeed() {
   );
 
   // ── Welcome Banner ───────────────────────────────────────────────────────
-  const renderWelcomeBanner = () => (
-    <View style={[styles.welcomeBanner, { backgroundColor: colors.primaryContainer }]}>
-      <View style={styles.welcomeLeaf1}>
-        <Ionicons name="leaf" size={40} color={colors.primary + '30'} />
+  const renderWelcomeBanner = () => {
+    const communityCountText = `${joinedCommunities.length} ${joinedCommunities.length === 1 ? 'community' : 'communities'}`;
+    const locationText = user?.village || 'Community Member';
+    const professionText = user?.occupation;
+
+    return (
+      <View style={[styles.welcomeBanner, { backgroundColor: colors.primaryContainer }]}>
+        <View style={styles.welcomeLeaf1}>
+          <Ionicons name="leaf" size={40} color={colors.primary + '30'} />
+        </View>
+        <View style={styles.welcomeLeaf2}>
+          <Ionicons name="leaf" size={60} color={colors.primary + '20'} />
+        </View>
+        <View style={styles.welcomeContent}>
+          <View style={styles.welcomeGreetingRow}>
+            <Text style={[styles.welcomeGreeting, { color: colors.primaryDark, fontSize: isSmallScreen ? 14 : 16 }]}>
+              {getGreeting()}, {user?.displayName?.split(' ')[0] || 'Member'} 🙏
+            </Text>
+          </View>
+          <View style={styles.welcomeMetaRow}>
+            <View style={styles.welcomeMetaItem}>
+              <Ionicons name="people-outline" size={12} color={colors.textSecondary} />
+              <Text style={[styles.welcomeSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                {communityCountText}
+              </Text>
+            </View>
+
+            <Text style={[styles.welcomeMetaDot, { color: colors.textMuted }]}>•</Text>
+
+            <View style={styles.welcomeMetaItem}>
+              <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
+              <Text style={[styles.welcomeSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                {locationText}
+              </Text>
+            </View>
+
+            {professionText ? (
+              <>
+                <Text style={[styles.welcomeMetaDot, { color: colors.textMuted }]}>•</Text>
+                <View style={styles.welcomeMetaItem}>
+                  <Ionicons name="briefcase-outline" size={11} color={colors.textSecondary} />
+                  <Text style={[styles.welcomeSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {professionText}
+                  </Text>
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+        <View style={[styles.welcomeTag, { backgroundColor: colors.primary }]}>
+          <Ionicons name="shield-checkmark" size={9.5} color="#FFF" />
+          <Text style={styles.welcomeTagText}>Verified Member</Text>
+        </View>
       </View>
-      <View style={styles.welcomeLeaf2}>
-        <Ionicons name="leaf" size={60} color={colors.primary + '20'} />
-      </View>
-      <View style={styles.welcomeContent}>
-        <Text style={[styles.welcomeGreeting, { color: colors.primaryDark, fontSize: isSmallScreen ? 16 : 20 }]}>
-          {getGreeting()}, {user?.displayName?.split(' ')[0] || 'Member'} 🙏
-        </Text>
-        <Text style={[styles.welcomeSub, { color: colors.textSecondary }]}>
-          {joinedCommunities.length} communities • {user?.village || 'Community Member'}
-        </Text>
-      </View>
-      <View style={[styles.welcomeTag, { backgroundColor: colors.primary }]}>
-        <Ionicons name="shield-checkmark" size={14} color="#FFF" />
-        <Text style={styles.welcomeTagText}>Verified Member</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   // ── Upcoming Events ──────────────────────────────────────────────────────
   const upcomingEvents = useMemo(() =>
@@ -341,184 +376,274 @@ export default function HomeFeed() {
     );
   };
 
-  const renderNewCommunities = () => {
-    const latest = communities.slice(0, 5);
-    if (!latest.length) return null;
+  // ── Communities & Our People (Tabbed Section) ───────────────────────────
+  const renderCommunitiesAndOurPeopleTabs = () => {
+    const latestCommunities = communities.slice(0, 5);
+    const topStories = (publicStories || []).slice(0, 4);
+
+    if (!latestCommunities.length && !topStories.length) return null;
+
     return (
-      <View style={styles.communitySection}>
+      <View style={styles.tabbedSection}>
+        {/* Header Tabs */}
         <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>New Communities</Text>
-            <View style={[styles.sectionBadge, { backgroundColor: colors.primaryContainer }]}>
-              <Text style={[styles.sectionBadgeText, { color: colors.primary }]}>{communities.length}</Text>
-            </View>
+          <View style={styles.tabToggleRow}>
+            {/* Communities Tab */}
+            {latestCommunities.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setFeaturedTab('communities')}
+                activeOpacity={0.75}
+                style={[
+                  styles.tabToggleBtn,
+                  featuredTab === 'communities' && [styles.tabToggleBtnActive, { borderBottomColor: colors.primary }],
+                ]}
+              >
+                <View style={styles.tabTitleWrap}>
+                  <Text
+                    style={[
+                      styles.tabToggleText,
+                      { color: featuredTab === 'communities' ? colors.text : colors.textMuted },
+                      featuredTab === 'communities' && styles.tabToggleTextActive,
+                    ]}
+                  >
+                    Communities
+                  </Text>
+                  <View
+                    style={[
+                      styles.tabSuperBadge,
+                      {
+                        backgroundColor:
+                          featuredTab === 'communities'
+                            ? colors.primaryContainer
+                            : isDark
+                            ? 'rgba(255,255,255,0.08)'
+                            : 'rgba(0,0,0,0.05)',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tabSuperBadgeText,
+                        { color: featuredTab === 'communities' ? colors.primary : colors.textMuted },
+                      ]}
+                    >
+                      {communities.length}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {/* Our People Tab */}
+            {topStories.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setFeaturedTab('our-people')}
+                activeOpacity={0.75}
+                style={[
+                  styles.tabToggleBtn,
+                  featuredTab === 'our-people' && [styles.tabToggleBtnActive, { borderBottomColor: colors.primary }],
+                ]}
+              >
+                <View style={styles.tabTitleWrap}>
+                  <Text
+                    style={[
+                      styles.tabToggleText,
+                      { color: featuredTab === 'our-people' ? colors.text : colors.textMuted },
+                      featuredTab === 'our-people' && styles.tabToggleTextActive,
+                    ]}
+                  >
+                    Our People
+                  </Text>
+                  <View
+                    style={[
+                      styles.tabSuperBadge,
+                      {
+                        backgroundColor:
+                          featuredTab === 'our-people'
+                            ? colors.primaryContainer
+                            : isDark
+                            ? 'rgba(255,255,255,0.08)'
+                            : 'rgba(0,0,0,0.05)',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tabSuperBadgeText,
+                        { color: featuredTab === 'our-people' ? colors.primary : colors.textMuted },
+                      ]}
+                    >
+                      {topStories.length}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/communities' as any)} activeOpacity={0.7} style={styles.seeAllBtn}>
-            <Text style={[styles.seeAllText, { color: colors.primary }]}>See all</Text>
+
+          {/* Action on right (See all / View all) */}
+          <TouchableOpacity
+            onPress={() =>
+              router.push(featuredTab === 'communities' ? ('/(tabs)/communities' as any) : ('/(tabs)/our-people' as any))
+            }
+            activeOpacity={0.7}
+            style={styles.seeAllBtn}
+          >
+            <Text style={[styles.seeAllText, { color: colors.primary }]}>
+              {featuredTab === 'communities' ? 'See all' : 'View all'}
+            </Text>
             <Ionicons name="chevron-forward" size={14} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.communityCardsScroll}>
-          {latest.map((community: any) => {
-            const memberCount = community.membersCount ?? community.memberCount ?? 0;
-            const memberText = memberCount === 1 ? '1 member' : `${memberCount.toLocaleString()} members`;
-            const isJoined = !!community.isJoined;
-            const isPending = community.memberStatus === 'PENDING';
+        {/* Tab 1: Communities Content */}
+        {featuredTab === 'communities' && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.communityCardsScroll}>
+            {latestCommunities.map((community: any) => {
+              const memberCount = community.membersCount ?? community.memberCount ?? 0;
+              const memberText = memberCount === 1 ? '1 member' : `${memberCount.toLocaleString()} members`;
+              const isJoined = !!community.isJoined;
+              const isPending = community.memberStatus === 'PENDING';
 
-            return (
+              return (
+                <TouchableOpacity
+                  key={community.id}
+                  onPress={() => router.push(`/(tabs)/community/${community.id}` as any)}
+                  activeOpacity={0.88}
+                  style={[
+                    styles.communityCard,
+                    {
+                      width: Math.min(285, screenWidth * 0.78),
+                      backgroundColor: colors.surface,
+                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    },
+                  ]}
+                >
+                  {/* Banner with smooth overlay */}
+                  <View style={styles.communityBannerWrap}>
+                    {community.bannerUrl ? (
+                      <Image source={{ uri: community.bannerUrl }} style={styles.communityBanner} contentFit="cover" transition={200} />
+                    ) : (
+                      <LinearGradient
+                        colors={[colors.primaryLight + '40', colors.primaryContainer]}
+                        style={styles.communityBanner}
+                      >
+                        <Ionicons name="people" size={32} color={colors.primary + '60'} />
+                      </LinearGradient>
+                    )}
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.35)']}
+                      style={styles.communityBannerScrim}
+                    />
+                  </View>
+
+                  {/* Overlapping Avatar */}
+                  <View style={[styles.communityAvatarWrap, { borderColor: colors.surface }]}>
+                    <Avatar url={community.avatarUrl} name={community.name} size={46} />
+                  </View>
+
+                  {/* Body Content */}
+                  <View style={styles.communityBody}>
+                    <Text numberOfLines={1} style={[styles.communityName, { color: colors.text }]}>
+                      {community.name}
+                    </Text>
+
+                    <View style={styles.communityMetaRow}>
+                      <Ionicons name="people-outline" size={12} color={colors.textMuted} />
+                      <Text style={[styles.communityMetaText, { color: colors.textSecondary }]}>
+                        {memberText}
+                      </Text>
+                      <Text style={[styles.communityMetaDot, { color: colors.textMuted }]}>•</Text>
+                      <Ionicons name="chatbox-outline" size={11} color={colors.textMuted} />
+                      <Text style={[styles.communityMetaText, { color: colors.textSecondary }]}>
+                        {(community.postsCount ?? 0).toLocaleString()} posts
+                      </Text>
+                    </View>
+
+                    <Text numberOfLines={2} style={[styles.communityDescription, { color: colors.textMuted }]}>
+                      {community.description || 'Connect and engage with members in this community.'}
+                    </Text>
+
+                    {/* Footer Action Buttons */}
+                    <View style={styles.communityFooter}>
+                      <Button
+                        title={isJoined ? 'Joined' : isPending ? 'Pending' : 'Join'}
+                        icon={isJoined ? 'checkmark-circle' : isPending ? 'time' : 'add'}
+                        variant={isJoined || isPending ? 'secondary' : 'primary'}
+                        size="sm"
+                        loading={joinCommunityMutation.isPending && (joinCommunityMutation.variables as any)?.communityId === community.id}
+                        disabled={isPending}
+                        onPress={() => {
+                          if (!isPending) {
+                            joinCommunityMutation.mutate({ communityId: community.id, isJoined });
+                          }
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <Button
+                        title="View Group"
+                        icon="people-outline"
+                        variant="secondary"
+                        size="sm"
+                        onPress={() => router.push(`/(tabs)/community/${community.id}` as any)}
+                        style={{ flex: 1 }}
+                      />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        {/* Tab 2: Our People Content */}
+        {featuredTab === 'our-people' && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ourPeopleScroll}>
+            {topStories.map((story) => (
               <TouchableOpacity
-                key={community.id}
-                onPress={() => router.push(`/(tabs)/community/${community.id}` as any)}
+                key={story.id}
+                onPress={() => router.push(`/our-people/${story.id}` as any)}
                 activeOpacity={0.88}
                 style={[
-                  styles.communityCard,
+                  styles.ourPeopleCard,
                   {
-                    width: Math.min(285, screenWidth * 0.78),
+                    width: Math.min(260, screenWidth * 0.72),
                     backgroundColor: colors.surface,
                     borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                   },
                 ]}
               >
-                {/* Banner with smooth overlay */}
-                <View style={styles.communityBannerWrap}>
-                  {community.bannerUrl ? (
-                    <Image source={{ uri: community.bannerUrl }} style={styles.communityBanner} contentFit="cover" transition={200} />
-                  ) : (
-                    <LinearGradient
-                      colors={[colors.primaryLight + '40', colors.primaryContainer]}
-                      style={styles.communityBanner}
-                    >
-                      <Ionicons name="people" size={32} color={colors.primary + '60'} />
-                    </LinearGradient>
-                  )}
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.35)']}
-                    style={styles.communityBannerScrim}
-                  />
-                </View>
-
-                {/* Overlapping Avatar */}
-                <View style={[styles.communityAvatarWrap, { borderColor: colors.surface }]}>
-                  <Avatar url={community.avatarUrl} name={community.name} size={46} />
-                </View>
-
-                {/* Body Content */}
-                <View style={styles.communityBody}>
-                  <Text numberOfLines={1} style={[styles.communityName, { color: colors.text }]}>
-                    {community.name}
-                  </Text>
-
-                  <View style={styles.communityMetaRow}>
-                    <Ionicons name="people-outline" size={12} color={colors.textMuted} />
-                    <Text style={[styles.communityMetaText, { color: colors.textSecondary }]}>
-                      {memberText}
-                    </Text>
-                    <Text style={[styles.communityMetaDot, { color: colors.textMuted }]}>•</Text>
-                    <Ionicons name="chatbox-outline" size={11} color={colors.textMuted} />
-                    <Text style={[styles.communityMetaText, { color: colors.textSecondary }]}>
-                      {(community.postsCount ?? 0).toLocaleString()} posts
-                    </Text>
+                <View style={styles.ourPeopleImageWrap}>
+                  <Image source={{ uri: story.featuredImage }} style={styles.ourPeopleImage} contentFit="cover" />
+                  <View style={styles.ourPeopleCatTag}>
+                    <Text style={styles.ourPeopleCatText}>{story.category}</Text>
                   </View>
-
-                  <Text numberOfLines={2} style={[styles.communityDescription, { color: colors.textMuted }]}>
-                    {community.description || 'Connect and engage with members in this community.'}
+                </View>
+                <View style={styles.ourPeopleBody}>
+                  <Text style={[styles.ourPeopleTitle, { color: colors.text }]} numberOfLines={2}>
+                    {story.title}
                   </Text>
-
-                  {/* Footer Action Buttons */}
-                  <View style={styles.communityFooter}>
-                    <Button
-                      title={isJoined ? 'Joined' : isPending ? 'Pending' : 'Join'}
-                      icon={isJoined ? 'checkmark-circle' : isPending ? 'time' : 'add'}
-                      variant={isJoined || isPending ? 'secondary' : 'primary'}
-                      size="sm"
-                      loading={joinCommunityMutation.isPending && (joinCommunityMutation.variables as any)?.communityId === community.id}
-                      disabled={isPending}
-                      onPress={() => {
-                        if (!isPending) {
-                          joinCommunityMutation.mutate({ communityId: community.id, isJoined });
-                        }
-                      }}
-                      style={{ flex: 1 }}
-                    />
-                    <Button
-                      title="View Group"
-                      variant="secondary"
-                      size="sm"
-                      onPress={() => router.push(`/(tabs)/community/${community.id}` as any)}
-                      style={{ flex: 1 }}
-                    />
+                  <View style={styles.ourPeopleFooterRow}>
+                    <View style={styles.ourPeopleInfoCol}>
+                      <Text style={[styles.ourPeoplePerson, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {story.personName} · {story.profession}
+                      </Text>
+                      <View style={styles.ourPeopleTimeRow}>
+                        <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+                        <Text style={[styles.ourPeopleReadTime, { color: colors.textMuted }]}>
+                          {story.readTimeMinutes} min read
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[styles.ourPeopleCTABadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : colors.primaryContainer }]}>
+                      <Text style={[styles.ourPeopleCTA, { color: colors.primary }]}>Read Story →</Text>
+                    </View>
                   </View>
                 </View>
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  // ── Our People Stories ───────────────────────────────────────────────────
-  const renderOurPeopleSection = () => {
-    const topStories = (publicStories || []).slice(0, 4);
-    if (!topStories.length) return null;
-
-    return (
-      <View style={styles.ourPeopleSection}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Our People</Text>
-            <View style={[styles.sectionBadge, { backgroundColor: colors.primaryContainer }]}>
-              <Text style={[styles.sectionBadgeText, { color: colors.primary }]}>{topStories.length}</Text>
-            </View>
-          </View>
-          <TouchableOpacity onPress={() => router.push('/our-people' as any)} activeOpacity={0.7} style={styles.seeAllBtn}>
-            <Text style={[styles.seeAllText, { color: colors.primary }]}>View All</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <Text style={[styles.ourPeopleSub, { color: colors.textMuted }]}>
-          Stories that inspire our community
-        </Text>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ourPeopleScroll}>
-          {topStories.map((story) => (
-            <TouchableOpacity
-              key={story.id}
-              onPress={() => router.push(`/our-people/${story.id}` as any)}
-              activeOpacity={0.88}
-              style={[
-                styles.ourPeopleCard,
-                {
-                  width: Math.min(260, screenWidth * 0.72),
-                  backgroundColor: colors.surface,
-                  borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                },
-              ]}
-            >
-              <View style={styles.ourPeopleImageWrap}>
-                <Image source={{ uri: story.featuredImage }} style={styles.ourPeopleImage} contentFit="cover" />
-                <View style={styles.ourPeopleCatTag}>
-                  <Text style={styles.ourPeopleCatText}>{story.category}</Text>
-                </View>
-              </View>
-              <View style={styles.ourPeopleBody}>
-                <Text style={[styles.ourPeopleTitle, { color: colors.text }]} numberOfLines={2}>
-                  {story.title}
-                </Text>
-                <Text style={[styles.ourPeoplePerson, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {story.personName} · {story.profession}
-                </Text>
-                <View style={styles.ourPeopleFooter}>
-                  <Text style={[styles.ourPeopleReadTime, { color: colors.textMuted }]}>
-                    {story.readTimeMinutes} min read
-                  </Text>
-                  <Text style={[styles.ourPeopleCTA, { color: colors.primary }]}>Read Story →</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+            ))}
+          </ScrollView>
+        )}
       </View>
     );
   };
@@ -526,8 +651,13 @@ export default function HomeFeed() {
   // ── Quick Actions ────────────────────────────────────────────────────────
   const renderQuickActions = () => (
     <View style={styles.quickActionsSection}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
-      <View style={styles.quickActionsGrid}>
+      <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 14 }]}>Quick Actions</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.quickActionsScroll}
+        style={styles.quickActionsScrollView}
+      >
         {QUICK_ACTIONS.map((action) => (
           <TouchableOpacity
             key={action.id}
@@ -542,8 +672,8 @@ export default function HomeFeed() {
                   backgroundColor: action.bg,
                   borderColor: action.border,
                   shadowColor: action.shadow,
-                  width: isSmallScreen ? 56 : 64,
-                  height: isSmallScreen ? 56 : 64,
+                  width: isSmallScreen ? 56 : 62,
+                  height: isSmallScreen ? 56 : 62,
                 },
               ]}
             >
@@ -554,12 +684,12 @@ export default function HomeFeed() {
                 transition={200}
               />
             </View>
-            <Text style={[styles.quickActionLabel, { color: colors.text }]}>
+            <Text style={[styles.quickActionLabel, { color: colors.text }]} numberOfLines={1}>
               {action.label}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 
@@ -571,8 +701,7 @@ export default function HomeFeed() {
         {renderWelcomeBanner()}
         {renderQuickActions()}
         {renderUpcomingEvents()}
-        {renderNewCommunities()}
-        {renderOurPeopleSection()}
+        {renderCommunitiesAndOurPeopleTabs()}
         <View style={styles.feedDivider}>
           <Text style={[styles.feedTitle, { color: colors.text }]}>Feed</Text>
           <TouchableOpacity onPress={() => router.push('/(tabs)/explore' as any)}>
@@ -590,14 +719,30 @@ export default function HomeFeed() {
       <View style={[styles.appBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         {/* Logo + Brand */}
         <View style={styles.appBarBrand}>
-          <View style={[styles.logoMark, { backgroundColor: colors.primaryContainer }]}>
-            <Ionicons name="leaf" size={18} color={colors.primary} />
+          <View
+            style={[
+              styles.logoMark,
+              {
+                backgroundColor: '#FFFFFF',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : colors.border,
+                overflow: 'hidden',
+              },
+            ]}
+          >
+            <Image
+              source={require('../../../assets/images/logo.png')}
+              style={styles.logoImg}
+              contentFit="contain"
+            />
           </View>
           <View>
-            <Text style={[styles.appBarTitle, { color: colors.text, fontSize: isSmallScreen ? 15 : 18 }]}>
-              {joinedCommunities[0]?.name ?? 'Community'}
+            <Text style={[styles.appBarTitle, { color: colors.text, fontSize: isSmallScreen ? 15 : 17 }]}>
+              Gowda Sangama
             </Text>
-
+            <Text style={[styles.appBarSub, { color: colors.textMuted }]}>
+              Connecting Our People
+            </Text>
           </View>
         </View>
 
@@ -615,7 +760,7 @@ export default function HomeFeed() {
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.push('/chat')}
+            onPress={() => router.push('/(tabs)/chat' as any)}
             style={[styles.appBarBtn, { backgroundColor: colors.elevation1 }]}
           >
             <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.text} />
@@ -720,11 +865,18 @@ const styles = StyleSheet.create({
   },
   appBarBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   logoMark: {
-    width: 36, height: 36, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  appBarTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
-  appBarSub: { fontSize: 12, fontWeight: '500', marginTop: 1 },
+  logoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  appBarTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  appBarSub: { fontSize: 11, fontWeight: '500', marginTop: 1 },
   appBarActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   appBarBtn: {
     width: 40, height: 40, borderRadius: 20,
@@ -744,9 +896,8 @@ const styles = StyleSheet.create({
   // ── Stories ──────────────────────────────────────────────────────────────
   storiesContainer: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    marginHorizontal: -12,
     marginTop: -8,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   storiesScroll: { paddingHorizontal: 16, paddingVertical: 12, gap: 14 },
   feedHeaderContent: { paddingHorizontal: 16 },
@@ -782,26 +933,54 @@ const styles = StyleSheet.create({
   welcomeLeaf1: { position: 'absolute', top: -8, right: 20 },
   welcomeLeaf2: { position: 'absolute', bottom: -16, left: -10 },
   welcomeContent: { position: 'relative', zIndex: 1 },
-  welcomeGreeting: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3, marginBottom: 4 },
-  welcomeSub: { fontSize: 13, fontWeight: '500' },
-  welcomeTag: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20, marginTop: 12,
+  welcomeGreetingRow: { paddingRight: 96, marginBottom: 4 },
+  welcomeGreeting: { fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  welcomeMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    gap: 5,
+    marginTop: 2,
   },
-  welcomeTagText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  welcomeMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3.5,
+    flexShrink: 1,
+  },
+  welcomeMetaDot: {
+    fontSize: 11,
+  },
+  welcomeSub: { fontSize: 11.5, fontWeight: '500' },
+  welcomeTag: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 8,
+  },
+  welcomeTagText: { color: '#FFF', fontSize: 9, fontWeight: '700', includeFontPadding: false },
 
   // ── Quick Actions ────────────────────────────────────────────────────────
   quickActionsSection: { marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.2, marginBottom: 14 },
-  quickActionsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: 8,
+  sectionTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  quickActionsScrollView: { marginHorizontal: -16 },
+  quickActionsScroll: {
+    paddingHorizontal: 16,
+    gap: 12,
+    alignItems: 'flex-start',
   },
-  quickActionItem: { width: '23%', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  quickActionItem: {
+    width: 68,
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 2,
+  },
   quickActionIcon: {
     borderRadius: 22,
     borderWidth: 1.5,
@@ -811,12 +990,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.16,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 5,
       },
       android: {
-        elevation: 3,
+        elevation: 1.5,
       },
     }),
   },
@@ -825,20 +1004,84 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   quickActionLabel: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     textAlign: 'center',
     letterSpacing: -0.2,
     marginTop: 2,
   },
   communitySection: { marginBottom: 20 },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sectionBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+  tabbedSection: { marginTop: 10, marginBottom: 20 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-  sectionBadgeText: { fontSize: 11, fontWeight: '800' },
+  tabToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  tabToggleBtn: {
+    paddingBottom: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabToggleBtnActive: {
+    borderBottomWidth: 2,
+  },
+  tabTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  tabToggleText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  tabToggleTextActive: {
+    fontWeight: '800',
+  },
+  tabSuperBadge: {
+    marginTop: -4,
+    marginLeft: 3,
+    paddingHorizontal: 4.5,
+    paddingVertical: 1,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabSuperBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    lineHeight: 12,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 20,
+    height: 20,
+  },
+  sectionBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 14,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 4 },
   communityCardsScroll: { gap: 14, paddingRight: 4 },
   communityCard: {
@@ -849,12 +1092,12 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 2,
+        elevation: 1,
       },
     }),
   },
@@ -863,15 +1106,21 @@ const styles = StyleSheet.create({
     height: 94,
     position: 'relative',
     overflow: 'hidden',
+    borderTopLeftRadius: 19,
+    borderTopRightRadius: 19,
   },
   communityBanner: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    borderTopLeftRadius: 19,
+    borderTopRightRadius: 19,
   },
   communityBannerScrim: {
     ...StyleSheet.absoluteFill,
+    borderTopLeftRadius: 19,
+    borderTopRightRadius: 19,
   },
   communityAvatarWrap: {
     position: 'absolute',
@@ -883,12 +1132,12 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 2,
       },
       android: {
-        elevation: 3,
+        elevation: 1,
       },
     }),
   },
@@ -935,6 +1184,7 @@ const styles = StyleSheet.create({
   feedDivider: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 10,
     marginBottom: 12,
   },
   feedTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
@@ -946,30 +1196,41 @@ const styles = StyleSheet.create({
   ourPeopleCard: {
     borderRadius: 16, borderWidth: 1, overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
-      android: { elevation: 2 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 4 },
+      android: { elevation: 1 },
     }),
   },
-  ourPeopleImageWrap: { height: 125, position: 'relative' },
-  ourPeopleImage: { width: '100%', height: '100%' },
+  ourPeopleImageWrap: { height: 125, position: 'relative', overflow: 'hidden', borderTopLeftRadius: 15, borderTopRightRadius: 15 },
+  ourPeopleImage: { width: '100%', height: '100%', borderTopLeftRadius: 15, borderTopRightRadius: 15 },
   ourPeopleCatTag: {
     position: 'absolute', top: 8, left: 8,
     backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6,
   },
   ourPeopleCatText: { color: '#FFF', fontSize: 10.5, fontWeight: '700' },
-  ourPeopleBody: { padding: 12, gap: 4 },
+  ourPeopleBody: { padding: 12, gap: 6 },
   ourPeopleTitle: { fontSize: 14, fontWeight: '800', lineHeight: 19 },
-  ourPeoplePerson: { fontSize: 12, marginTop: 2 },
-  ourPeopleFooter: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginTop: 8, paddingTop: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.06)',
+  ourPeopleFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    gap: 8,
   },
-  ourPeopleReadTime: { fontSize: 11 },
-  ourPeopleCTA: { fontSize: 12, fontWeight: '700' },
+  ourPeopleInfoCol: { flex: 1, gap: 2 },
+  ourPeoplePerson: { fontSize: 12, fontWeight: '600' },
+  ourPeopleTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  ourPeopleReadTime: { fontSize: 11, fontWeight: '500' },
+  ourPeopleCTABadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ourPeopleCTA: { fontSize: 11.5, fontWeight: '700' },
 
   // ── Upcoming Events ────────────────────────────────────────────────────────
   eventsSection: { marginBottom: 16 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   seeAllText: { fontSize: 13, fontWeight: '600' },
   eventsScroll: { gap: 12, paddingRight: 4 },
   eventCard: {
@@ -977,13 +1238,13 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#1A2D1A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6 },
-      android: { elevation: 3 },
+      ios: { shadowColor: '#1A2D1A', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+      android: { elevation: 1 },
     }),
   },
-  eventBannerWrap: { height: 130, position: 'relative', backgroundColor: '#E0E0E0' },
-  eventBanner: { width: '100%', height: '100%' },
-  eventBannerOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.22)' },
+  eventBannerWrap: { height: 130, position: 'relative', backgroundColor: '#E0E0E0', overflow: 'hidden', borderTopLeftRadius: 17, borderTopRightRadius: 17 },
+  eventBanner: { width: '100%', height: '100%', borderTopLeftRadius: 17, borderTopRightRadius: 17 },
+  eventBannerOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.22)', borderTopLeftRadius: 17, borderTopRightRadius: 17 },
   eventDateBadge: {
     position: 'absolute', left: 10, bottom: -14,
     width: 44, height: 44, borderRadius: 12,

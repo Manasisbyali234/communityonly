@@ -29,6 +29,17 @@ import { useToastStore } from '../../store/toastStore';
 type FilterTab = 'ALL' | 'UNREAD' | 'REQUESTS';
 type IconCfg = { name: any; color: string; bg: string };
 
+const FILTER_TABS: {
+  id: FilterTab;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { id: 'ALL', label: 'All', icon: 'notifications-outline', activeIcon: 'notifications' },
+  { id: 'UNREAD', label: 'Unread', icon: 'mail-unread-outline', activeIcon: 'mail-unread' },
+  { id: 'REQUESTS', label: 'Requests', icon: 'person-add-outline', activeIcon: 'person-add' },
+];
+
 const ICON_MAP: Record<string, IconCfg> = {
   LIKE:                { name: 'heart',           color: '#EF4444', bg: '#FEE2E2' },
   COMMENT:             { name: 'chatbubble',       color: '#3B82F6', bg: '#DBEAFE' },
@@ -127,7 +138,7 @@ export default function NotificationsScreen() {
       }
       case 'FOLLOW':
       case 'CONNECTION_ACCEPTED':
-        if (actorId) router.push(`/(tabs)/user/${actorId}` as any);
+        if (actorId) router.push(`/(tabs)/user/${actorId}?from=notifications` as any);
         break;
       case 'MESSAGE': {
         const conversationId = item.conversationId || (item.entityType === 'CONVERSATION' ? id : null);
@@ -158,7 +169,7 @@ export default function NotificationsScreen() {
   const handleActorPress = useCallback((item: any) => {
     if (!item.actorId) return;
     if (!item.isRead) markRead.mutate(item.id);
-    router.push(`/(tabs)/user/${item.actorId}` as any);
+    router.push(`/(tabs)/user/${item.actorId}?from=notifications` as any);
   }, [router, markRead]);
 
   const renderItem = ({ item }: { item: any }) => {
@@ -411,12 +422,12 @@ export default function NotificationsScreen() {
 
       {/* Segmented Filter Pills */}
       <View style={[styles.filterBar, { borderBottomColor: colors.border }]}>
-        {(['ALL', 'UNREAD', 'REQUESTS'] as FilterTab[]).map((tab) => {
-          const active = activeFilter === tab;
-          const label = tab === 'ALL' ? 'All' : tab === 'UNREAD' ? 'Unread' : 'Requests';
+        {FILTER_TABS.map((tab) => {
+          const active = activeFilter === tab.id;
+          const iconName = active ? tab.activeIcon : tab.icon;
           return (
             <TouchableOpacity
-              key={tab}
+              key={tab.id}
               style={[
                 styles.filterPill,
                 active
@@ -425,20 +436,26 @@ export default function NotificationsScreen() {
                       styles.filterPillInactive,
                       {
                         backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
-                        borderColor: 'transparent',
+                        borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0',
                       },
                     ],
               ]}
-              onPress={() => setActiveFilter(tab)}
-              activeOpacity={0.7}
+              onPress={() => setActiveFilter(tab.id)}
+              activeOpacity={0.75}
             >
+              <Ionicons
+                name={iconName}
+                size={14}
+                color={active ? '#FFF' : colors.textMuted}
+                style={{ marginRight: 5 }}
+              />
               <Text
                 style={[
                   styles.filterText,
-                  { color: active ? '#FFF' : colors.textMuted, fontWeight: active ? '700' : '600' },
+                  { color: active ? '#FFF' : colors.textSecondary, fontWeight: active ? '700' : '600' },
                 ]}
               >
-                {label}
+                {tab.label}
               </Text>
             </TouchableOpacity>
           );
@@ -551,11 +568,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 13,
+    paddingVertical: 7,
     borderRadius: 20,
+    borderWidth: 1,
   },
-  filterPillActive: {},
+  filterPillActive: {
+    borderColor: 'transparent',
+  },
   filterPillInactive: {},
   filterText: {
     fontSize: 12.5,

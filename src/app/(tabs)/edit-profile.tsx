@@ -8,9 +8,15 @@ import {
   Platform,
   TouchableOpacity,
   Modal,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { Image as ExpoImage } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -51,8 +57,24 @@ export default function EditProfile() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const { user, updateProfile } = useAuthStore();
   const showToast = useToastStore((state) => state.showToast);
+
+  const handleBack = () => {
+    if (from === 'settings' || from === '/(tabs)/settings') {
+      router.replace('/(tabs)/settings' as any);
+    } else if (from === 'profile' || from === '/(tabs)/profile') {
+      router.replace('/(tabs)/profile' as any);
+    } else if (from) {
+      const target = from.startsWith('/') ? from : `/(tabs)/${from}`;
+      router.replace(target as any);
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/profile' as any);
+    }
+  };
 
   const G = colors.primary;
   const BG = colors.background;
@@ -92,6 +114,28 @@ export default function EditProfile() {
   const bioValue = watch('bio') || '';
   const currentLanguages = watch('languages') || '';
   const currentInterests = watch('interests') || '';
+
+  // Accordion state - keep one section expanded at a time
+  const [expandedSection, setExpandedSection] = useState<'basic' | 'roots' | 'interests' | null>('basic');
+
+  const toggleSection = (section: 'basic' | 'roots' | 'interests') => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedSection((prev) => (prev === section ? null : section));
+  };
+
+  // Automatically expand the section with validation errors
+  useEffect(() => {
+    if (errors.displayName || errors.bio) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setExpandedSection('basic');
+    } else if (errors.village || errors.occupation) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setExpandedSection('roots');
+    } else if (errors.languages || errors.interests) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setExpandedSection('interests');
+    }
+  }, [errors]);
 
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
   const [pickedImage, setPickedImage] = useState<PickedImage | null>(null);
@@ -237,7 +281,11 @@ export default function EditProfile() {
       if (avatarUrl) updated.avatarUrl = avatarUrl;
       if (coverImage !== undefined) updated.coverImage = coverImage;
       updateProfile(updated);
-      router.replace('/(tabs)/profile');
+      if (from === 'settings' || from === '/(tabs)/settings') {
+        router.replace('/(tabs)/settings' as any);
+      } else {
+        router.replace('/(tabs)/profile');
+      }
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || 'Failed to update profile. Try again.';
       showToast(msg, 'error');
@@ -257,8 +305,9 @@ export default function EditProfile() {
       {/* ── Top Navbar ──────────────────────────────────────────────── */}
       <View style={[styles.navbar, { paddingTop: insets.top + 6, backgroundColor: SURF, borderBottomColor: BORDER }]}>
         <TouchableOpacity
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')}
+          onPress={handleBack}
           style={styles.navBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="arrow-back" size={22} color={TEXT} />
         </TouchableOpacity>
@@ -334,189 +383,269 @@ export default function EditProfile() {
           </View>
         </View>
 
-        {/* ── Form Section Groups ─────────────────────────────────────── */}
+        {/* ── Form Section Accordion Groups ───────────────────────────── */}
         <View style={styles.formContainer}>
-          {/* Group 1: Basic Identity */}
-          <View style={[styles.formCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="person-outline" size={17} color={G} />
-              <Text style={[styles.cardTitle, { color: TEXT }]}>Basic Details</Text>
-            </View>
-
-            <Controller
-              control={control}
-              name="displayName"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Full Name *"
-                  placeholder="Enter your full name"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  leftIcon="person-outline"
-                  error={errors.displayName?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="bio"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View>
-                  <Input
-                    label="Bio"
-                    placeholder="Share a short bio about yourself..."
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    multiline
-                    numberOfLines={3}
-                    leftIcon="document-text-outline"
-                    error={errors.bio?.message}
-                    containerStyle={{ minHeight: 90 }}
-                  />
-                  <Text style={[styles.charCounter, { color: bioValue.length > 150 ? '#EF4444' : TEXT3 }]}>
-                    {bioValue.length}/160
+          {/* Group 1: Basic Identity Accordion */}
+          <View style={[styles.accordionCard, { backgroundColor: SURF }]}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => toggleSection('basic')}
+              style={styles.accordionHeader}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <View style={[styles.accordionIconWrap, { backgroundColor: G + '15' }]}>
+                  <Ionicons name="person-outline" size={18} color={G} />
+                </View>
+                <View style={styles.accordionTitleWrap}>
+                  <Text style={[styles.accordionTitle, { color: TEXT }]}>Basic Details</Text>
+                  <Text style={[styles.accordionSubtitle, { color: TEXT3 }]} numberOfLines={1}>
+                    {watch('displayName') || user?.displayName || 'Name & Bio'}
                   </Text>
                 </View>
-              )}
-            />
+              </View>
+              <View style={[styles.accordionChevronWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                <Ionicons
+                  name={expandedSection === 'basic' ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={expandedSection === 'basic' ? G : TEXT3}
+                />
+              </View>
+            </TouchableOpacity>
+
+            {expandedSection === 'basic' && (
+              <View style={styles.accordionBody}>
+                <Controller
+                  control={control}
+                  name="displayName"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      label="Full Name *"
+                      placeholder="Enter your full name"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      leftIcon="person-outline"
+                      error={errors.displayName?.message}
+                      containerStyle={styles.fieldItem}
+                    />
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="bio"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <View style={styles.fieldItem}>
+                      <Input
+                        label="Bio"
+                        placeholder="Share a short bio about yourself..."
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        multiline
+                        numberOfLines={3}
+                        leftIcon="document-text-outline"
+                        error={errors.bio?.message}
+                        containerStyle={{ minHeight: 90, marginBottom: 0 }}
+                      />
+                      <Text style={[styles.charCounter, { color: bioValue.length > 150 ? '#EF4444' : TEXT3 }]}>
+                        {bioValue.length}/160
+                      </Text>
+                    </View>
+                  )}
+                />
+              </View>
+            )}
           </View>
 
-          {/* Group 2: Community & Roots */}
-          <View style={[styles.formCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="home-outline" size={17} color={G} />
-              <Text style={[styles.cardTitle, { color: TEXT }]}>Community & Roots</Text>
-            </View>
-
-            <Controller
-              control={control}
-              name="village"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Native Place / Village"
-                  placeholder="e.g. Somwarpet, Kodagu"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  leftIcon="location-outline"
-                  error={errors.village?.message}
+          {/* Group 2: Community & Roots Accordion */}
+          <View style={[styles.accordionCard, { backgroundColor: SURF }]}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => toggleSection('roots')}
+              style={styles.accordionHeader}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <View style={[styles.accordionIconWrap, { backgroundColor: G + '15' }]}>
+                  <Ionicons name="home-outline" size={18} color={G} />
+                </View>
+                <View style={styles.accordionTitleWrap}>
+                  <Text style={[styles.accordionTitle, { color: TEXT }]}>Community & Roots</Text>
+                  <Text style={[styles.accordionSubtitle, { color: TEXT3 }]} numberOfLines={1}>
+                    {[watch('village') || user?.village, watch('occupation') || user?.occupation].filter(Boolean).join(' • ') || 'Native place & profession'}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.accordionChevronWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                <Ionicons
+                  name={expandedSection === 'roots' ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={expandedSection === 'roots' ? G : TEXT3}
                 />
-              )}
-            />
+              </View>
+            </TouchableOpacity>
 
-            <Controller
-              control={control}
-              name="occupation"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Profession / Occupation"
-                  placeholder="e.g. Planter, Software Engineer"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  leftIcon="briefcase-outline"
-                  error={errors.occupation?.message}
+            {expandedSection === 'roots' && (
+              <View style={styles.accordionBody}>
+                <Controller
+                  control={control}
+                  name="village"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      label="Native Place / Village"
+                      placeholder="e.g. Somwarpet, Kodagu"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      leftIcon="location-outline"
+                      error={errors.village?.message}
+                      containerStyle={styles.fieldItem}
+                    />
+                  )}
                 />
-              )}
-            />
+
+                <Controller
+                  control={control}
+                  name="occupation"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      label="Profession / Occupation"
+                      placeholder="e.g. Planter, Software Engineer"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      leftIcon="briefcase-outline"
+                      error={errors.occupation?.message}
+                      containerStyle={styles.fieldItem}
+                    />
+                  )}
+                />
+              </View>
+            )}
           </View>
 
-          {/* Group 3: Languages & Passions */}
-          <View style={[styles.formCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="sparkles-outline" size={17} color={G} />
-              <Text style={[styles.cardTitle, { color: TEXT }]}>Languages & Interests</Text>
-            </View>
-
-            <Controller
-              control={control}
-              name="languages"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View>
-                  <Input
-                    label="Languages Known"
-                    placeholder="e.g. Kannada, English, Kodava"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    leftIcon="language-outline"
-                    error={errors.languages?.message}
-                  />
-                  {/* Quick suggestion tags */}
-                  <View style={styles.suggestionRow}>
-                    <Text style={[styles.suggestionLabel, { color: TEXT3 }]}>Suggestions:</Text>
-                    {LANGUAGE_SUGGESTIONS.map((lang) => (
-                      <TouchableOpacity
-                        key={lang}
-                        onPress={() => handleAddLanguageSuggestion(lang)}
-                        style={[styles.suggestionPill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}
-                      >
-                        <Text style={[styles.suggestionText, { color: TEXT2 }]}>+ {lang}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {currentLanguages ? (
-                    <View style={styles.selectedRow}>
-                      {currentLanguages.split(',').map((language) => language.trim()).filter(Boolean).map((language) => (
-                        <TouchableOpacity key={language} onPress={() => removeLanguage(language)} style={[styles.selectedPill, { backgroundColor: G + '16', borderColor: G + '35' }]} accessibilityLabel={`Remove ${language}`}>
-                          <Text style={[styles.selectedPillText, { color: G }]}>{language}</Text>
-                          <Ionicons name="close-circle" size={16} color={G} />
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : null}
+          {/* Group 3: Languages & Interests Accordion */}
+          <View style={[styles.accordionCard, { backgroundColor: SURF }]}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => toggleSection('interests')}
+              style={styles.accordionHeader}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <View style={[styles.accordionIconWrap, { backgroundColor: G + '15' }]}>
+                  <Ionicons name="sparkles-outline" size={18} color={G} />
                 </View>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="interests"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={{ marginTop: 12 }}>
-                  <Input
-                    label="Interests & Passions"
-                    placeholder="e.g. Agriculture, Community, Sports"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    leftIcon="heart-outline"
-                    error={errors.interests?.message}
-                  />
-                  {/* Quick suggestion tags */}
-                  <View style={styles.suggestionRow}>
-                    <Text style={[styles.suggestionLabel, { color: TEXT3 }]}>Suggestions:</Text>
-                    {INTEREST_SUGGESTIONS.map((interest) => (
-                      <TouchableOpacity
-                        key={interest}
-                        onPress={() => handleAddInterestSuggestion(interest)}
-                        style={[styles.suggestionPill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}
-                      >
-                        <Text style={[styles.suggestionText, { color: TEXT2 }]}>+ {interest}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {currentInterests ? (
-                    <View style={styles.selectedRow}>
-                      {currentInterests.split(',').map((interest) => interest.trim()).filter(Boolean).map((interest) => (
-                        <TouchableOpacity key={interest} onPress={() => removeInterest(interest)} style={[styles.selectedPill, { backgroundColor: G + '16', borderColor: G + '35' }]} accessibilityLabel={`Remove ${interest}`}>
-                          <Text style={[styles.selectedPillText, { color: G }]}>{interest}</Text>
-                          <Ionicons name="close-circle" size={16} color={G} />
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : null}
+                <View style={styles.accordionTitleWrap}>
+                  <Text style={[styles.accordionTitle, { color: TEXT }]}>Languages & Interests</Text>
+                  <Text style={[styles.accordionSubtitle, { color: TEXT3 }]} numberOfLines={1}>
+                    {[
+                      currentLanguages ? `${currentLanguages.split(',').filter(Boolean).length} languages` : '',
+                      currentInterests ? `${currentInterests.split(',').filter(Boolean).length} interests` : '',
+                    ].filter(Boolean).join(' • ') || 'Languages & passions'}
+                  </Text>
                 </View>
-              )}
-            />
+              </View>
+              <View style={[styles.accordionChevronWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                <Ionicons
+                  name={expandedSection === 'interests' ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={expandedSection === 'interests' ? G : TEXT3}
+                />
+              </View>
+            </TouchableOpacity>
+
+            {expandedSection === 'interests' && (
+              <View style={styles.accordionBody}>
+                <Controller
+                  control={control}
+                  name="languages"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <View style={styles.fieldItem}>
+                      <Input
+                        label="Languages Known"
+                        placeholder="e.g. Kannada, English, Kodava"
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        leftIcon="language-outline"
+                        error={errors.languages?.message}
+                        containerStyle={{ marginBottom: 0 }}
+                      />
+                      {/* Quick suggestion tags */}
+                      <View style={styles.suggestionRow}>
+                        <Text style={[styles.suggestionLabel, { color: TEXT3 }]}>Suggestions:</Text>
+                        {LANGUAGE_SUGGESTIONS.map((lang) => (
+                          <TouchableOpacity
+                            key={lang}
+                            onPress={() => handleAddLanguageSuggestion(lang)}
+                            style={[styles.suggestionPill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}
+                          >
+                            <Text style={[styles.suggestionText, { color: TEXT2 }]}>+ {lang}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {currentLanguages ? (
+                        <View style={styles.selectedRow}>
+                          {currentLanguages.split(',').map((language) => language.trim()).filter(Boolean).map((language) => (
+                            <TouchableOpacity key={language} onPress={() => removeLanguage(language)} style={[styles.selectedPill, { backgroundColor: G + '16', borderColor: G + '35' }]} accessibilityLabel={`Remove ${language}`}>
+                              <Text style={[styles.selectedPillText, { color: G }]}>{language}</Text>
+                              <Ionicons name="close-circle" size={16} color={G} />
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="interests"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <View style={styles.fieldItem}>
+                      <Input
+                        label="Interests & Passions"
+                        placeholder="e.g. Agriculture, Community, Sports"
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        leftIcon="heart-outline"
+                        error={errors.interests?.message}
+                        containerStyle={{ marginBottom: 0 }}
+                      />
+                      {/* Quick suggestion tags */}
+                      <View style={styles.suggestionRow}>
+                        <Text style={[styles.suggestionLabel, { color: TEXT3 }]}>Suggestions:</Text>
+                        {INTEREST_SUGGESTIONS.map((interest) => (
+                          <TouchableOpacity
+                            key={interest}
+                            onPress={() => handleAddInterestSuggestion(interest)}
+                            style={[styles.suggestionPill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}
+                          >
+                            <Text style={[styles.suggestionText, { color: TEXT2 }]}>+ {interest}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {currentInterests ? (
+                        <View style={styles.selectedRow}>
+                          {currentInterests.split(',').map((interest) => interest.trim()).filter(Boolean).map((interest) => (
+                            <TouchableOpacity key={interest} onPress={() => removeInterest(interest)} style={[styles.selectedPill, { backgroundColor: G + '16', borderColor: G + '35' }]} accessibilityLabel={`Remove ${interest}`}>
+                              <Text style={[styles.selectedPillText, { color: G }]}>{interest}</Text>
+                              <Ionicons name="close-circle" size={16} color={G} />
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+                />
+              </View>
+            )}
           </View>
 
           {/* ── Main Save Button CTA ─────────────────────────────────── */}
           <Button
-            title="Save Profile Changes"
+            title="Update Changes"
             onPress={handleSubmit(onSubmit)}
             loading={isSubmitting}
             variant="primary"
@@ -685,25 +814,66 @@ const styles = StyleSheet.create({
   // Form Container
   formContainer: {
     paddingHorizontal: 16,
-    gap: 16,
+    gap: 12,
     marginTop: 12,
   },
-  formCard: {
+  accordionCard: {
     borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 16,
-    gap: 12,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+      android: { elevation: 1 },
+    }),
   },
-  cardHeaderRow: {
+  accordionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  cardTitle: {
+  accordionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    paddingRight: 8,
+  },
+  accordionIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accordionTitleWrap: {
+    flex: 1,
+  },
+  accordionTitle: {
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: -0.2,
+  },
+  accordionSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  accordionChevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accordionBody: {
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    paddingBottom: 16,
+    gap: 10,
+  },
+  fieldItem: {
+    marginBottom: 0,
   },
   charCounter: {
     fontSize: 11,

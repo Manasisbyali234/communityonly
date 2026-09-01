@@ -153,7 +153,7 @@ export default function MatrimonyInterestsScreen() {
       <View style={[styles.header, { backgroundColor: colors.primaryDark }]}>
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: 'rgba(255,255,255,0.18)' }]}
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/matrimony' as any))}
         >
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>

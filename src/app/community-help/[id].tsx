@@ -22,7 +22,7 @@ import {
 import { shareUrl } from '../../utils/shareUtils';
 
 export default function HelpRequestDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -130,11 +130,19 @@ export default function HelpRequestDetailScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (from === 'discover' || from === 'explore') {
+      router.replace('/(tabs)/explore?tab=help' as any);
+    } else {
+      router.replace('/(tabs)/community-help' as any);
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <View style={[styles.navbar, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+          <TouchableOpacity onPress={handleBack} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.navTitle, { color: colors.text }]}>Help Request</Text>
@@ -151,7 +159,7 @@ export default function HelpRequestDetailScreen() {
     return (
       <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <View style={[styles.navbar, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+          <TouchableOpacity onPress={handleBack} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.navTitle, { color: colors.text }]}>Help Request</Text>
@@ -175,7 +183,7 @@ export default function HelpRequestDetailScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Navbar */}
       <View style={[styles.navbar, { backgroundColor: colors.cardBg, borderBottomColor: colors.border, paddingTop: insets.top > 0 ? insets.top + 6 : 14 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+        <TouchableOpacity onPress={handleBack} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.navTitle, { color: colors.text }]} numberOfLines={1}>Help Request</Text>
@@ -365,42 +373,42 @@ export default function HelpRequestDetailScreen() {
               ))}
             </View>
           )}
-        </View>
-      </ScrollView>
 
-      {/* Bottom Sticky Action Bar */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.cardBg, borderTopColor: colors.border, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 16 }]}>
-        {isMyRequest ? (
-          request.status !== 'RESOLVED' ? (
-            <TouchableOpacity
-              style={[styles.resolveCTA, { backgroundColor: '#059669' }]}
-              onPress={handleResolve}
-            >
-              <Ionicons name="checkmark-done" size={18} color="#FFF" />
-              <Text style={styles.resolveCTAText}>Mark as Resolved</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.resolvedNote}>
-              <Ionicons name="checkmark-circle" size={16} color="#059669" />
-              <Text style={styles.resolvedNoteText}>This request is closed.</Text>
+          {/* Action Buttons */}
+            <View style={{ marginTop: 18 }}>
+              {isMyRequest ? (
+                request.status !== 'RESOLVED' ? (
+                  <TouchableOpacity
+                    style={[styles.resolveCTA, { backgroundColor: '#059669' }]}
+                    onPress={handleResolve}
+                  >
+                    <Ionicons name="checkmark-done" size={18} color="#FFF" />
+                    <Text style={styles.resolveCTAText}>Mark as Resolved</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.resolvedNote}>
+                    <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                    <Text style={styles.resolvedNoteText}>This request is closed.</Text>
+                  </View>
+                )
+              ) : hasOfferedHelp ? (
+                <View style={styles.alreadyOfferedBar}>
+                  <Ionicons name="checkmark-circle" size={20} color="#059669" />
+                  <Text style={styles.alreadyOfferedText}>You have offered help for this request</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.offerCTA, { backgroundColor: isUrgent ? '#DC2626' : colors.primary }]}
+                  onPress={handleOfferHelpPrompt}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="heart" size={19} color="#FFF" />
+                  <Text style={styles.offerCTAText}>I Can Help</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          )
-        ) : hasOfferedHelp ? (
-          <View style={styles.alreadyOfferedBar}>
-            <Ionicons name="checkmark-circle" size={20} color="#059669" />
-            <Text style={styles.alreadyOfferedText}>You have offered help for this request</Text>
           </View>
-        ) : (
-          <TouchableOpacity
-            style={[styles.offerCTA, { backgroundColor: isUrgent ? '#DC2626' : colors.primary }]}
-            onPress={handleOfferHelpPrompt}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="heart" size={19} color="#FFF" />
-            <Text style={styles.offerCTAText}>I Can Help</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        </ScrollView>
 
       {/* Offer Help Modal */}
       <Modal visible={showOfferModal} transparent animationType="slide" onRequestClose={() => setShowOfferModal(false)}>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, ScrollView, Dimensions, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, ScrollView, Dimensions, useWindowDimensions, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, interpolate, Extrapolation, type SharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import Skeleton from '../../components/feedback/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
+import { useAuthStore } from '../../store/authStore';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -39,19 +40,33 @@ function AnimatedCommunityCard({ scrollY, children }: { scrollY: SharedValue<num
 }
 
 export default function CommunitiesDirectory() {
-  const { colors, spacing, typography, roundness } = useTheme();
+  const { colors, spacing, typography, roundness, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const currentUser = useAuthStore((s) => s.user);
 
   const { data: communities = [], isLoading } = useCommunitiesQuery();
   const { data: myRequests = [] } = useMyCommunitiesRequestsQuery();
   const joinMutation = useJoinCommunityMutation();
   const showToast = useToastStore((state) => state.showToast);
 
+  const [commSubTab, setCommSubTab] = useState<'all' | 'my'>('all');
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const scrollY = useSharedValue(0);
+
+  const isMyCommunity = (c: any) => {
+    return !!(
+      c.isJoined ||
+      (currentUser?.id && (c.creatorId === currentUser.id || c.ownerId === currentUser.id)) ||
+      (c.role && ['ADMIN', 'MODERATOR', 'MEMBER'].includes(c.role))
+    );
+  };
+
+  const myCommunitiesList = communities.filter(isMyCommunity);
+  const myCommunitiesCount = myCommunitiesList.length;
+  const allCommunitiesCount = communities.length;
 
   const CATEGORIES = ['All', ...Array.from(new Set(communities.map((c) => c.category).filter(Boolean)))];
 
@@ -84,6 +99,11 @@ export default function CommunitiesDirectory() {
   };
 
   const filteredCommunities = communities.filter((c) => {
+    // Sub-tab filter
+    if (commSubTab === 'my' && !isMyCommunity(c)) {
+      return false;
+    }
+
     // Category Filter
     if (selectedCategory !== 'All' && c.category.toLowerCase() !== selectedCategory.toLowerCase()) {
       return false;
@@ -155,6 +175,7 @@ export default function CommunitiesDirectory() {
           />
           <Button
             title="View Group"
+            icon="people-outline"
             variant="secondary"
             size="sm"
             onPress={() => router.push(`/community/${item.id}`)}
@@ -189,8 +210,8 @@ export default function CommunitiesDirectory() {
         <View style={styles.headerBrand}>
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: colors.primaryContainer }]}
-            onPress={() => router.replace('/' as any)}
-            accessibilityLabel="Go to Home"
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
+            accessibilityLabel="Go back"
           >
             <Ionicons name="arrow-back" size={18} color={colors.primary} />
           </TouchableOpacity>
@@ -256,6 +277,101 @@ export default function CommunitiesDirectory() {
         </View>
       </View>
 
+      {/* Sub Tabs Segmented Control */}
+      <View style={styles.segmentWrap}>
+        <View style={[styles.segmentContainer, { backgroundColor: isDark ? colors.elevation1 : '#F1F5F9' }]}>
+          <TouchableOpacity
+            style={[
+              styles.segmentBtn,
+              commSubTab === 'all' && [styles.segmentBtnActive, { backgroundColor: colors.primary }],
+            ]}
+            onPress={() => setCommSubTab('all')}
+            activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: commSubTab === 'all' }}
+          >
+            <Ionicons
+              name={commSubTab === 'all' ? 'globe' : 'globe-outline'}
+              size={15}
+              color={commSubTab === 'all' ? '#FFF' : colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                {
+                  color: commSubTab === 'all' ? '#FFF' : colors.textSecondary,
+                  fontWeight: commSubTab === 'all' ? '700' : '600',
+                },
+              ]}
+            >
+              All communities
+            </Text>
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor: commSubTab === 'all' ? 'rgba(255, 255, 255, 0.25)' : isDark ? colors.elevation2 : '#E2E8F0',
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: commSubTab === 'all' ? '#FFF' : colors.textSecondary },
+                ]}
+              >
+                {allCommunitiesCount}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.segmentBtn,
+              commSubTab === 'my' && [styles.segmentBtnActive, { backgroundColor: colors.primary }],
+            ]}
+            onPress={() => setCommSubTab('my')}
+            activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: commSubTab === 'my' }}
+          >
+            <Ionicons
+              name={commSubTab === 'my' ? 'people' : 'people-outline'}
+              size={15}
+              color={commSubTab === 'my' ? '#FFF' : colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                {
+                  color: commSubTab === 'my' ? '#FFF' : colors.textSecondary,
+                  fontWeight: commSubTab === 'my' ? '700' : '600',
+                },
+              ]}
+            >
+              My communities
+            </Text>
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor: commSubTab === 'my' ? 'rgba(255, 255, 255, 0.25)' : isDark ? colors.elevation2 : '#E2E8F0',
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: commSubTab === 'my' ? '#FFF' : colors.textSecondary },
+                ]}
+              >
+                {myCommunitiesCount}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Categories Filter Pills */}
       <View style={styles.categoriesContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
@@ -304,15 +420,31 @@ export default function CommunitiesDirectory() {
           ListEmptyComponent={() => (
             <View style={[styles.emptyContainer, { backgroundColor: colors.cardBg, borderColor: colors.borderSecondary }]}>
               <View style={[styles.emptyIcon, { backgroundColor: colors.primaryContainer }]}>
-                <Ionicons name="people-outline" size={30} color={colors.primary} />
+                <Ionicons name={commSubTab === 'my' ? 'people-outline' : 'people-outline'} size={30} color={colors.primary} />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No communities found</Text>
-              <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: typography.sizes.sm }]}>
-                Try another search or create a space for your community.
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                {commSubTab === 'my' ? 'No Joined Communities Yet' : 'No communities found'}
               </Text>
-              <TouchableOpacity onPress={() => router.push('/create/community' as any)} style={[styles.emptyAction, { backgroundColor: colors.primary }]}>
-                <Ionicons name="add" size={18} color="#fff" />
-                <Text style={styles.emptyActionText}>Create community</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: typography.sizes.sm }]}>
+                {commSubTab === 'my'
+                  ? "You haven't joined any communities yet. Discover and join communities that interest you!"
+                  : 'Try another search or create a space for your community.'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (commSubTab === 'my') {
+                    setCommSubTab('all');
+                    setSelectedCategory('All');
+                  } else {
+                    router.push('/create/community' as any);
+                  }
+                }}
+                style={[styles.emptyAction, { backgroundColor: colors.primary }]}
+              >
+                <Ionicons name={commSubTab === 'my' ? 'compass-outline' : 'add'} size={18} color="#fff" />
+                <Text style={styles.emptyActionText}>
+                  {commSubTab === 'my' ? 'Explore All Communities' : 'Create community'}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -412,6 +544,10 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: 'hidden',
     marginBottom: 20,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 3 },
+      android: { elevation: 1 },
+    }),
   },
   communityCardWide: { maxWidth: 680, alignSelf: 'center', width: '100%' },
   bannerContainer: {
@@ -493,4 +629,49 @@ const styles = StyleSheet.create({
   },
   emptyAction: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 10, marginTop: 18, paddingHorizontal: 14, paddingVertical: 10 },
   emptyActionText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+
+  // Sub Tabs Segmented Control
+  segmentWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  segmentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 3,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 9,
+    gap: 6,
+  },
+  segmentBtnActive: {
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.12,
+        shadowRadius: 3,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  segmentText: {
+    fontSize: 13,
+  },
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 10,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });

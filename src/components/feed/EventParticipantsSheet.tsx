@@ -43,7 +43,7 @@ export default function EventParticipantsSheet({
 
   const handleUserPress = (userId: string) => {
     onClose();
-    router.push(`/user/${userId}` as any);
+    router.push(`/user/${userId}?from=events` as any);
   };
 
   return (

@@ -28,8 +28,8 @@ import Button from '../components/common/Button';
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const SERVICES = [
-  { id: 'tractor',    icon: 'construct-outline',     label: 'Traction',         color: '#F57F17', bg: '#FFF3E0' },
-  { id: 'pesticide',  icon: 'flask-outline',         label: 'Pesticide Calc',   color: '#00695C', bg: '#E8F5E9' },
+  { id: 'tractor',    icon: 'construct-outline',     label: 'Tractor',         color: '#F57F17', bg: '#FFF3E0' },
+  { id: 'pesticide',  icon: 'flask-outline',         label: 'Pesticide Calculator',   color: '#00695C', bg: '#E8F5E9' },
   { id: 'price',      icon: 'calculator-outline',    label: 'Price Calculator', color: '#6A1B9A', bg: '#EDE7F6' },
   { id: 'market',     icon: 'trending-up-outline',   label: 'Market Rates',     color: '#C62828', bg: '#FFEBEE' },
 ];
@@ -403,7 +403,7 @@ export default function KrushiMitraScreen() {
         <View style={[styles.inlinePanelIcon, { backgroundColor: '#F57F1715' }]}>
           <Ionicons name="construct-outline" size={22} color="#F57F17" />
         </View>
-        <Text style={[styles.inlinePanelTitle, { color: colors.text }]}>Book Traction</Text>
+        <Text style={[styles.inlinePanelTitle, { color: colors.text }]}>Book Tractor</Text>
         <TouchableOpacity onPress={() => { closeService(); resetTraction(); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="close-circle" size={24} color={colors.textMuted} />
         </TouchableOpacity>
@@ -464,12 +464,12 @@ export default function KrushiMitraScreen() {
                         <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.iosPickerDone}>
                           <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Done</Text>
                         </TouchableOpacity>
-                        <DateTimePicker value={tractorDate ?? new Date()} mode="date" display="inline" minimumDate={new Date()} onChange={(_, d) => { if (d) setTractorDate(d); }} style={{ width: '100%' }} />
+                        <DateTimePicker value={tractorDate ?? new Date()} mode="date" display="inline" minimumDate={new Date()} onValueChange={(_, d) => { if (d) setTractorDate(d); }} onDismiss={() => setShowDatePicker(false)} style={{ width: '100%' }} />
                       </View>
                     </Modal>
                   )}
                   {Platform.OS === 'android' && showDatePicker && (
-                    <DateTimePicker value={tractorDate ?? new Date()} mode="date" display="calendar" minimumDate={new Date()} onChange={(_, d) => { setShowDatePicker(false); if (d) setTractorDate(d); }} />
+                    <DateTimePicker value={tractorDate ?? new Date()} mode="date" display="calendar" minimumDate={new Date()} onValueChange={(_, d) => { setShowDatePicker(false); if (d) setTractorDate(d); }} onDismiss={() => setShowDatePicker(false)} />
                   )}
                 </>
               )}
@@ -514,17 +514,60 @@ export default function KrushiMitraScreen() {
               activeOpacity={0.75}
               style={[
                 styles.servicePill,
-                isActive && { borderWidth: 1.5, borderColor: service.color + '50' },
+                {
+                  backgroundColor: isActive
+                    ? (isDark ? service.color + '22' : service.color + '12')
+                    : (isDark ? 'rgba(255,255,255,0.03)' : colors.surface),
+                  borderColor: isActive ? service.color : (isDark ? 'rgba(255,255,255,0.06)' : colors.border),
+                  borderWidth: isActive ? 1.5 : 1,
+                },
               ]}
               onPress={() => {
                 if (service.id === 'market') { router.push('/market-rates' as any); return; }
                 toggleService(service.id);
               }}
             >
-              <View style={[styles.servicePillIcon, { backgroundColor: isActive ? service.color + '25' : service.bg }]}>
-                <Ionicons name={service.icon as any} size={24} color={service.color} />
+              <View
+                style={[
+                  styles.servicePillIcon,
+                  {
+                    backgroundColor: isActive ? service.color : (isDark ? 'rgba(255,255,255,0.06)' : service.bg),
+                    ...(isActive
+                      ? (Platform.select<any>({
+                          ios: { shadowColor: service.color, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 6 },
+                          android: { elevation: 3 },
+                          web: { boxShadow: `0px 4px 10px ${service.color}40` },
+                        }) ?? {})
+                      : {}),
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={service.icon as any}
+                  size={24}
+                  color={isActive ? '#FFFFFF' : service.color}
+                />
               </View>
-              <Text style={[styles.servicePillLabel, { color: isActive ? service.color : colors.text }]}>{service.label}</Text>
+              <Text
+                style={[
+                  styles.servicePillLabel,
+                  {
+                    color: isActive ? service.color : colors.text,
+                    fontWeight: isActive ? '800' : '600',
+                  },
+                ]}
+                numberOfLines={2}
+              >
+                {service.label}
+              </Text>
+              {isActive && (
+                <View
+                  style={[
+                    styles.activeIndicator,
+                    { backgroundColor: service.color },
+                  ]}
+                />
+              )}
             </TouchableOpacity>
           );
         })}
@@ -567,7 +610,7 @@ export default function KrushiMitraScreen() {
         iconPosition="right"
         variant="primary"
         size="md"
-        onPress={() => {}}
+        onPress={() => Linking.openURL('https://en.vikaspedia.in/viewcontent/agriculture/crop-production/tips-for-farmers/icar-agro-advisory-for-kharif?lgn=en')}
         style={{ marginTop: 8 }}
       />
     </View>
@@ -772,17 +815,30 @@ const styles = StyleSheet.create({
   servicePill: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 16,
     gap: 6,
   },
   servicePillIcon: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  servicePillLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center', flexShrink: 1 },
+  servicePillLabel: {
+    fontSize: 11.5,
+    textAlign: 'center',
+    flexShrink: 1,
+    lineHeight: 15,
+  },
+  activeIndicator: {
+    width: 16,
+    height: 3,
+    borderRadius: 1.5,
+    marginTop: 1,
+  },
 
   // Seasonal Advisory
   seasonalCard: {

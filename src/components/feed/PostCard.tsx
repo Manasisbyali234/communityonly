@@ -192,9 +192,9 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   };
 
   const navigateToCommunity = () => {
-    if (post.community) router.push(`/community/${post.community.id}`);
+    if (post.community) router.push(`/community/${post.community.id}?from=feed`);
   };
-  const navigateToAuthor = () => router.push(`/user/${post.author.id}` as any);
+  const navigateToAuthor = () => router.push(`/user/${post.author.id}?from=feed` as any);
 
   const timeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -331,7 +331,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                   }}
                 >
                   <View style={[styles.dropdownIconBox, { backgroundColor: '#FFEBEE' }]}>
-                    <Ionicons name="flag-outline" size={15} color="#E53935" />
+                    <Ionicons name="flag-outline" size={13} color="#E53935" />
                   </View>
                   <Text style={[styles.dropdownText, { color: '#E53935' }]}>Report Post</Text>
                 </Pressable>
@@ -357,18 +357,11 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                   }}
                 >
                   <View style={[styles.dropdownIconBox, { backgroundColor: '#FFEBEE' }]}>
-                    <Ionicons name="trash-outline" size={15} color="#E53935" />
+                    <Ionicons name="trash-outline" size={13} color="#E53935" />
                   </View>
                   <Text style={[styles.dropdownText, { color: '#E53935' }]}>Delete Post</Text>
                 </Pressable>
               )}
-              <View style={[styles.dropdownDivider, { backgroundColor: subtleDividerColor }]} />
-              <Pressable style={styles.dropdownItem} onPress={() => setMenuVisible(false)}>
-                <View style={[styles.dropdownIconBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F0F0F0' }]}>
-                  <Ionicons name="close-outline" size={15} color={colors.textSecondary} />
-                </View>
-                <Text style={[styles.dropdownText, { color: colors.textSecondary }]}>Cancel</Text>
-              </Pressable>
             </View>
           </View>
         </Modal>
@@ -397,13 +390,15 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
             {parsedContent}
           </Text>
 
-          {shouldShowReadMore && !isExpanded && (
+          {shouldShowReadMore && (
             <TouchableOpacity
-              onPress={() => setIsExpanded(true)}
+              onPress={() => setIsExpanded(!isExpanded)}
               style={styles.readMoreTouch}
               activeOpacity={0.7}
             >
-              <Text style={[styles.readMore, { color: colors.primary }]}>See more</Text>
+              <Text style={[styles.readMore, { color: colors.primary }]}>
+                {isExpanded ? 'See less' : 'See more'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -535,12 +530,12 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.02,
+        shadowRadius: 3,
       },
       android: {
-        elevation: 2,
+        elevation: 1,
       },
     }),
   },
@@ -622,31 +617,31 @@ const styles = StyleSheet.create({
   // ── Dropdown Menu ─────────────────────────────────────────────────────────
   dropdown: {
     position: 'absolute',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    paddingVertical: 6,
-    minWidth: 180,
+    paddingVertical: 3,
+    minWidth: 135,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16 },
-      android: { elevation: 8 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 10 },
+      android: { elevation: 6 },
     }),
   },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
   dropdownIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dropdownText: {
-    fontSize: 13.5,
+    fontSize: 12,
     fontWeight: '600',
   },
   dropdownDivider: {

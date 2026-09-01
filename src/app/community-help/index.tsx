@@ -4,6 +4,7 @@ import {
   TextInput, FlatList, ActivityIndicator, RefreshControl, Platform, Modal, Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -55,7 +56,7 @@ function HelpCard({
         {
           backgroundColor: colors.cardBg,
           borderColor: isUrgent
-            ? isDark ? 'rgba(239,68,68,0.35)' : '#FECACA'
+            ? isDark ? 'rgba(239,68,68,0.4)' : '#FECACA'
             : isDark ? 'rgba(255,255,255,0.08)' : colors.border,
         },
       ]}
@@ -68,7 +69,7 @@ function HelpCard({
           <View
             style={[
               styles.catPill,
-              { backgroundColor: (catConfig?.color || '#2D6A2D') + '15' },
+              { backgroundColor: (catConfig?.color || colors.primary) + '15' },
             ]}
           >
             <Text style={styles.catEmoji}>{catConfig?.emoji || '🤝'}</Text>
@@ -112,7 +113,7 @@ function HelpCard({
         {item.description}
       </Text>
 
-      {/* Metadata Row: Location & Requester */}
+      {/* Metadata Row: Location & Date */}
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
           <Ionicons name="location-outline" size={13} color={colors.textMuted} />
@@ -128,8 +129,8 @@ function HelpCard({
         </View>
       </View>
 
-      {/* Requester Badge (Privacy Protected: Name only, no phone) */}
-      <View style={[styles.requesterBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB' }]}>
+      {/* Requester Badge */}
+      <View style={[styles.requesterBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
         <View style={styles.requesterInfo}>
           {item.requesterAvatarUrl ? (
             <Image
@@ -159,8 +160,8 @@ function HelpCard({
         )}
       </View>
 
-      {/* Footer CTA: "I Can Help" */}
-      <View style={styles.cardFooter}>
+      {/* Footer CTA: "I Can Help" & "View Details" */}
+      <View style={[styles.cardFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
         {isMyRequest ? (
           <View style={[styles.myRequestBadge, { backgroundColor: colors.primaryContainer }]}>
             <Ionicons name="person-circle-outline" size={15} color={colors.primary} />
@@ -188,11 +189,12 @@ function HelpCard({
         <TouchableOpacity
           style={styles.detailsLink}
           onPress={onPress}
+          activeOpacity={0.7}
         >
           <Text style={[styles.detailsLinkText, { color: colors.primary }]}>
             View Details
           </Text>
-          <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+          <Ionicons name="chevron-forward" size={14} color={colors.primary} />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -250,7 +252,7 @@ export default function CommunityHelpScreen() {
 
     const confirmed = await confirmAction({
       title: 'Offer Help?',
-      message: 'Your interest will be shared with the person who created this request.',
+      message: 'Your contact interest will be shared with the person who created this request.',
       confirmText: 'I Can Help',
       cancelText: 'Cancel',
       isDestructive: false,
@@ -303,61 +305,88 @@ export default function CommunityHelpScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: BG, paddingTop: insets.top }]}>
-      {/* Header */}
+      {/* ── Header ────────────────────────────────────────────── */}
       <View style={[styles.header, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
         <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
-          onPress={() => router.back()}
-          accessibilityLabel="Go back"
+          style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
+          onPress={() => router.replace('/(tabs)/explore?tab=help' as any)}
+          accessibilityLabel="Go back to discover"
+          activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={19} color={G} />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: TEXT }]}>Community Help ❤️</Text>
+
+        <View style={styles.headerTitleWrap}>
+          <Text style={[styles.headerTitle, { color: TEXT }]}>Community Help</Text>
           <Text style={[styles.headerSub, { color: TEXT3 }]}>
-            Support & stand with fellow community members
+            {isLoading ? 'Loading requests...' : `${requests.length} active request${requests.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
+
         <TouchableOpacity
-          style={[styles.myRequestsBtn, { backgroundColor: colors.primaryContainer }]}
+          style={[styles.myRequestsBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
           onPress={() => router.push('/community-help/my-requests' as any)}
           accessibilityLabel="My help requests"
+          activeOpacity={0.75}
         >
           <Ionicons name="hand-left-outline" size={17} color={G} />
-          <Text style={[styles.myRequestsBtnText, { color: G }]}>My Requests</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Awareness banner */}
-      <View style={[styles.banner, { backgroundColor: G }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.bannerTitle}>🤝 Direct Member-to-Member Help</Text>
-          <Text style={styles.bannerSub}>
-            All requests are verified by admins. Connect directly with people in need.
-          </Text>
+      {/* ── Modern Hero Banner Card ───────────────────────────── */}
+      <LinearGradient
+        colors={isDark ? ['#14532D', '#052E16'] : ['#16A34A', '#15803D']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroCard}
+      >
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroIconWrap}>
+            <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroTitle}>Direct Member Help</Text>
+            <Text style={styles.heroSub}>
+              All requests are verified by admins · Connect directly with people in need
+            </Text>
+          </View>
         </View>
-        <TouchableOpacity
-          style={styles.bannerAction}
-          onPress={() => router.push('/community-help/create' as any)}
-        >
-          <Ionicons name="add" size={16} color={G} />
-          <Text style={[styles.bannerActionText, { color: G }]}>Request Help</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Search & Urgency Toggle */}
-      <View style={[styles.searchBarWrap, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
-        <View style={[styles.searchBox, { backgroundColor: colors.inputBg }]}>
+        <View style={styles.heroActionRow}>
+          <TouchableOpacity
+            style={styles.heroPrimaryBtn}
+            onPress={() => router.push('/(tabs)/community-help/create' as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={16} color="#15803D" />
+            <Text style={styles.heroPrimaryBtnText}>Request Help</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.heroSecondaryBtn}
+            onPress={() => router.push('/community-help/my-requests' as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="hand-left-outline" size={14} color="#FFFFFF" />
+            <Text style={styles.heroSecondaryBtnText}>My Requests</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      {/* ── Search & Urgency Filter Row ───────────────────────── */}
+      <View style={styles.controlsWrap}>
+        <View style={[styles.searchBox, { backgroundColor: colors.inputBg, borderColor: isDark ? 'rgba(255,255,255,0.08)' : colors.border }]}>
           <Ionicons name="search" size={16} color={TEXT3} style={{ marginRight: 8 }} />
           <TextInput
-            placeholder="Search help requests, location..."
+            placeholder="Search by title, location, need..."
             placeholderTextColor={TEXT3}
             value={search}
             onChangeText={setSearch}
             style={[styles.searchInput, { color: TEXT }]}
             returnKeyType="search"
+            clearButtonMode="while-editing"
           />
-          {search.length > 0 && (
+          {search.length > 0 && Platform.OS === 'android' && (
             <TouchableOpacity onPress={() => { setSearch(''); setDebouncedSearch(''); }}>
               <Ionicons name="close-circle" size={16} color={TEXT3} />
             </TouchableOpacity>
@@ -368,15 +397,16 @@ export default function CommunityHelpScreen() {
           style={[
             styles.urgentToggleBtn,
             {
-              backgroundColor: onlyUrgent ? '#DC2626' : isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6',
-              borderColor: onlyUrgent ? '#DC2626' : BORDER,
+              backgroundColor: onlyUrgent ? '#DC2626' : isDark ? 'rgba(255,255,255,0.06)' : colors.cardBg,
+              borderColor: onlyUrgent ? '#DC2626' : isDark ? 'rgba(255,255,255,0.08)' : colors.border,
             },
           ]}
           onPress={() => setOnlyUrgent((prev) => !prev)}
+          activeOpacity={0.75}
         >
           <Ionicons
-            name="alert-circle"
-            size={14}
+            name={onlyUrgent ? 'alert-circle' : 'alert-circle-outline'}
+            size={16}
             color={onlyUrgent ? '#FFF' : '#DC2626'}
           />
           <Text style={[styles.urgentToggleText, { color: onlyUrgent ? '#FFF' : TEXT }]}>
@@ -385,8 +415,8 @@ export default function CommunityHelpScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Category Pills */}
-      <View style={[styles.categoriesWrap, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
+      {/* ── Category Chips ────────────────────────────────────── */}
+      <View style={styles.categoriesWrap}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -397,13 +427,14 @@ export default function CommunityHelpScreen() {
             style={[
               styles.catChip,
               {
-                backgroundColor: selectedCategory === 'All' ? G : isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceSecondary,
-                borderColor: selectedCategory === 'All' ? G : BORDER,
+                backgroundColor: selectedCategory === 'All' ? G : isDark ? 'rgba(255,255,255,0.06)' : colors.cardBg,
+                borderColor: selectedCategory === 'All' ? G : isDark ? 'rgba(255,255,255,0.08)' : colors.border,
               },
             ]}
+            activeOpacity={0.75}
           >
             <Text style={[styles.catChipText, { color: selectedCategory === 'All' ? '#FFF' : TEXT3 }]}>
-              All Categories
+              All Requests
             </Text>
           </TouchableOpacity>
 
@@ -416,10 +447,11 @@ export default function CommunityHelpScreen() {
                 style={[
                   styles.catChip,
                   {
-                    backgroundColor: active ? cat.color : isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceSecondary,
-                    borderColor: active ? cat.color : BORDER,
+                    backgroundColor: active ? cat.color : isDark ? 'rgba(255,255,255,0.06)' : colors.cardBg,
+                    borderColor: active ? cat.color : isDark ? 'rgba(255,255,255,0.08)' : colors.border,
                   },
                 ]}
+                activeOpacity={0.75}
               >
                 <Text style={styles.catChipEmoji}>{cat.emoji}</Text>
                 <Text style={[styles.catChipText, { color: active ? '#FFF' : TEXT }]}>
@@ -431,7 +463,7 @@ export default function CommunityHelpScreen() {
         </ScrollView>
       </View>
 
-      {/* Requests List */}
+      {/* ── Requests Feed List ────────────────────────────────── */}
       {isLoading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={G} />
@@ -442,8 +474,8 @@ export default function CommunityHelpScreen() {
           data={requests}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
-            const hasOfferedHelp = item.helpers.some((h) => h.helperId === 'current-user');
-            const isMyRequest = item.userId === 'current-user';
+            const hasOfferedHelp = item.helpers.some((h) => h.helperId === (user?.id || 'current-user'));
+            const isMyRequest = item.userId === (user?.id || 'current-user');
             return (
               <HelpCard
                 item={item}
@@ -467,23 +499,24 @@ export default function CommunityHelpScreen() {
               colors={[G]}
             />
           }
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
           ListEmptyComponent={
-            <View style={[styles.emptyBox, { backgroundColor: SURF, borderColor: BORDER }]}>
+            <View style={[styles.emptyBox, { backgroundColor: colors.cardBg, borderColor: BORDER }]}>
               <View style={[styles.emptyIconBg, { backgroundColor: colors.primaryContainer }]}>
-                <Ionicons name="heart-outline" size={40} color={G} />
+                <Ionicons name="heart-outline" size={36} color={G} />
               </View>
               <Text style={[styles.emptyTitle, { color: TEXT }]}>No Help Requests Found</Text>
               <Text style={[styles.emptySub, { color: TEXT3 }]}>
                 {debouncedSearch
-                  ? `No requests match "${debouncedSearch}". Try another keyword.`
+                  ? `No requests match "${debouncedSearch}". Try a different keyword.`
                   : selectedCategory !== 'All'
-                  ? `No requests under "${selectedCategory}" right now.`
+                  ? `No requests under "${selectedCategory}" at this time.`
                   : 'There are currently no active help requests in the community.'}
               </Text>
               <TouchableOpacity
                 style={[styles.emptyBtn, { backgroundColor: G }]}
-                onPress={() => router.push('/community-help/create' as any)}
+                onPress={() => router.push('/(tabs)/community-help/create' as any)}
+                activeOpacity={0.85}
               >
                 <Ionicons name="add" size={18} color="#FFF" />
                 <Text style={styles.emptyBtnText}>Post a Help Request</Text>
@@ -493,18 +526,9 @@ export default function CommunityHelpScreen() {
         />
       )}
 
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: G, shadowColor: G }]}
-        onPress={() => router.push('/community-help/create' as any)}
-        activeOpacity={0.85}
-        accessibilityLabel="Request help"
-      >
-        <Ionicons name="add" size={22} color="#FFF" />
-        <Text style={styles.fabText}>Request Help</Text>
-      </TouchableOpacity>
 
-      {/* Report Modal */}
+
+      {/* ── Report Modal ──────────────────────────────────────── */}
       <Modal
         visible={!!reportingItem}
         transparent
@@ -588,166 +612,494 @@ export default function CommunityHelpScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
+  // Header
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
   },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
-  headerSub: { fontSize: 11.5, fontWeight: '500', marginTop: 1 },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleWrap: { flex: 1 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  headerSub: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    marginTop: 2,
+  },
   myRequestsBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  myRequestsBtnText: { fontSize: 12, fontWeight: '700' },
 
-  // Banner
-  banner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingVertical: 12,
-  },
-  bannerTitle: { color: '#FFF', fontSize: 13.5, fontWeight: '800', marginBottom: 2 },
-  bannerSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12, lineHeight: 16 },
-  bannerAction: {
-    backgroundColor: '#FFF', flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10,
-  },
-  bannerActionText: { fontSize: 12, fontWeight: '700' },
-
-  // Search & Filters
-  searchBarWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  searchBox: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    height: 40, borderRadius: 12, paddingHorizontal: 10,
-  },
-  searchInput: { flex: 1, fontSize: 13.5, padding: 0 },
-  urgentToggleBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    height: 40, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1,
-  },
-  urgentToggleText: { fontSize: 12, fontWeight: '700' },
-
-  // Categories
-  categoriesWrap: { borderBottomWidth: StyleSheet.hairlineWidth },
-  catScroll: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  catChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1.5,
-  },
-  catChipEmoji: { fontSize: 13 },
-  catChipText: { fontSize: 12.5, fontWeight: '600' },
-
-  // List
-  listContainer: { padding: 16 },
-  centerLoading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  loadingText: { fontSize: 13.5, fontWeight: '500' },
-
-  // Card
-  card: {
-    borderRadius: 18, borderWidth: 1, padding: 14,
+  // Hero Card
+  heroCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 6,
+    padding: 16,
+    borderRadius: 18,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
+      ios: { shadowColor: '#16A34A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 },
       android: { elevation: 2 },
     }),
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  heroIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  heroSub: {
+    color: 'rgba(255, 255, 255, 0.88)',
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  heroActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  heroPrimaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 11,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2 },
+      android: { elevation: 1 },
+    }),
+  },
+  heroPrimaryBtnText: {
+    color: '#15803D',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  heroSecondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 11,
+  },
+  heroSecondaryBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+
+  // Controls Wrap (Search & Urgent Toggle)
+  controlsWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 42,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13.5,
+    padding: 0,
+  },
+  urgentToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 42,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  urgentToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Category Filter Chips
+  categoriesWrap: {
+    paddingVertical: 4,
+  },
+  catScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    gap: 8,
+  },
+  catChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  catChipEmoji: { fontSize: 13 },
+  catChipText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+
+  // Requests List
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  centerLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 13.5,
+    fontWeight: '500',
+  },
+
+  // Card
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 15,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
   catPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   catEmoji: { fontSize: 12 },
-  catText: { fontSize: 11.5, fontWeight: '700' },
-  urgentPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10,
+  catText: {
+    fontSize: 11.5,
+    fontWeight: '700',
   },
-  urgentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#DC2626' },
-  urgentText: { color: '#DC2626', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  urgentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  urgentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#DC2626',
+  },
+  urgentText: {
+    color: '#DC2626',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
   moreBtn: { padding: 4 },
 
-  cardTitle: { fontSize: 15.5, fontWeight: '800', lineHeight: 21, marginBottom: 6 },
-  cardDesc: { fontSize: 13.5, lineHeight: 19, marginBottom: 10 },
-
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 10 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12, fontWeight: '500' },
-
-  // Requester
-  requesterBox: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 8, borderRadius: 10, marginBottom: 12,
+  cardTitle: {
+    fontSize: 15.5,
+    fontWeight: '700',
+    lineHeight: 21,
+    marginBottom: 6,
   },
-  requesterInfo: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1 },
-  requesterAvatar: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden' },
-  requesterName: { fontSize: 12 },
-  helperCountTag: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ECFDF5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-  helperCountText: { color: '#059669', fontSize: 11, fontWeight: '700' },
+  cardDesc: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 10,
+  },
+
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 10,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  // Requester Box
+  requesterBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  requesterInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  requesterAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  requesterName: {
+    fontSize: 12,
+  },
+  helperCountTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  helperCountText: {
+    color: '#059669',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 
   // Card Footer
   cardFooter: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.06)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   helpBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7.5,
+    borderRadius: 10,
   },
-  helpBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
-  offeredBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#ECFDF5', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
-  offeredText: { color: '#059669', fontSize: 12, fontWeight: '700' },
-  myRequestBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
-  myRequestText: { fontSize: 12, fontWeight: '700' },
-  detailsLink: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 4 },
-  detailsLinkText: { fontSize: 12.5, fontWeight: '700' },
-
-  // FAB
-  fab: {
-    position: 'absolute', bottom: 20, right: 16,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 18, paddingVertical: 13, borderRadius: 30,
-    ...Platform.select({
-      ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-      android: { elevation: 6 },
-    }),
+  helpBtnText: {
+    color: '#FFF',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
-  fabText: { color: '#FFF', fontSize: 14.5, fontWeight: '700' },
+  offeredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  offeredText: {
+    color: '#059669',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  myRequestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  myRequestText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  detailsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+  },
+  detailsLinkText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
 
-  // Empty
+
+
+  // Empty State
   emptyBox: {
-    alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20,
-    borderRadius: 18, borderWidth: 1, gap: 10, marginTop: 10,
+    alignItems: 'center',
+    paddingVertical: 36,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 10,
   },
-  emptyIconBg: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 17, fontWeight: '700' },
-  emptySub: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
+  emptyIconBg: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: 16.5,
+    fontWeight: '700',
+  },
+  emptySub: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12, marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 4,
   },
-  emptyBtnText: { color: '#FFF', fontSize: 13.5, fontWeight: '700' },
+  emptyBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { borderRadius: 18, padding: 18, gap: 10 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  modalTitle: { fontSize: 17, fontWeight: '800' },
-  modalSub: { fontSize: 13, marginBottom: 4 },
+  // Report Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 18,
+    padding: 18,
+    gap: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  modalSub: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
   reportOption: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 12, borderRadius: 10, borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  reportOptionText: { fontSize: 13.5, fontWeight: '600' },
+  reportOptionText: {
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
   reportInput: {
-    borderWidth: 1, borderRadius: 10, padding: 10, fontSize: 13.5, minHeight: 70, marginTop: 4,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 13.5,
+    minHeight: 70,
+    marginTop: 4,
   },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  modalBtn: { flex: 1, paddingVertical: 11, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  modalBtnText: { fontSize: 13.5, fontWeight: '700' },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
 });

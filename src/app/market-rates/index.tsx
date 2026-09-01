@@ -46,7 +46,7 @@ export default function MarketRatesScreen() {
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/krushi-mitra' as any))} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -168,8 +168,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     ...Platform.select({
-      ios: { shadowColor: '#1A2D1A', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 3 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+      android: { elevation: 1 },
+      web: { boxShadow: '0px 1px 3px rgba(0,0,0,0.04)' } as any,
     }),
   },
 

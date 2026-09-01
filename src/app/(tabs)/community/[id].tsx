@@ -36,10 +36,18 @@ const FlashList = ShopifyFlashList as any;
 type TabType = 'posts' | 'rules' | 'requests';
 
 export default function CommunityDetails() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { colors, spacing, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const handleBack = () => {
+    if (from === 'communities') {
+      router.replace('/(tabs)/communities' as any);
+    } else {
+      router.replace('/(tabs)/explore?tab=communities' as any);
+    }
+  };
   const { width: windowWidth } = useWindowDimensions();
   const bannerHeight = Math.round(windowWidth * 0.45);
   const showToast = useToastStore((state) => state.showToast);
@@ -132,7 +140,7 @@ export default function CommunityDetails() {
       <View style={[styles.bannerContainer, { height: bannerHeight }]}>
         <Image source={{ uri: community.bannerUrl }} style={styles.banner} contentFit="cover" />
         <TouchableOpacity
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          onPress={handleBack}
           style={[styles.iconBtn, { top: insets.top + 10, left: 14 }]}
         >
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />

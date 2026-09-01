@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
+  View, Text, StyleSheet, TouchableOpacity,
   Animated, Platform, ActivityIndicator, Alert,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -24,6 +26,7 @@ function formatTime(iso: string) {
 
 export default function ViewStoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const deleteStory = useDeleteStoryMutation();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -114,22 +117,24 @@ export default function ViewStoryScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <StatusBar style="light" translucent backgroundColor="transparent" />
         <ActivityIndicator style={{ flex: 1 }} color="#FFF" />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!story) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <StatusBar style="light" translucent backgroundColor="transparent" />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <Text style={{ color: '#FFF', fontSize: 16 }}>Story not found or expired.</Text>
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={{ marginTop: 20 }}>
             <Text style={{ color: '#FFF', fontWeight: '700' }}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -139,8 +144,11 @@ export default function ViewStoryScreen() {
     extrapolate: 'clamp',
   });
 
+  const topInset = insets.top > 0 ? insets.top : (Platform.OS === 'android' ? 28 : 20);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
       <View style={styles.storyContainer}>
         {/* Media */}
         {story.mediaType === 'VIDEO' ? (
@@ -165,10 +173,10 @@ export default function ViewStoryScreen() {
           />
         )}
 
-        <View style={styles.gradientTop} />
+        <View style={[styles.gradientTop, { height: topInset + 100 }]} />
 
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { top: topInset + 6 }]}>
           {/* Progress bars */}
           <View style={styles.progressBarContainer}>
             {stories.map((s, i) => (
@@ -220,7 +228,7 @@ export default function ViewStoryScreen() {
           <TouchableOpacity style={styles.touchRight} activeOpacity={1} onPress={goNext} />
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

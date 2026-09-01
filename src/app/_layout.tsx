@@ -32,10 +32,13 @@ function resolveIntendedRoute(raw: string | null): string | null {
   const path = raw.startsWith('/') ? raw.slice(1) : raw;
   // These are top-level routes, not nested under (tabs)
   const topLevelScreens = [
-    'create', 'chat', 'story', 'jobs', 'matrimony', 'business', 'community-help',
-    'our-people', 'krushi-mitra', 'market-rates', 'price-calculator', 'download',
+    'create', 'chat', 'story', 'download',
   ];
-  const tabScreens = ['explore', 'communities', 'profile', 'notifications', 'settings'];
+  const tabScreens = [
+    'explore', 'communities', 'our-people', 'profile', 'notifications', 'settings',
+    'community-help', 'business', 'jobs', 'matrimony', 'events', 'event',
+    'krushi-mitra', 'market-rates', 'price-calculator',
+  ];
   const base = path.split('?')[0].split('/')[0];
   if (topLevelScreens.includes(base)) return `/${path}`;
   if (tabScreens.includes(base)) return `/(tabs)/${path}`;

@@ -31,17 +31,17 @@ export default function MediaGalleryScreen() {
   const videos = files.filter((f) => f.mimeType.startsWith('video'));
   const displayed = filter === 'image' ? images : filter === 'video' ? videos : files;
 
-  const FILTERS: { id: typeof filter; label: string }[] = [
-    { id: 'all', label: `All (${files.length})` },
-    { id: 'image', label: `Photos (${images.length})` },
-    { id: 'video', label: `Videos (${videos.length})` },
+  const FILTERS: { id: typeof filter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { id: 'all', label: `All (${files.length})`, icon: 'apps-outline' },
+    { id: 'image', label: `Photos (${images.length})`, icon: 'images-outline' },
+    { id: 'video', label: `Videos (${videos.length})`, icon: 'videocam-outline' },
   ];
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/profile' as any)} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>My Media</Text>
@@ -50,22 +50,31 @@ export default function MediaGalleryScreen() {
 
       {/* Filter chips */}
       <View style={[styles.filterRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        {FILTERS.map((f) => (
-          <TouchableOpacity
-            key={f.id}
-            onPress={() => setFilter(f.id)}
-            style={[
-              styles.chip,
-              filter === f.id
-                ? { backgroundColor: colors.primaryContainer, borderColor: colors.primary }
-                : { backgroundColor: 'transparent', borderColor: colors.border },
-            ]}
-          >
-            <Text style={[styles.chipText, { color: filter === f.id ? colors.primaryDark : colors.textMuted }]}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {FILTERS.map((f) => {
+          const isSelected = filter === f.id;
+          return (
+            <TouchableOpacity
+              key={f.id}
+              onPress={() => setFilter(f.id)}
+              style={[
+                styles.chip,
+                isSelected
+                  ? { backgroundColor: colors.primaryContainer, borderColor: colors.primary }
+                  : { backgroundColor: 'transparent', borderColor: colors.border },
+              ]}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={f.icon}
+                size={15}
+                color={isSelected ? colors.primaryDark || colors.primary : colors.textMuted}
+              />
+              <Text style={[styles.chipText, { color: isSelected ? colors.primaryDark || colors.primary : colors.textMuted }]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Grid */}
@@ -130,7 +139,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
   chipText: { fontSize: 13, fontWeight: '600' },
   skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, padding: GAP },

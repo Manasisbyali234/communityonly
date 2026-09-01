@@ -227,7 +227,8 @@ export default function MyHelpRequestsScreen() {
       <View style={[styles.header, { backgroundColor: colors.cardBg, borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(tabs)/community-help' as any)}
+          accessibilityLabel="Go back to community help"
         >
           <Ionicons name="arrow-back" size={19} color={colors.primary} />
         </TouchableOpacity>
@@ -239,7 +240,7 @@ export default function MyHelpRequestsScreen() {
         </View>
         <TouchableOpacity
           style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.push('/community-help/create' as any)}
+          onPress={() => router.push('/(tabs)/community-help/create' as any)}
         >
           <Ionicons name="add" size={18} color="#FFF" />
           <Text style={styles.addBtnText}>New</Text>
@@ -294,7 +295,7 @@ export default function MyHelpRequestsScreen() {
               isDark={isDark}
             />
           )}
-          contentContainerStyle={[styles.listContainer, { paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: insets.bottom + 90 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} />
@@ -311,7 +312,7 @@ export default function MyHelpRequestsScreen() {
               </Text>
               <TouchableOpacity
                 style={[styles.emptyAddBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push('/community-help/create' as any)}
+                onPress={() => router.push('/(tabs)/community-help/create' as any)}
               >
                 <Ionicons name="add" size={18} color="#FFF" />
                 <Text style={styles.emptyAddBtnText}>Request Help</Text>

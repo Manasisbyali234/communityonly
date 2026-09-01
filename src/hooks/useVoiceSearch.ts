@@ -1,20 +1,32 @@
 import { useState, useCallback, useEffect } from 'react';
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from 'expo-speech-recognition';
+
+let SpeechModule: any = null;
+let useSpeechRecognitionEventHook: ((event: string, listener: (event: any) => void) => void) | null = null;
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const speechPkg = require('expo-speech-recognition');
+  SpeechModule = speechPkg.ExpoSpeechRecognitionModule;
+  useSpeechRecognitionEventHook = speechPkg.useSpeechRecognitionEvent;
+} catch {
+  SpeechModule = null;
+  useSpeechRecognitionEventHook = null;
+}
+
+const noopHook = () => {};
+const safeUseSpeechRecognitionEvent = useSpeechRecognitionEventHook || noopHook;
 
 export function useVoiceSearch(onResult: (text: string) => void) {
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useSpeechRecognitionEvent('start', () => setIsListening(true));
-  useSpeechRecognitionEvent('end', () => setIsListening(false));
-  useSpeechRecognitionEvent('error', (e) => {
+  safeUseSpeechRecognitionEvent('start', () => setIsListening(true));
+  safeUseSpeechRecognitionEvent('end', () => setIsListening(false));
+  safeUseSpeechRecognitionEvent('error', (e) => {
     setIsListening(false);
     if (e.error !== 'aborted') setError('Voice recognition failed. Please try again.');
   });
-  useSpeechRecognitionEvent('result', (e) => {
+  safeUseSpeechRecognitionEvent('result', (e) => {
     const text = e.results?.[0]?.transcript?.trim();
     if (text) onResult(text);
   });
@@ -28,21 +40,26 @@ export function useVoiceSearch(onResult: (text: string) => void) {
 
   const start = useCallback(async () => {
     setError(null);
-    if (isListening) {
-      ExpoSpeechRecognitionModule.abort();
+    if (!SpeechModule) {
+      setError('Voice recognition requires a development build.');
       return;
     }
-    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (isListening) {
+      SpeechModule.abort();
+      return;
+    }
+    const { granted } = await SpeechModule.requestPermissionsAsync();
     if (!granted) {
       setError('Microphone permission denied.');
       return;
     }
-    ExpoSpeechRecognitionModule.start({ lang: 'en-US', interimResults: false });
+    SpeechModule.start({ lang: 'en-US', interimResults: false });
   }, [isListening]);
 
   const stop = useCallback(() => {
-    ExpoSpeechRecognitionModule.stop();
+    SpeechModule?.stop?.();
   }, []);
 
   return { isListening, error, start, stop };
 }
+

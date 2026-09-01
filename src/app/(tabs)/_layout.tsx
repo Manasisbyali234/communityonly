@@ -63,7 +63,7 @@ function CreatePostTabIcon({ focused }: { focused: boolean; color: string }) {
   );
 }
 
-// Nav Tab Icon wrapper with refined micro-dot indicator
+// Nav Tab Icon wrapper
 function TabItem({
   focused,
   activeIcon,
@@ -80,14 +80,8 @@ function TabItem({
     <View style={styles.tabItemContainer}>
       <Ionicons
         name={(focused ? activeIcon : inactiveIcon) as any}
-        size={27}
+        size={focused ? 27 : 23}
         color={focused ? colors.primary : colors.textMuted}
-      />
-      <View
-        style={[
-          styles.activeDot,
-          { backgroundColor: focused ? colors.primary : 'transparent' },
-        ]}
       />
     </View>
   );
@@ -177,13 +171,7 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="communities"
-          listeners={{
-            tabPress: (e) => {
-              e.preventDefault();
-              router.push('/chat' as any);
-            },
-          }}
+          name="chat"
           options={{
             tabBarIcon: ({ focused, color }) => (
               <TabItem
@@ -198,38 +186,42 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="profile"
           options={{
-            tabBarIcon: ({ focused }) => (
-              <View style={styles.tabItemContainer}>
-                {user?.avatarUrl ? (
-                  <View
-                    style={[
-                      styles.avatarWrapper,
-                      {
-                        borderColor: focused ? colors.primary : 'transparent',
-                      },
-                    ]}
-                  >
-                    <Avatar url={user.avatarUrl} name={user.displayName} size={29} />
-                  </View>
-                ) : (
-                  <Ionicons
-                    name={focused ? 'person' : 'person-outline'}
-                    size={27}
-                    color={focused ? colors.primary : colors.textMuted}
-                  />
-                )}
-                <View
-                  style={[
-                    styles.activeDot,
-                    { backgroundColor: focused ? colors.primary : 'transparent' },
-                  ]}
-                />
-              </View>
+            tabBarIcon: ({ focused, color }) => (
+              <TabItem
+                focused={focused}
+                activeIcon="person"
+                inactiveIcon="person-outline"
+                color={color as string}
+              />
             ),
           }}
         />
 
         {/* Hidden screens that share the tab bar */}
+        <Tabs.Screen name="communities" options={{ href: null }} />
+        <Tabs.Screen name="our-people/index" options={{ href: null }} />
+        <Tabs.Screen name="our-people/[id]" options={{ href: null }} />
+        <Tabs.Screen name="community-help/index" options={{ href: null }} />
+        <Tabs.Screen name="community-help/create" options={{ href: null }} />
+        <Tabs.Screen name="community-help/[id]" options={{ href: null }} />
+        <Tabs.Screen name="community-help/my-requests" options={{ href: null }} />
+        <Tabs.Screen name="business/index" options={{ href: null }} />
+        <Tabs.Screen name="business/submit" options={{ href: null }} />
+        <Tabs.Screen name="business/[id]" options={{ href: null }} />
+        <Tabs.Screen name="business/my-businesses" options={{ href: null }} />
+        <Tabs.Screen name="jobs/index" options={{ href: null }} />
+        <Tabs.Screen name="jobs/[id]" options={{ href: null }} />
+        <Tabs.Screen name="jobs/my-applications" options={{ href: null }} />
+        <Tabs.Screen name="matrimony/index" options={{ href: null }} />
+        <Tabs.Screen name="matrimony/create-profile" options={{ href: null }} />
+        <Tabs.Screen name="matrimony/[id]" options={{ href: null }} />
+        <Tabs.Screen name="matrimony/interests" options={{ href: null }} />
+        <Tabs.Screen name="events/[id]" options={{ href: null }} />
+        <Tabs.Screen name="event/[id]" options={{ href: null }} />
+        <Tabs.Screen name="krushi-mitra" options={{ href: null }} />
+        <Tabs.Screen name="market-rates/index" options={{ href: null }} />
+        <Tabs.Screen name="market-rates/[cropName]" options={{ href: null }} />
+        <Tabs.Screen name="price-calculator" options={{ href: null }} />
         <Tabs.Screen name="user/[id]" options={{ href: null }} />
         <Tabs.Screen name="community/[id]" options={{ href: null }} />
         <Tabs.Screen name="community/[id]/members" options={{ href: null }} />

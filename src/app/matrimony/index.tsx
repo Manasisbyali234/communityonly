@@ -258,7 +258,7 @@ export default function MatrimonyScreen() {
         <View style={[styles.header, { backgroundColor: colors.primaryDark }]}>
           <TouchableOpacity
             style={[styles.headerBtn, { backgroundColor: 'rgba(255,255,255,0.18)' }]}
-            onPress={() => router.replace('/(tabs)' as any)}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
           >
             <Ionicons name="close" size={22} color="#fff" />
           </TouchableOpacity>
@@ -331,7 +331,7 @@ export default function MatrimonyScreen() {
       <View style={[styles.header, { backgroundColor: colors.primaryDark }]}>
         <TouchableOpacity
           style={[styles.headerBtn, { backgroundColor: 'rgba(255,255,255,0.18)' }]}
-          onPress={() => router.replace('/(tabs)' as any)}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
         >
           <Ionicons name="close" size={22} color="#fff" />
         </TouchableOpacity>

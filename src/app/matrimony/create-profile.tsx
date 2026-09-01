@@ -266,7 +266,7 @@ export default function CreateMatrimonyProfile() {
     return (
       <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <View style={[styles.header, { backgroundColor: colors.primaryDark }]}>
-          <TouchableOpacity style={[styles.backBtn, { backgroundColor: 'rgba(255,255,255,0.18)' }]} onPress={() => router.back()}>
+          <TouchableOpacity style={[styles.backBtn, { backgroundColor: 'rgba(255,255,255,0.18)' }]} onPress={() => (router.canGoBack() ? router.back() : router.replace('/matrimony' as any))}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Loading...</Text>
@@ -281,7 +281,7 @@ export default function CreateMatrimonyProfile() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[styles.header, { backgroundColor: colors.primaryDark }]}>
-        <TouchableOpacity style={[styles.backBtn, { backgroundColor: 'rgba(255,255,255,0.18)' }]} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.backBtn, { backgroundColor: 'rgba(255,255,255,0.18)' }]} onPress={() => (router.canGoBack() ? router.back() : router.replace('/matrimony' as any))}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{myProfile?.id ? 'Edit Profile' : 'Create Profile'}</Text>
@@ -403,10 +403,11 @@ export default function CreateMatrimonyProfile() {
             value={form.dateOfBirth ? new Date(`${form.dateOfBirth}T12:00:00`) : new Date(1995, 0, 1)}
             mode="date"
             maximumDate={new Date()}
-            onChange={(_event, date) => {
+            onValueChange={(_event, date) => {
               if (Platform.OS !== 'ios') setShowDatePicker(false);
               if (date) set('dateOfBirth')(date.toISOString().slice(0, 10));
             }}
+            onDismiss={() => setShowDatePicker(false)}
           />
         )}
         {showDatePicker && Platform.OS === 'ios' && (

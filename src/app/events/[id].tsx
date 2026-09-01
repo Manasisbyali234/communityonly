@@ -37,10 +37,14 @@ import EventParticipantsSheet from '../../components/feed/EventParticipantsSheet
 import { shareUrl } from '../../utils/shareUtils';
 
 export default function EventDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const handleBack = () => {
+    router.replace('/(tabs)/explore?tab=events' as any);
+  };
   const { width: windowWidth } = useWindowDimensions();
   const showToast = useToastStore((state) => state.showToast);
   const currentUser = useAuthStore((state) => state.user);
@@ -179,7 +183,7 @@ export default function EventDetailScreen() {
           title="Back to Explore"
           variant="primary"
           size="md"
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/explore?tab=events')}
+          onPress={handleBack}
           style={{ marginTop: 16 }}
         />
       </View>
@@ -200,7 +204,7 @@ export default function EventDetailScreen() {
       {/* ── Floating Top Navigation Bar ───────────────────────────────── */}
       <Animated.View style={[styles.navBar, { paddingTop: insets.top + 6, height: insets.top + 54 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: SURF, opacity: navBgOpacity, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER }]} />
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/explore?tab=events')} style={styles.floatingCircleBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.floatingCircleBtn}>
           <Ionicons name="arrow-back" size={22} color={TEXT} />
         </TouchableOpacity>
         <Animated.Text style={[styles.navTitle, { color: TEXT, opacity: navBgOpacity }]} numberOfLines={1}>
@@ -266,7 +270,7 @@ export default function EventDetailScreen() {
             <TouchableOpacity
               style={[styles.organizerCard, { backgroundColor: SURF, borderColor: BORDER }]}
               activeOpacity={0.8}
-              onPress={() => router.push(`/user/${event.creatorId}` as any)}
+              onPress={() => router.push(`/user/${event.creatorId}?from=events` as any)}
             >
               <Avatar url={creator?.avatarUrl} name={creator?.displayName || 'Organizer'} size={44} />
               <View style={{ flex: 1, marginLeft: 12 }}>

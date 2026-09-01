@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme';
 
 export interface ButtonProps {
@@ -96,7 +97,8 @@ export const Button: React.FC<ButtonProps> = ({
 
   switch (variant) {
     case 'primary':
-      bgColor = colors.primary;
+    case 'gradient':
+      bgColor = 'rgb(45, 106, 45)';
       textColor = '#FFFFFF';
       break;
 
@@ -150,6 +152,8 @@ export const Button: React.FC<ButtonProps> = ({
     return null;
   };
 
+  const isGradient = variant === 'primary' || variant === 'gradient';
+
   return (
     <TouchableOpacity
       onPress={handlePress}
@@ -173,10 +177,18 @@ export const Button: React.FC<ButtonProps> = ({
         style,
       ]}
     >
+      {isGradient && !disabled && (
+        <LinearGradient
+          colors={['rgb(76, 175, 80)', 'rgb(45, 106, 45)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[StyleSheet.absoluteFill, { borderRadius: sizeConfig.borderRadius }]}
+        />
+      )}
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' || variant === 'destructive' ? '#FFFFFF' : colors.primary}
+          color={variant === 'primary' || variant === 'destructive' || variant === 'gradient' ? '#FFFFFF' : colors.primary}
         />
       ) : (
         <>
@@ -210,6 +222,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
   },
   baseText: {
     fontWeight: '700',

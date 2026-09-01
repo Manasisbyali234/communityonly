@@ -147,7 +147,8 @@ export default function MyBusinessesScreen() {
       <View style={[styles.header, { backgroundColor: colors.cardBg, borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(tabs)/business' as any)}
+          accessibilityLabel="Go back"
         >
           <Ionicons name="arrow-back" size={19} color={colors.primary} />
         </TouchableOpacity>
@@ -159,7 +160,7 @@ export default function MyBusinessesScreen() {
         </View>
         <TouchableOpacity
           style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.push('/business/submit' as any)}
+          onPress={() => router.push('/business/submit?from=my-businesses' as any)}
         >
           <Ionicons name="add" size={18} color="#FFF" />
           <Text style={styles.addBtnText}>Add</Text>
@@ -193,7 +194,7 @@ export default function MyBusinessesScreen() {
               colors={colors}
               isDark={isDark}
               onView={() => router.push(`/business/${item.id}` as any)}
-              onEdit={() => router.push(`/business/submit?id=${item.id}` as any)}
+              onEdit={() => router.push(`/business/submit?id=${item.id}&from=my-businesses` as any)}
               onDelete={() => handleDelete(item)}
             />
           )}
@@ -211,7 +212,7 @@ export default function MyBusinessesScreen() {
               </Text>
               <TouchableOpacity
                 style={[styles.emptyAddBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push('/business/submit' as any)}
+                onPress={() => router.push('/business/submit?from=my-businesses' as any)}
               >
                 <Ionicons name="add" size={18} color="#FFF" />
                 <Text style={styles.emptyAddBtnText}>Add My Business</Text>

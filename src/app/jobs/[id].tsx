@@ -36,10 +36,20 @@ import { shareUrl } from '../../utils/shareUtils';
 import Button from '../../components/common/Button';
 
 export default function JobDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { colors, isDark, palette } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const handleBack = () => {
+    if (from === 'my-applications') {
+      router.replace('/jobs/my-applications' as any);
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/jobs' as any);
+    }
+  };
   const { user } = useAuthStore();
   const showToast = useToastStore((state) => state.showToast);
   const confirm = useConfirmStore((state) => state.confirm);
@@ -53,11 +63,12 @@ export default function JobDetailScreen() {
   const [resumeFile, setResumeFile] = useState<{ uri: string; name: string; mimeType: string; size?: number } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   // Other jobs from the same company
   const { data: companyJobs = [] } = useCompanyJobsQuery(job?.companyName || '');
   const otherJobs = useMemo(() => {
-    return companyJobs.filter((j) => j.id !== id).slice(0, 3);
+    return companyJobs.filter((j) => j.id !== id);
   }, [companyJobs, id]);
 
   const daysLeft = useMemo(() => {
@@ -70,6 +81,15 @@ export default function JobDetailScreen() {
 
     return Math.round((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   }, [job?.lastDate]);
+
+  const formattedSalary = useMemo(() => {
+    if (!job?.salaryLPA) return 'Not Disclosed';
+    const s = String(job.salaryLPA).trim();
+    if (s.toLowerCase().includes('lpa') || s.toLowerCase().includes('k') || s.includes('₹') || s.includes('lac') || s.includes('lakh')) {
+      return s.startsWith('₹') ? s : `₹${s}`;
+    }
+    return `₹${s} LPA`;
+  }, [job?.salaryLPA]);
 
   const pickResume = async () => {
     try {
@@ -165,7 +185,7 @@ export default function JobDetailScreen() {
       <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <View style={[styles.navbar, { borderBottomColor: colors.borderSecondary }]}>
           <TouchableOpacity
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
+            onPress={handleBack}
             style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceSecondary }]}
           >
             <Ionicons name="arrow-back" size={20} color={colors.text} />
@@ -185,7 +205,7 @@ export default function JobDetailScreen() {
       <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <View style={[styles.navbar, { borderBottomColor: colors.borderSecondary }]}>
           <TouchableOpacity
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
+            onPress={handleBack}
             style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceSecondary }]}
           >
             <Ionicons name="arrow-back" size={20} color={colors.text} />
@@ -227,7 +247,7 @@ export default function JobDetailScreen() {
         ]}
       >
         <TouchableOpacity
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
+          onPress={handleBack}
           style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}
           accessibilityLabel="Go back"
         >
@@ -338,18 +358,35 @@ export default function JobDetailScreen() {
             style={[
               styles.salaryBanner,
               {
-                backgroundColor: isDark ? 'rgba(45, 106, 45, 0.15)' : '#F4F9F4',
-                borderColor: isDark ? 'rgba(76, 175, 80, 0.3)' : '#C8E6C9',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F9FAF9',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2ECE2',
               },
             ]}
           >
-            <View style={styles.salaryInfo}>
-              <Text style={[styles.salaryLabel, { color: colors.primary }]}>OFFERED SALARY</Text>
-              <Text style={[styles.salaryValue, { color: colors.text }]}>{job.salaryLPA}</Text>
+            <View
+              style={[
+                styles.salaryIconWrap,
+                { backgroundColor: isDark ? 'rgba(76, 175, 80, 0.15)' : 'rgba(45, 106, 45, 0.08)' },
+              ]}
+            >
+              <Ionicons name="wallet-outline" size={20} color={colors.primary} />
             </View>
-            <View style={[styles.salaryBadge, { backgroundColor: isDark ? 'rgba(45, 106, 45, 0.3)' : colors.primary }]}>
-              <Ionicons name="cash-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.salaryBadgeText}>Annual CTC</Text>
+            <View style={styles.salaryInfo}>
+              <Text style={[styles.salaryLabel, { color: colors.textMuted }]}>OFFERED SALARY</Text>
+              <Text style={[styles.salaryValue, { color: colors.text }]}>{formattedSalary}</Text>
+            </View>
+            <View
+              style={[
+                styles.salaryBadge,
+                {
+                  backgroundColor: isDark ? 'rgba(76, 175, 80, 0.12)' : 'rgba(45, 106, 45, 0.07)',
+                  borderColor: isDark ? 'rgba(76, 175, 80, 0.25)' : 'rgba(45, 106, 45, 0.16)',
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Ionicons name="briefcase-outline" size={13} color={colors.primary} />
+              <Text style={[styles.salaryBadgeText, { color: colors.primary }]}>Annual CTC</Text>
             </View>
           </View>
         </View>
@@ -381,7 +418,13 @@ export default function JobDetailScreen() {
             <OverviewCard
               icon="time-outline"
               label="Experience"
-              value={job.experience}
+              value={
+                job.experience
+                  ? (job.experience.toLowerCase().includes('year') || job.experience.toLowerCase().includes('yr')
+                      ? job.experience
+                      : `${job.experience} Years`)
+                  : 'Not Specified'
+              }
               iconColor="#D97706"
               iconBg={isDark ? 'rgba(217, 119, 6, 0.18)' : '#FFFBEB'}
               colors={colors}
@@ -391,7 +434,7 @@ export default function JobDetailScreen() {
             <OverviewCard
               icon="location-outline"
               label="Location"
-              value={job.location}
+              value={job.location || 'Remote'}
               iconColor="#059669"
               iconBg={isDark ? 'rgba(5, 150, 105, 0.18)' : '#ECFDF5'}
               colors={colors}
@@ -413,7 +456,8 @@ export default function JobDetailScreen() {
             <OverviewCard
               icon="people-outline"
               label="Vacancies"
-              value={`${job.vacancyCount} Openings • ${job.applyCount} Applied`}
+              value={`${job.vacancyCount || 1} Opening${(job.vacancyCount || 1) !== 1 ? 's' : ''}`}
+              subValue={job.applyCount ? `${job.applyCount} Applicant${job.applyCount !== 1 ? 's' : ''}` : undefined}
               iconColor="#0284C7"
               iconBg={isDark ? 'rgba(2, 132, 199, 0.18)' : '#F0F9FF'}
               colors={colors}
@@ -482,9 +526,29 @@ export default function JobDetailScreen() {
             <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Job Description</Text>
           </View>
 
-          <Text style={[styles.descriptionText, { color: colors.textSecondary }]}>
+          <Text
+            style={[styles.descriptionText, { color: colors.textSecondary }]}
+            numberOfLines={isDescriptionExpanded ? undefined : 3}
+          >
             {job.description}
           </Text>
+
+          {job.description && job.description.length > 120 ? (
+            <TouchableOpacity
+              style={styles.readMoreBtn}
+              onPress={() => setIsDescriptionExpanded((prev) => !prev)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.readMoreText, { color: colors.primary }]}>
+                {isDescriptionExpanded ? 'Read Less' : 'Read More'}
+              </Text>
+              <Ionicons
+                name={isDescriptionExpanded ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* Office Address */}
@@ -630,37 +694,73 @@ export default function JobDetailScreen() {
               <Text style={[styles.sectionHeading, { color: colors.text }]}>
                 More from {job.companyName}
               </Text>
+              <Text style={[styles.otherJobsCount, { color: colors.textMuted }]}>
+                {otherJobs.length} {otherJobs.length === 1 ? 'opening' : 'openings'}
+              </Text>
             </View>
 
-            <View style={{ gap: 10 }}>
-              {otherJobs.map((otherJob) => (
-                <TouchableOpacity
-                  key={otherJob.id}
-                  style={[
-                    styles.otherJobCard,
-                    {
-                      backgroundColor: colors.cardBg,
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : colors.border,
-                    },
-                  ]}
-                  onPress={() => router.push(`/jobs/${otherJob.id}` as any)}
-                  activeOpacity={0.75}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.otherJobTitle, { color: colors.text }]} numberOfLines={1}>
-                      {otherJob.jobTitle}
-                    </Text>
-                    <Text style={[styles.otherJobMeta, { color: colors.textMuted }]}>
-                      {otherJob.location} • {EMPLOYMENT_TYPE_LABELS[otherJob.employmentType] || otherJob.employmentType}
-                    </Text>
-                  </View>
-                  <Text style={[styles.otherJobSalary, { color: colors.primary }]}>
-                    {otherJob.salaryLPA}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.otherJobsScrollContent}
+              nestedScrollEnabled
+            >
+              {otherJobs.map((otherJob) => {
+                const s = otherJob.salaryLPA ? String(otherJob.salaryLPA).trim() : '';
+                const salaryDisp = s
+                  ? s.toLowerCase().includes('lpa') || s.toLowerCase().includes('k') || s.includes('₹')
+                    ? s
+                    : `₹${s} LPA`
+                  : null;
+
+                return (
+                  <TouchableOpacity
+                    key={otherJob.id}
+                    style={[
+                      styles.otherJobCard,
+                      {
+                        backgroundColor: colors.cardBg,
+                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E6ECE6',
+                      },
+                    ]}
+                    onPress={() => router.push(`/jobs/${otherJob.id}` as any)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.otherJobCardHeader}>
+                      <Text style={[styles.otherJobTitle, { color: colors.text }]} numberOfLines={1}>
+                        {otherJob.jobTitle}
+                      </Text>
+                      {salaryDisp ? (
+                        <View
+                          style={[
+                            styles.otherJobSalaryPill,
+                            { backgroundColor: isDark ? 'rgba(76,175,80,0.12)' : 'rgba(45,106,45,0.07)' },
+                          ]}
+                        >
+                          <Text style={[styles.otherJobSalary, { color: colors.primary }]}>
+                            {salaryDisp}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    <View style={styles.otherJobBottomRow}>
+                      <Text style={[styles.otherJobMeta, { color: colors.textMuted }]} numberOfLines={1}>
+                        {otherJob.location || 'Remote'} • {EMPLOYMENT_TYPE_LABELS[otherJob.employmentType] || otherJob.employmentType}
+                      </Text>
+                      <View
+                        style={[
+                          styles.otherJobArrow,
+                          { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' },
+                        ]}
+                      >
+                        <Ionicons name="arrow-forward" size={13} color={colors.textSecondary} />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         ) : null}
       </ScrollView>
@@ -686,8 +786,11 @@ export default function JobDetailScreen() {
               },
             ]}
           >
-            <Ionicons name="checkmark-circle" size={22} color="#16A34A" />
+            <Ionicons name="checkmark-circle" size={24} color="#16A34A" />
             <View style={{ flex: 1 }}>
+              <Text style={[styles.appliedTag, { color: isDark ? '#86EFAC' : '#15803D' }]}>
+                Application Status
+              </Text>
               <Text style={[styles.appliedTitle, { color: '#16A34A' }]}>Application Submitted</Text>
               <Text style={[styles.appliedSub, { color: isDark ? '#A7F3D0' : '#15803D' }]}>
                 Under review by {job.companyName}
@@ -878,6 +981,7 @@ function OverviewCard({
   icon,
   label,
   value,
+  subValue,
   iconColor,
   iconBg,
   colors,
@@ -886,6 +990,7 @@ function OverviewCard({
   icon: any;
   label: string;
   value: string;
+  subValue?: string;
   iconColor: string;
   iconBg: string;
   colors: any;
@@ -896,18 +1001,29 @@ function OverviewCard({
       style={[
         styles.gridCard,
         {
-          backgroundColor: colors.cardBg,
-          borderColor: isDark ? 'rgba(255,255,255,0.08)' : colors.border,
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E6ECE6',
         },
       ]}
     >
-      <View style={[styles.gridIconWrap, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={18} color={iconColor} />
+      <View style={styles.gridCardTop}>
+        <View style={[styles.gridIconWrap, { backgroundColor: iconBg }]}>
+          <Ionicons name={icon} size={15} color={iconColor} />
+        </View>
+        <Text style={[styles.gridLabel, { color: colors.textMuted }]} numberOfLines={1}>
+          {label}
+        </Text>
       </View>
-      <Text style={[styles.gridLabel, { color: colors.textMuted }]}>{label}</Text>
-      <Text style={[styles.gridValue, { color: colors.text }]} numberOfLines={2}>
-        {value}
-      </Text>
+      <View style={styles.gridCardBottom}>
+        <Text style={[styles.gridValue, { color: colors.text }]} numberOfLines={2}>
+          {value}
+        </Text>
+        {subValue ? (
+          <Text style={[styles.gridSubValue, { color: colors.textMuted }]} numberOfLines={1}>
+            {subValue}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -979,27 +1095,29 @@ const styles = StyleSheet.create({
 
   // Scroll Content
   scrollContent: {
-    padding: 16,
-    gap: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 28,
+    gap: 12,
   },
 
   // Hero Card
   heroCard: {
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    padding: 18,
+    padding: 14,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 1.5 },
+        shadowOpacity: 0.03,
+        shadowRadius: 5,
       },
       android: {
-        elevation: 3,
+        elevation: 1,
       },
       default: {
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.03)',
       },
     }),
   },
@@ -1007,45 +1125,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 12,
   },
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusBadgeText: {
-    fontSize: 12,
+    fontSize: 10.5,
     fontWeight: '700',
+    letterSpacing: 0.2,
   },
   postedTime: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '500',
   },
   companyHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    marginBottom: 16,
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
   },
   companyLogo: {
-    width: 58,
-    height: 58,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
   },
   companyLogoFallback: {
-    width: 58,
-    height: 58,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1053,11 +1172,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   jobTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
-    lineHeight: 26,
-    letterSpacing: -0.4,
-    marginBottom: 4,
+    lineHeight: 23,
+    letterSpacing: -0.3,
+    marginBottom: 2,
   },
   companyNameWrap: {
     flexDirection: 'row',
@@ -1065,99 +1184,121 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   companyName: {
-    fontSize: 14.5,
+    fontSize: 13.5,
     fontWeight: '600',
   },
   salaryBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
     borderRadius: 14,
     borderWidth: 1,
+    gap: 10,
+  },
+  salaryIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   salaryInfo: {
     flex: 1,
   },
   salaryLabel: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    marginBottom: 2,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 1,
   },
   salaryValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
   salaryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4.5,
     borderRadius: 10,
   },
   salaryBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
 
   // Grid Section
   gridSection: {
-    gap: 10,
+    gap: 8,
   },
   sectionHeading: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   gridCard: {
-    width: '48.5%',
-    borderRadius: 16,
+    width: '48.7%',
+    minHeight: 74,
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 14,
+    padding: 10,
+    justifyContent: 'space-between',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.02,
+        shadowRadius: 3,
       },
       android: {
-        elevation: 1.5,
+        elevation: 0.5,
       },
       default: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
       },
     }),
   },
+  gridCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
   gridIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
   },
   gridLabel: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    marginBottom: 3,
+    fontSize: 10,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
+    flex: 1,
+  },
+  gridCardBottom: {
+    justifyContent: 'flex-end',
   },
   gridValue: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '700',
-    lineHeight: 18,
+    lineHeight: 16,
+  },
+  gridSubValue: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
   },
 
   // Section Card
@@ -1168,15 +1309,15 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 1.5 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 2,
+        elevation: 1,
       },
       default: {
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.03)',
       },
     }),
   },
@@ -1232,8 +1373,19 @@ const styles = StyleSheet.create({
   // Description
   descriptionText: {
     fontSize: 14.5,
-    lineHeight: 23,
+    lineHeight: 22,
     letterSpacing: 0.1,
+  },
+  readMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  readMoreText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   // Address
@@ -1314,33 +1466,80 @@ const styles = StyleSheet.create({
 
   // Other Jobs Section
   otherJobsSection: {
-    marginTop: 6,
-    gap: 12,
+    marginTop: 4,
+    gap: 10,
   },
   otherJobsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  otherJobsCount: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  otherJobsScrollContent: {
+    gap: 10,
+    paddingRight: 16,
+  },
   otherJobCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
+    width: 230,
+    borderRadius: 14,
     borderWidth: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+    minHeight: 82,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.02,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 0.5,
+      },
+      default: {
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+      },
+    }),
+  },
+  otherJobCardHeader: {
+    gap: 4,
+    marginBottom: 8,
   },
   otherJobTitle: {
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 3,
+    lineHeight: 18,
   },
-  otherJobMeta: {
-    fontSize: 12,
+  otherJobSalaryPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 8,
   },
   otherJobSalary: {
-    fontSize: 13,
+    fontSize: 11.5,
     fontWeight: '700',
+  },
+  otherJobBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  otherJobMeta: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    flex: 1,
+  },
+  otherJobArrow: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Bottom Floating Bar
@@ -1403,12 +1602,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
   },
-  appliedTitle: {
-    fontSize: 14,
+  appliedTag: {
+    fontSize: 10,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 1,
+  },
+  appliedTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   appliedSub: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '500',
   },
   closedBanner: {

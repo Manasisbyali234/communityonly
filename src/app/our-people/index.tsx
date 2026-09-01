@@ -221,8 +221,8 @@ export default function OurPeopleScreen() {
       <View style={[styles.header, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
-          onPress={() => router.back()}
-          accessibilityLabel="Go back"
+          onPress={() => router.replace('/(tabs)/explore?tab=stories' as any)}
+          accessibilityLabel="Go back to discover"
         >
           <Ionicons name="arrow-back" size={19} color={G} />
         </TouchableOpacity>
@@ -314,7 +314,7 @@ export default function OurPeopleScreen() {
               isDark={isDark}
             />
           )}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 40 }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 90 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={G} colors={[G]} />}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}

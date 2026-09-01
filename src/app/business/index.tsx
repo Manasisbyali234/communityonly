@@ -202,7 +202,7 @@ export default function BusinessDirectoryScreen() {
       router.push('/(auth)/login' as any);
       return;
     }
-    router.push('/business/submit' as any);
+    router.push('/business/submit?from=directory' as any);
   };
 
   const G = colors.primary;
@@ -219,8 +219,8 @@ export default function BusinessDirectoryScreen() {
       <View style={[styles.header, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
-          onPress={() => router.back()}
-          accessibilityLabel="Go back"
+          onPress={() => router.replace('/(tabs)/explore?tab=business' as any)}
+          accessibilityLabel="Go back to discover"
         >
           <Ionicons name="arrow-back" size={19} color={G} />
         </TouchableOpacity>

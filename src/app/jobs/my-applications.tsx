@@ -35,7 +35,7 @@ export default function MyJobApplicationsScreen() {
   return (
     <View style={[s.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/jobs' as any))} style={s.backBtn} accessibilityLabel="Go back to hiring companies">
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -73,8 +73,12 @@ export default function MyJobApplicationsScreen() {
       ) : (
         <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>
           {applications.map(app => (
-            <AppCard key={app.id} app={app} colors={colors}
-              onPress={() => router.push(`/jobs/${app.jobId}` as any)} />
+            <AppCard
+              key={app.id}
+              app={app}
+              colors={colors}
+              onPress={() => router.push({ pathname: '/jobs/[id]', params: { id: app.jobId, from: 'my-applications' } } as any)}
+            />
           ))}
         </ScrollView>
       )}

@@ -161,7 +161,8 @@ function MobileDateInput({ value, onChange, colors }: { value: string; onChange:
               mode="date"
               display="inline"
               minimumDate={new Date()}
-              onChange={onConfirm}
+              onValueChange={onConfirm}
+              onDismiss={() => setShow(false)}
               style={{ width: '100%' }}
             />
           </View>
@@ -174,7 +175,8 @@ function MobileDateInput({ value, onChange, colors }: { value: string; onChange:
           mode="date"
           display="calendar"
           minimumDate={new Date()}
-          onChange={onConfirm}
+          onValueChange={onConfirm}
+          onDismiss={() => setShow(false)}
         />
       )}
     </>
@@ -235,7 +237,8 @@ function MobileTimeInput({ value, onChange, colors }: { value: string; onChange:
               display="spinner"
               is24Hour={false}
               minuteInterval={5}
-              onChange={onConfirm}
+              onValueChange={onConfirm}
+              onDismiss={() => setShow(false)}
               style={{ width: '100%' }}
             />
           </View>
@@ -249,7 +252,8 @@ function MobileTimeInput({ value, onChange, colors }: { value: string; onChange:
           display="clock"
           is24Hour={false}
           minuteInterval={5}
-          onChange={onConfirm}
+          onValueChange={onConfirm}
+          onDismiss={() => setShow(false)}
         />
       )}
     </>

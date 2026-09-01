@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback,
   SafeAreaView, Platform, ActivityIndicator, Alert, ScrollView,
   StatusBar, TextInput, KeyboardAvoidingView, useWindowDimensions,
+  PanResponder, Animated,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -20,7 +21,7 @@ type Tool = 'none' | 'emoji' | 'text';
 type EmojiOverlay = { id: number; emoji: string; size: number; top: number; left: number };
 type TextOverlay  = { id: number; text: string; color: string; size: number; top: number; left: number };
 
-const EMOJIS = ['ðŸ˜€','ðŸ˜‚','ðŸ˜','ðŸ¥°','ðŸ˜Ž','ðŸ¤©','ðŸ˜­','ðŸ˜±','ðŸ”¥','â¤ï¸','ðŸ’¯','âœ¨','ðŸŽ‰','ðŸ‘','ðŸ™Œ','ðŸ’ª','ðŸ¤”','ðŸ˜´','ðŸ¥³','ðŸ˜‡','ðŸŒŸ','ðŸ’«','ðŸŽŠ','ðŸŽˆ','ðŸŒˆ','ðŸ¦‹','ðŸŒ¸','ðŸ€','âš¡','ðŸŽ¯'];
+const EMOJIS = ['😀','😂','😍','🥰','😎','🤩','😭','😱','🔥','❤️','💯','✨','🎉','👍','🙌','💪','🤔','😴','🥳','😇','🌟','💫','🎊','🎈','🌈','🦋','🌸','🍀','⚡','🎯'];
 
 const COLORS = [
   '#FFFFFF','#000000','#FF3B30','#FF9500','#FFCC00',
@@ -242,12 +243,12 @@ function CameraScreen({ onMedia }: { onMedia: (m: MediaItem) => void }) {
   );
 }
 
-// â”€â”€â”€ Emoji Size Controls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Emoji Size Controls ──────────────────────────────────────────────────────────
 function EmojiSizeControls({ id, size, onResize, onDelete }: { id: number; size: number; onResize: (id: number, delta: number) => void; onDelete: (id: number) => void }) {
   return (
     <View style={s.emojiControls}>
       <TouchableOpacity style={s.sizeBtn} onPress={() => onResize(id, -6)}>
-        <Text style={s.sizeBtnText}>âˆ’</Text>
+        <Text style={s.sizeBtnText}>-</Text>
       </TouchableOpacity>
       <TouchableOpacity style={s.sizeBtn} onPress={() => onResize(id, 6)}>
         <Text style={s.sizeBtnText}>+</Text>
@@ -259,14 +260,241 @@ function EmojiSizeControls({ id, size, onResize, onDelete }: { id: number; size:
   );
 }
 
-// â”€â”€â”€ Preview Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Draggable Overlays ──────────────────────────────────────
+function DraggableTextOverlay({
+  item,
+  isSelected,
+  containerWidth,
+  containerHeight,
+  onSelect,
+  onUpdatePosition,
+}: {
+  item: TextOverlay;
+  isSelected: boolean;
+  containerWidth: number;
+  containerHeight: number;
+  onSelect: () => void;
+  onUpdatePosition: (id: number, top: number, left: number) => void;
+}) {
+  const W = containerWidth || 360;
+  const H = containerHeight || 640;
+
+  const initialX = (item.left / 100) * W;
+  const initialY = (item.top / 100) * H;
+
+  const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
+  const currentPos = useRef({ x: initialX, y: initialY });
+  const isDragging = useRef(false);
+  const itemRef = useRef(item);
+  itemRef.current = item;
+  const containerRef = useRef({ w: W, h: H });
+  containerRef.current = { w: W, h: H };
+
+  useEffect(() => {
+    const id = pan.addListener((value) => {
+      currentPos.current = value;
+    });
+    return () => pan.removeListener(id);
+  }, [pan]);
+
+  useEffect(() => {
+    const targetX = (item.left / 100) * containerRef.current.w;
+    const targetY = (item.top / 100) * containerRef.current.h;
+    if (Math.abs(currentPos.current.x - targetX) > 2 || Math.abs(currentPos.current.y - targetY) > 2) {
+      pan.setValue({ x: targetX, y: targetY });
+      currentPos.current = { x: targetX, y: targetY };
+    }
+  }, [item.left, item.top]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 2 || Math.abs(gestureState.dy) > 2;
+      },
+      onPanResponderGrant: () => {
+        isDragging.current = false;
+        pan.setOffset({
+          x: currentPos.current.x,
+          y: currentPos.current.y,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3) {
+          isDragging.current = true;
+        }
+        pan.setValue({ x: gestureState.dx, y: gestureState.dy });
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        pan.flattenOffset();
+
+        if (!isDragging.current || (Math.abs(gestureState.dx) < 4 && Math.abs(gestureState.dy) < 4)) {
+          onSelect();
+          return;
+        }
+
+        const screenW = containerRef.current.w;
+        const screenH = containerRef.current.h;
+
+        const clampedX = Math.max(10, Math.min(screenW - 50, currentPos.current.x));
+        const clampedY = Math.max(50, Math.min(screenH - 130, currentPos.current.y));
+
+        pan.setValue({ x: clampedX, y: clampedY });
+        currentPos.current = { x: clampedX, y: clampedY };
+
+        const newLeft = (clampedX / screenW) * 100;
+        const newTop = (clampedY / screenH) * 100;
+
+        onUpdatePosition(itemRef.current.id, newTop, newLeft);
+      },
+    })
+  ).current;
+
+  return (
+    <Animated.View
+      {...panResponder.panHandlers}
+      style={[
+        s.overlayItem,
+        {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          transform: [{ translateX: pan.x }, { translateY: pan.y }],
+        },
+        isSelected && s.overlayItemSelected,
+      ]}
+    >
+      <Text style={[s.textOverlayText, { fontSize: item.size, color: item.color }]}>
+        {item.text}
+      </Text>
+    </Animated.View>
+  );
+}
+
+function DraggableEmojiOverlay({
+  item,
+  isSelected,
+  containerWidth,
+  containerHeight,
+  onSelect,
+  onUpdatePosition,
+  onResize,
+  onDelete,
+}: {
+  item: EmojiOverlay;
+  isSelected: boolean;
+  containerWidth: number;
+  containerHeight: number;
+  onSelect: () => void;
+  onUpdatePosition: (id: number, top: number, left: number) => void;
+  onResize: (id: number, delta: number) => void;
+  onDelete: (id: number) => void;
+}) {
+  const W = containerWidth || 360;
+  const H = containerHeight || 640;
+
+  const initialX = (item.left / 100) * W;
+  const initialY = (item.top / 100) * H;
+
+  const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
+  const currentPos = useRef({ x: initialX, y: initialY });
+  const isDragging = useRef(false);
+  const itemRef = useRef(item);
+  itemRef.current = item;
+  const containerRef = useRef({ w: W, h: H });
+  containerRef.current = { w: W, h: H };
+
+  useEffect(() => {
+    const id = pan.addListener((value) => {
+      currentPos.current = value;
+    });
+    return () => pan.removeListener(id);
+  }, [pan]);
+
+  useEffect(() => {
+    const targetX = (item.left / 100) * containerRef.current.w;
+    const targetY = (item.top / 100) * containerRef.current.h;
+    if (Math.abs(currentPos.current.x - targetX) > 2 || Math.abs(currentPos.current.y - targetY) > 2) {
+      pan.setValue({ x: targetX, y: targetY });
+      currentPos.current = { x: targetX, y: targetY };
+    }
+  }, [item.left, item.top]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 2 || Math.abs(gestureState.dy) > 2;
+      },
+      onPanResponderGrant: () => {
+        isDragging.current = false;
+        pan.setOffset({
+          x: currentPos.current.x,
+          y: currentPos.current.y,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3) {
+          isDragging.current = true;
+        }
+        pan.setValue({ x: gestureState.dx, y: gestureState.dy });
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        pan.flattenOffset();
+
+        if (!isDragging.current || (Math.abs(gestureState.dx) < 4 && Math.abs(gestureState.dy) < 4)) {
+          onSelect();
+          return;
+        }
+
+        const screenW = containerRef.current.w;
+        const screenH = containerRef.current.h;
+
+        const clampedX = Math.max(10, Math.min(screenW - 50, currentPos.current.x));
+        const clampedY = Math.max(50, Math.min(screenH - 130, currentPos.current.y));
+
+        pan.setValue({ x: clampedX, y: clampedY });
+        currentPos.current = { x: clampedX, y: clampedY };
+
+        const newLeft = (clampedX / screenW) * 100;
+        const newTop = (clampedY / screenH) * 100;
+
+        onUpdatePosition(itemRef.current.id, newTop, newLeft);
+      },
+    })
+  ).current;
+
+  return (
+    <Animated.View
+      {...panResponder.panHandlers}
+      style={[
+        s.overlayItem,
+        {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          transform: [{ translateX: pan.x }, { translateY: pan.y }],
+        },
+      ]}
+    >
+      <Text style={{ fontSize: item.size }}>{item.emoji}</Text>
+      {isSelected && (
+        <EmojiSizeControls id={item.id} size={item.size} onResize={onResize} onDelete={onDelete} />
+      )}
+    </Animated.View>
+  );
+}
+
+// ─── Preview Screen ─────────────────────────────────────────
 function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => void }) {
   const showToast = useToastStore((s) => s.showToast);
   const router = useRouter();
   const { storyId } = useLocalSearchParams<{ storyId?: string }>();
   const createStory = useCreateStoryMutation();
   const updateStory = useUpdateStoryMutation();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -321,8 +549,16 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
     setSelectedTextId(null);
   };
 
+  const updateTextPosition = (id: number, top: number, left: number) => {
+    setTextOverlays(prev => prev.map(t => t.id === id ? { ...t, top, left } : t));
+  };
+
+  const updateEmojiPosition = (id: number, top: number, left: number) => {
+    setOverlayEmojis(prev => prev.map(e => e.id === id ? { ...e, top, left } : e));
+  };
+
   const containerRef = useRef<KeyboardAvoidingView>(null);
-  const [containerSize, setContainerSize] = useState({ w: windowWidth, h: 0 });
+  const [containerSize, setContainerSize] = useState({ w: windowWidth, h: windowHeight });
 
   const compositeImageWithOverlays = async (sourceBlob: Blob): Promise<Blob> => {
     return new Promise((resolve, reject) => {
@@ -456,62 +692,95 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
       <LinearGradient colors={['rgba(0,0,0,0.5)', 'transparent']} style={s.topGradient} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={s.bottomGradient} />
 
-      {/* â”€â”€ Emoji overlays â”€â”€ */}
+      {/* ── Emoji overlays (Draggable) ── */}
       {overlayEmojis.map(item => (
-        <TouchableOpacity
+        <DraggableEmojiOverlay
           key={item.id}
-          style={[s.overlayItem, { top: `${item.top}%` as any, left: `${item.left}%` as any }]}
-          onPress={() => setSelectedEmojiId(prev => prev === item.id ? null : item.id)}
-        >
-          <Text style={{ fontSize: item.size }}>{item.emoji}</Text>
-          {selectedEmojiId === item.id && (
-            <EmojiSizeControls id={item.id} size={item.size} onResize={resizeEmoji} onDelete={deleteEmoji} />
-          )}
-        </TouchableOpacity>
+          item={item}
+          isSelected={selectedEmojiId === item.id}
+          containerWidth={containerSize.w || windowWidth}
+          containerHeight={containerSize.h || windowHeight}
+          onSelect={() => {
+            setSelectedTextId(null);
+            setSelectedEmojiId(prev => prev === item.id ? null : item.id);
+          }}
+          onUpdatePosition={updateEmojiPosition}
+          onResize={resizeEmoji}
+          onDelete={deleteEmoji}
+        />
       ))}
 
-      {/* â”€â”€ Text overlays â”€â”€ */}
+      {/* ── Text overlays (Draggable) ── */}
       {textOverlays.map(item => (
-        <TouchableOpacity
+        <DraggableTextOverlay
           key={item.id}
-          style={[s.overlayItem, { top: `${item.top}%` as any, left: `${item.left}%` as any }]}
-          onPress={() => setSelectedTextId(prev => prev === item.id ? null : item.id)}
-        >
-          <Text style={[s.textOverlayText, { fontSize: item.size, color: item.color }]}>{item.text}</Text>
-          {selectedTextId === item.id && (
-            <View style={s.textEditControls}>
-              {/* Size row */}
-              <View style={s.textEditRow}>
-                <TouchableOpacity style={s.sizeBtn} onPress={() => setTextOverlays(prev => prev.map(t => t.id === item.id ? { ...t, size: Math.max(14, t.size - 4) } : t))}>
-                  <Text style={s.sizeBtnText}>âˆ’</Text>
-                </TouchableOpacity>
-                <Text style={s.textSizeLabel}>{item.size}px</Text>
-                <TouchableOpacity style={s.sizeBtn} onPress={() => setTextOverlays(prev => prev.map(t => t.id === item.id ? { ...t, size: Math.min(72, t.size + 4) } : t))}>
-                  <Text style={s.sizeBtnText}>+</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.sizeBtn, { backgroundColor: 'rgba(255,59,48,0.8)', marginLeft: 4 }]} onPress={() => deleteText(item.id)}>
-                  <Ionicons name="trash-outline" size={14} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-              {/* Color row */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 4, paddingTop: 6 }}>
-                {COLORS.map(c => (
-                  <TouchableOpacity
-                    key={c}
-                    onPress={() => setTextOverlays(prev => prev.map(t => t.id === item.id ? { ...t, color: c } : t))}
-                    style={[s.colorDot, {
-                      backgroundColor: c,
-                      borderWidth: item.color === c ? 3 : 1.5,
-                      borderColor: item.color === c ? '#FFF' : 'rgba(255,255,255,0.35)',
-                      transform: [{ scale: item.color === c ? 1.2 : 1 }],
-                    }]}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </TouchableOpacity>
+          item={item}
+          isSelected={selectedTextId === item.id}
+          containerWidth={containerSize.w || windowWidth}
+          containerHeight={containerSize.h || windowHeight}
+          onSelect={() => {
+            setSelectedEmojiId(null);
+            setSelectedTextId(prev => prev === item.id ? null : item.id);
+          }}
+          onUpdatePosition={updateTextPosition}
+        />
       ))}
+
+      {/* ── Selected Text Edit Panel (Docked safely above bottom actions) ── */}
+      {selectedTextId !== null && (() => {
+        const item = textOverlays.find(t => t.id === selectedTextId);
+        if (!item) return null;
+        return (
+          <View style={s.textEditControlsDocked}>
+            {/* Top row: size controls, delete, and checkmark */}
+            <View style={s.textEditRow}>
+              <TouchableOpacity
+                style={s.sizeBtn}
+                onPress={() => setTextOverlays(prev => prev.map(t => t.id === item.id ? { ...t, size: Math.max(14, t.size - 4) } : t))}
+              >
+                <Text style={s.sizeBtnText}>A-</Text>
+              </TouchableOpacity>
+              <Text style={s.textSizeLabel}>{item.size}px</Text>
+              <TouchableOpacity
+                style={s.sizeBtn}
+                onPress={() => setTextOverlays(prev => prev.map(t => t.id === item.id ? { ...t, size: Math.min(72, t.size + 4) } : t))}
+              >
+                <Text style={s.sizeBtnText}>A+</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.sizeBtn, { backgroundColor: 'rgba(255,59,48,0.85)', marginLeft: 8 }]}
+                onPress={() => deleteText(item.id)}
+              >
+                <Ionicons name="trash-outline" size={16} color="#FFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.sizeBtn, { backgroundColor: 'rgba(52,199,89,0.9)', marginLeft: 8 }]}
+                onPress={() => setSelectedTextId(null)}
+              >
+                <Ionicons name="checkmark" size={18} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Bottom row: Color palette */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 4, paddingTop: 8 }}>
+              {COLORS.map(c => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setTextOverlays(prev => prev.map(t => t.id === item.id ? { ...t, color: c } : t))}
+                  style={[s.colorDot, {
+                    backgroundColor: c,
+                    borderWidth: item.color === c ? 3 : 1.5,
+                    borderColor: item.color === c ? '#FFF' : 'rgba(255,255,255,0.35)',
+                    transform: [{ scale: item.color === c ? 1.2 : 1 }],
+                  }]}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        );
+      })()}
 
       {/* â”€â”€ Emoji picker panel â”€â”€ */}
       {activeTool === 'emoji' && (
@@ -545,7 +814,7 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
           {/* Size row */}
           <View style={s.textSizeRow}>
             <TouchableOpacity style={s.sizeBtn} onPress={() => setTextSize(prev => Math.max(14, prev - 4))}>
-              <Text style={s.sizeBtnText}>Aâˆ’</Text>
+              <Text style={s.sizeBtnText}>A-</Text>
             </TouchableOpacity>
             <Text style={s.textSizeLabel}>{textSize}px</Text>
             <TouchableOpacity style={s.sizeBtn} onPress={() => setTextSize(prev => Math.min(72, prev + 4))}>
@@ -557,7 +826,7 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
             <TextInput
               ref={textInputRef}
               style={[s.textInputField, { color: textColor, fontSize: Math.min(textSize, 22) }]}
-              placeholder="Type somethingâ€¦"
+              placeholder="Type something"
               placeholderTextColor="rgba(255,255,255,0.4)"
               value={textInput}
               onChangeText={setTextInput}
@@ -583,7 +852,7 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
               style={[s.topIconBtn, activeTool === 'emoji' && s.topIconActive]}
               onPress={() => toggleTool('emoji')}
             >
-              <Text style={{ fontSize: 22 }}>ðŸ˜Š</Text>
+              <Text style={{ fontSize: 22 }}>😊</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.topIconBtn, activeTool === 'text' && s.topIconActive]}
@@ -600,7 +869,7 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
         {uploading ? (
           <View style={s.uploadingRow}>
             <ActivityIndicator color="#FFF" size="small" />
-            <Text style={s.uploadingText}>Uploadingâ€¦ {progress}%</Text>
+            <Text style={s.uploadingText}>Uploading... {progress}%</Text>
             <View style={s.uploadProgressBg}>
               <View style={[s.uploadProgressFill, { width: `${progress}%` as any }]} />
             </View>
@@ -772,6 +1041,15 @@ const s = StyleSheet.create({
 
   // Overlays
   overlayItem: { position: 'absolute', zIndex: 15, alignItems: 'center' },
+  overlayItemSelected: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
   textOverlayText: { fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 4 },
 
   // Emoji / text size controls
@@ -806,14 +1084,21 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 6,
   },
   textSizeLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, flex: 1, textAlign: 'center' },
-  // Inline edit controls for selected text overlay
-  textEditControls: {
-    marginTop: 6,
-    backgroundColor: 'rgba(0,0,0,0.72)',
-    borderRadius: 16, paddingHorizontal: 8, paddingVertical: 8,
-    alignItems: 'center', gap: 4,
+  // Docked edit controls for selected text overlay (stays safely on screen)
+  textEditControlsDocked: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 130 : 110,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.86)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    zIndex: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  textEditRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  textEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' },
   textInputRow: {
     flexDirection: 'row', alignItems: 'flex-end',
     paddingHorizontal: 12, gap: 8,

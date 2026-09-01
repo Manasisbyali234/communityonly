@@ -14,8 +14,9 @@ import { useTheme } from '../../../theme';
 import { useToastStore } from '../../../store/toastStore';
 
 export default function PostDetail() {
-  const params = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; from?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const from = params.from;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, spacing, typography, palette, roundness } = useTheme();
@@ -41,10 +42,10 @@ export default function PostDetail() {
   }, [post?.isLiked, post?.likesCount]);
 
   const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
+    if (from === 'feed' || from === 'home') {
+      router.replace('/(tabs)' as any);
     } else {
-      router.replace('/(tabs)/explore' as any);
+      router.replace('/(tabs)/explore?tab=feed' as any);
     }
   };
 

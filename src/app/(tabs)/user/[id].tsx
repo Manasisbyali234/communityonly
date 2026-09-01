@@ -10,6 +10,7 @@ import {
   Animated,
   Alert,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,7 +29,10 @@ import { useAuthStore } from '../../../store/authStore';
 import { useConnectionStatusQuery, useSendConnectionRequestMutation } from '../../../api/connections';
 import { shareUrl } from '../../../utils/shareUtils';
 import { useUserJoinedEventsQuery } from '../../../api/event';
+import { BottomSheet } from '../../../components/common/BottomSheet';
+import { confirmAction } from '../../../store/confirmStore';
 import { Share } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SW } = Dimensions.get('window');
 const COVER_HEIGHT = 175;
@@ -41,10 +45,22 @@ const TABS: { id: ProfileTab; label: string; icon: string }[] = [
 ];
 
 export default function UserProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const handleBack = () => {
+    if (from === 'notifications') {
+      router.replace('/(tabs)/notifications' as any);
+    } else if (from === 'events') {
+      router.replace('/(tabs)/explore?tab=events' as any);
+    } else if (from === 'feed') {
+      router.replace('/(tabs)' as any);
+    } else {
+      router.replace('/(tabs)/explore?tab=members' as any);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [bioExpanded, setBioExpanded] = useState(false);
@@ -52,6 +68,7 @@ export default function UserProfileScreen() {
   const [commentSheetVisible, setCommentSheetVisible] = useState(false);
   const [selectedForwardPostId, setSelectedForwardPostId] = useState<string | null>(null);
   const [forwardSheetVisible, setForwardSheetVisible] = useState(false);
+  const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const showToast = useToastStore((state) => state.showToast);
@@ -80,6 +97,9 @@ export default function UserProfileScreen() {
     showToast(ok ? 'Link copied to clipboard!' : 'Could not share profile', ok ? 'success' : 'error');
   }, [user, showToast]);
 
+  const { width: screenWidth } = useWindowDimensions();
+  const statItemWidth = (screenWidth - 32) / 3.5;
+
   const G = colors.primary;
   const BG = colors.background;
   const SURF = colors.surface;
@@ -98,7 +118,7 @@ export default function UserProfileScreen() {
     return (
       <View style={[styles.root, { backgroundColor: BG, paddingTop: insets.top }]}>
         <View style={[styles.navbar, { borderBottomColor: BORDER }]}>
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={styles.navIconBtn}>
+          <TouchableOpacity onPress={handleBack} style={styles.navIconBtn}>
             <Ionicons name="arrow-back" size={24} color={TEXT} />
           </TouchableOpacity>
           <Text style={[styles.navTitle, { color: TEXT }]}>Profile</Text>
@@ -129,7 +149,7 @@ export default function UserProfileScreen() {
           title="Go Back"
           variant="primary"
           size="md"
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
+          onPress={handleBack}
         />
       </View>
     );
@@ -143,7 +163,7 @@ export default function UserProfileScreen() {
       {/* ── Animated App Bar ─────────────────────────────────────────────── */}
       <Animated.View style={[styles.navbar, { borderBottomColor: BORDER }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: SURF, opacity: navBgOpacity }]} />
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={styles.navIconBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.navIconBtn}>
           <Ionicons name="arrow-back" size={24} color={TEXT} />
         </TouchableOpacity>
         <Text style={[styles.navTitle, { color: TEXT }]} numberOfLines={1}>{user.displayName}</Text>
@@ -153,10 +173,8 @@ export default function UserProfileScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.navIconBtn}
-            onPress={() => Alert.alert('Profile options', undefined, [
-              { text: 'Share profile', onPress: handleShare },
-              { text: 'Cancel', style: 'cancel' },
-            ])}
+            onPress={() => setOptionsMenuVisible(true)}
+            accessibilityLabel="Profile options"
           >
             <Ionicons name="ellipsis-vertical" size={22} color={TEXT} />
           </TouchableOpacity>
@@ -247,7 +265,7 @@ export default function UserProfileScreen() {
 
             <Text style={[styles.usernameText, { color: TEXT3 }]}>@{user.username}</Text>
 
-            <View style={styles.metaPillsRow}>
+            <View style={[styles.metaPillsRow, !user.bio && { marginBottom: 0 }]}>
               <View style={[styles.badgePill, { backgroundColor: G + '15' }]}>
                 <Ionicons name="sparkles" size={11} color={G} />
                 <Text style={[styles.badgePillText, { color: G }]}>{user.occupation || 'Member'}</Text>
@@ -274,66 +292,75 @@ export default function UserProfileScreen() {
             ) : null}
           </View>
 
-          {/* Stats Bar with Colorful Icons */}
-          <View style={[styles.statsCardWrapper, { backgroundColor: SURF, borderColor: BORDER }]}>
-            {[
-              {
-                label: 'Followers',
-                value: (user.followersCount || 0).toString(),
-                icon: 'people',
-                color: G,
-                bg: G + '14',
-              },
-              {
-                label: 'Following',
-                value: (user.followingCount || 0).toString(),
-                icon: 'person-add',
-                color: '#3B82F6',
-                bg: '#3B82F614',
-              },
-              {
-                label: 'Communities',
-                value: (user.communitiesCount || 0).toString(),
-                icon: 'globe',
-                color: '#8B5CF6',
-                bg: '#8B5CF614',
-              },
-              {
-                label: 'Helped',
-                value: (user.helpCount || 0).toString(),
-                icon: 'heart',
-                color: '#DC2626',
-                bg: '#DC262614',
-              },
-              {
-                label: 'Events Attended',
-                value: (user.attendedEventCount || 0).toString(),
-                icon: 'calendar',
-                color: '#0891B2',
-                bg: '#0891B214',
-              },
-              {
-                label: 'Member',
-                value: memberSinceYear.toString(),
-                icon: 'ribbon',
-                color: '#F59E0B',
-                bg: '#F59E0B14',
-              },
-            ].map((stat, index, arr) => (
-              <View
-                key={stat.label}
-                style={[
-                  styles.statBlock,
-                  index % 3 !== 2 && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: BORDER },
-                ]}
-              >
-                <View style={[styles.statIconBadge, { backgroundColor: stat.bg }]}>
-                  <Ionicons name={stat.icon as any} size={15} color={stat.color} />
+          {/* Stats Bar with Colorful Icons (Scrollable in one row) */}
+          <View style={[styles.statsCardContainer, { backgroundColor: SURF, borderColor: BORDER }]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.statsScrollContent}
+            >
+              {[
+                {
+                  label: 'Followers',
+                  value: (user.followersCount || 0).toString(),
+                  icon: 'people',
+                  color: G,
+                  bg: G + '14',
+                },
+                {
+                  label: 'Following',
+                  value: (user.followingCount || 0).toString(),
+                  icon: 'person-add',
+                  color: '#3B82F6',
+                  bg: '#3B82F614',
+                },
+                {
+                  label: 'Communities',
+                  value: (user.communitiesCount || 0).toString(),
+                  icon: 'globe',
+                  color: '#8B5CF6',
+                  bg: '#8B5CF614',
+                },
+                {
+                  label: 'Helped',
+                  value: (user.helpCount || 0).toString(),
+                  icon: 'heart',
+                  color: '#DC2626',
+                  bg: '#DC262614',
+                },
+                {
+                  label: 'Events Attended',
+                  value: (user.attendedEventCount || 0).toString(),
+                  icon: 'calendar',
+                  color: '#0891B2',
+                  bg: '#0891B214',
+                },
+                {
+                  label: 'Member',
+                  value: memberSinceYear.toString(),
+                  icon: 'ribbon',
+                  color: '#F59E0B',
+                  bg: '#F59E0B14',
+                },
+              ].map((stat, index, arr) => (
+                <View
+                  key={stat.label}
+                  style={[
+                    styles.statBlock,
+                    { width: statItemWidth },
+                    index < arr.length - 1 && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: BORDER },
+                  ]}
+                >
+                  <View style={[styles.statIconBadge, { backgroundColor: stat.bg }]}>
+                    <Ionicons name={stat.icon as any} size={15} color={stat.color} />
+                  </View>
+                  <Text style={[styles.statValue, { color: TEXT }]}>{stat.value}</Text>
+                  <Text style={[styles.statLabel, { color: TEXT3 }]} numberOfLines={1} ellipsizeMode="tail">
+                    {stat.label}
+                  </Text>
                 </View>
-                <Text style={[styles.statValue, { color: TEXT }]}>{stat.value}</Text>
-                <Text style={[styles.statLabel, { color: TEXT3 }]}>{stat.label}</Text>
-              </View>
-            ))}
+              ))}
+            </ScrollView>
           </View>
         </View>
 
@@ -349,12 +376,20 @@ export default function UserProfileScreen() {
                   style={[
                     styles.tabPill,
                     active
-                      ? [styles.tabPillActive, { backgroundColor: G }]
+                      ? [styles.tabPillActive, { backgroundColor: 'rgb(45, 106, 45)' }]
                       : [styles.tabPillInactive, { backgroundColor: SURF, borderColor: BORDER }],
                   ]}
                 >
-                  <Ionicons name={tab.icon as any} size={14} color={active ? '#FFF' : TEXT3} />
-                  <Text style={[styles.tabLabel, { color: active ? '#FFF' : TEXT2, fontWeight: active ? '700' : '500' }]}>
+                  {active && (
+                    <LinearGradient
+                      colors={['rgb(76, 175, 80)', 'rgb(45, 106, 45)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  )}
+                  <Ionicons name={tab.icon as any} size={16} color={active ? '#FFF' : TEXT3} />
+                  <Text style={[styles.tabLabel, { color: active ? '#FFF' : TEXT2, fontWeight: active ? '700' : '600' }]}>
                     {tab.label}
                   </Text>
                 </Pressable>
@@ -465,48 +500,50 @@ export default function UserProfileScreen() {
           {/* ABOUT TAB */}
           {activeTab === 'about' && (
             <View style={{ gap: 14 }}>
-              {/* Card 1: Personal & Heritage */}
+              {/* Card 1: Personal & Heritage (Two Column Grid) */}
               <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                   <Ionicons name="person-circle-outline" size={18} color={G} />
                   <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>Personal Details</Text>
                 </View>
 
-                {/* Native Place */}
-                <View style={[styles.detailItemRow, { borderBottomColor: BORDER, borderBottomWidth: StyleSheet.hairlineWidth }]}>
-                  <View style={[styles.detailIconContainer, { backgroundColor: G + '14' }]}>
-                    <Ionicons name="location" size={16} color={G} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.detailLabel, { color: TEXT3 }]}>Native Place / Village</Text>
-                    <Text style={[styles.detailValue, { color: user.village ? TEXT : TEXT3 }]}>
+                <View style={styles.twoColumnGrid}>
+                  {/* Native Place */}
+                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                    <View style={styles.detailTileHeader}>
+                      <View style={[styles.detailTileIcon, { backgroundColor: G + '14' }]}>
+                        <Ionicons name="location" size={13} color={G} />
+                      </View>
+                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Native Place</Text>
+                    </View>
+                    <Text style={[styles.detailTileValue, { color: user.village ? TEXT : TEXT3 }]} numberOfLines={1}>
                       {user.village || 'Not specified'}
                     </Text>
                   </View>
-                </View>
 
-                {/* Profession / Occupation */}
-                <View style={[styles.detailItemRow, { borderBottomColor: BORDER, borderBottomWidth: StyleSheet.hairlineWidth }]}>
-                  <View style={[styles.detailIconContainer, { backgroundColor: '#3B82F614' }]}>
-                    <Ionicons name="briefcase" size={16} color="#3B82F6" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.detailLabel, { color: TEXT3 }]}>Profession / Occupation</Text>
-                    <Text style={[styles.detailValue, { color: user.occupation ? TEXT : TEXT3 }]}>
+                  {/* Profession / Occupation */}
+                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                    <View style={styles.detailTileHeader}>
+                      <View style={[styles.detailTileIcon, { backgroundColor: '#3B82F614' }]}>
+                        <Ionicons name="briefcase" size={13} color="#3B82F6" />
+                      </View>
+                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Profession</Text>
+                    </View>
+                    <Text style={[styles.detailTileValue, { color: user.occupation ? TEXT : TEXT3 }]} numberOfLines={1}>
                       {user.occupation || 'Not specified'}
                     </Text>
                   </View>
-                </View>
 
-                {/* Languages */}
-                <View style={[styles.detailItemRow, { borderBottomColor: BORDER, borderBottomWidth: StyleSheet.hairlineWidth }]}>
-                  <View style={[styles.detailIconContainer, { backgroundColor: '#8B5CF614' }]}>
-                    <Ionicons name="language" size={16} color="#8B5CF6" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.detailLabel, { color: TEXT3 }]}>Languages Known</Text>
+                  {/* Languages */}
+                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                    <View style={styles.detailTileHeader}>
+                      <View style={[styles.detailTileIcon, { backgroundColor: '#8B5CF614' }]}>
+                        <Ionicons name="language" size={13} color="#8B5CF6" />
+                      </View>
+                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Languages</Text>
+                    </View>
                     {user.languages ? (
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                      <View style={styles.tilePillsWrap}>
                         {user.languages.split(',').map((lang, idx) => (
                           <View key={idx} style={[styles.aboutPill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}>
                             <Text style={[styles.aboutPillText, { color: TEXT2 }]}>{lang.trim()}</Text>
@@ -514,20 +551,20 @@ export default function UserProfileScreen() {
                         ))}
                       </View>
                     ) : (
-                      <Text style={[styles.detailValue, { color: TEXT3 }]}>Not specified</Text>
+                      <Text style={[styles.detailTileValue, { color: TEXT3 }]}>Not specified</Text>
                     )}
                   </View>
-                </View>
 
-                {/* Interests */}
-                <View style={styles.detailItemRow}>
-                  <View style={[styles.detailIconContainer, { backgroundColor: '#F59E0B14' }]}>
-                    <Ionicons name="sparkles" size={16} color="#F59E0B" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.detailLabel, { color: TEXT3 }]}>Interests & Passions</Text>
+                  {/* Interests */}
+                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                    <View style={styles.detailTileHeader}>
+                      <View style={[styles.detailTileIcon, { backgroundColor: '#F59E0B14' }]}>
+                        <Ionicons name="sparkles" size={13} color="#F59E0B" />
+                      </View>
+                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Interests</Text>
+                    </View>
                     {user.interests ? (
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                      <View style={styles.tilePillsWrap}>
                         {user.interests.split(',').map((interest, idx) => (
                           <View key={idx} style={[styles.aboutPill, { backgroundColor: G + '12' }]}>
                             <Text style={[styles.aboutPillText, { color: G }]}>{interest.trim()}</Text>
@@ -535,7 +572,7 @@ export default function UserProfileScreen() {
                         ))}
                       </View>
                     ) : (
-                      <Text style={[styles.detailValue, { color: TEXT3 }]}>Not specified</Text>
+                      <Text style={[styles.detailTileValue, { color: TEXT3 }]}>Not specified</Text>
                     )}
                   </View>
                 </View>
@@ -551,38 +588,38 @@ export default function UserProfileScreen() {
                 <View style={styles.metricsGrid}>
                   <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
                     <View style={[styles.metricIconBg, { backgroundColor: G + '14' }]}>
-                      <Ionicons name="globe" size={16} color={G} />
+                      <Ionicons name="globe" size={14} color={G} />
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]}>{user.communitiesCount ?? 0}</Text>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]}>Communities</Text>
+                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.communitiesCount ?? 0}</Text>
+                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Communities</Text>
                   </View>
 
                   <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
                     <View style={[styles.metricIconBg, { backgroundColor: '#8B5CF614' }]}>
-                      <Ionicons name="people" size={16} color="#8B5CF6" />
+                      <Ionicons name="people" size={14} color="#8B5CF6" />
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]}>{user.followersCount ?? 0}</Text>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]}>Followers</Text>
+                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.followersCount ?? 0}</Text>
+                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Followers</Text>
                   </View>
 
                   <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
                     <View style={[styles.metricIconBg, { backgroundColor: '#3B82F614' }]}>
-                      <Ionicons name="person-add" size={16} color="#3B82F6" />
+                      <Ionicons name="person-add" size={14} color="#3B82F6" />
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]}>{user.followingCount ?? 0}</Text>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]}>Following</Text>
+                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.followingCount ?? 0}</Text>
+                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Following</Text>
                   </View>
 
                   <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
                     <View style={[styles.metricIconBg, { backgroundColor: '#F59E0B14' }]}>
-                      <Ionicons name="ribbon" size={16} color="#F59E0B" />
+                      <Ionicons name="ribbon" size={14} color="#F59E0B" />
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]}>
+                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1} adjustsFontSizeToFit>
                       {(user.joinedAt || user.createdAt)
                         ? new Date(user.joinedAt || user.createdAt!).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
                         : '2026'}
                     </Text>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]}>Member Since</Text>
+                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Member Since</Text>
                   </View>
                 </View>
               </View>
@@ -627,6 +664,129 @@ export default function UserProfileScreen() {
           } catch (_) {}
         }}
       />
+
+      {/* Modern Profile Options Bottom Sheet */}
+      <BottomSheet
+        visible={optionsMenuVisible}
+        onClose={() => setOptionsMenuVisible(false)}
+        title="Profile Options"
+      >
+        <View style={styles.optionsSheetContent}>
+          {/* User Quick Info Tile */}
+          <View style={[styles.optionsUserTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F4F4F5', borderColor: BORDER }]}>
+            <Avatar
+              url={user?.avatarUrl}
+              name={user?.displayName || 'User'}
+              size={44}
+            />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.optionsUserName, { color: TEXT }]} numberOfLines={1}>
+                {user?.displayName}
+              </Text>
+              <Text style={[styles.optionsUserHandle, { color: TEXT3 }]} numberOfLines={1}>
+                @{user?.username} {user?.occupation ? `· ${user.occupation}` : ''}
+              </Text>
+            </View>
+          </View>
+
+          {/* Action List */}
+          <View style={styles.optionsList}>
+            {/* Share Profile */}
+            <TouchableOpacity
+              style={[styles.optionsItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}
+              onPress={() => {
+                setOptionsMenuVisible(false);
+                setTimeout(handleShare, 200);
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.optionsIconWrap, { backgroundColor: G + '15' }]}>
+                <Ionicons name="share-social-outline" size={20} color={G} />
+              </View>
+              <View style={styles.optionsTextWrap}>
+                <Text style={[styles.optionsItemTitle, { color: TEXT }]}>Share Profile</Text>
+                <Text style={[styles.optionsItemSub, { color: TEXT3 }]}>Share profile via link or social apps</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={17} color={TEXT3} />
+            </TouchableOpacity>
+
+            {/* Send Message (if not own profile) */}
+            {!isOwnProfile && (
+              <TouchableOpacity
+                style={[styles.optionsItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}
+                onPress={() => {
+                  setOptionsMenuVisible(false);
+                  router.push(`/chat/new?participantId=${user.id}` as any);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.optionsIconWrap, { backgroundColor: '#3B82F615' }]}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={20} color="#3B82F6" />
+                </View>
+                <View style={styles.optionsTextWrap}>
+                  <Text style={[styles.optionsItemTitle, { color: TEXT }]}>Send Direct Message</Text>
+                  <Text style={[styles.optionsItemSub, { color: TEXT3 }]}>Start a private conversation</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={TEXT3} />
+              </TouchableOpacity>
+            )}
+
+            {/* Copy Profile Link */}
+            <TouchableOpacity
+              style={[styles.optionsItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}
+              onPress={async () => {
+                setOptionsMenuVisible(false);
+                const base = Platform.OS === 'web' && typeof window !== 'undefined'
+                  ? `${window.location.protocol}//${window.location.host}` : 'https://gowdaconnect.com';
+                const link = `${base}/user/${user.id}`;
+                const ok = await shareUrl(link, link);
+                showToast(ok ? 'Profile link copied!' : 'Could not copy link', ok ? 'success' : 'error');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.optionsIconWrap, { backgroundColor: '#8B5CF615' }]}>
+                <Ionicons name="link-outline" size={20} color="#8B5CF6" />
+              </View>
+              <View style={styles.optionsTextWrap}>
+                <Text style={[styles.optionsItemTitle, { color: TEXT }]}>Copy Profile Link</Text>
+                <Text style={[styles.optionsItemSub, { color: TEXT3 }]}>Copy link to clipboard</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={17} color={TEXT3} />
+            </TouchableOpacity>
+
+            {/* Report Profile (if not own profile) */}
+            {!isOwnProfile && (
+              <TouchableOpacity
+                style={[styles.optionsItem, { borderBottomColor: 'transparent' }]}
+                onPress={async () => {
+                  setOptionsMenuVisible(false);
+                  const confirmed = await confirmAction({
+                    title: `Report @${user.username}?`,
+                    message: 'Our moderation team will review this profile for any community guideline violations.',
+                    confirmText: 'Report User',
+                    cancelText: 'Cancel',
+                    isDestructive: true,
+                    icon: 'flag-outline',
+                  });
+                  if (confirmed) {
+                    showToast('Report submitted. Thank you for keeping the community safe.', 'success');
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.optionsIconWrap, { backgroundColor: '#EF444415' }]}>
+                  <Ionicons name="flag-outline" size={20} color="#EF4444" />
+                </View>
+                <View style={styles.optionsTextWrap}>
+                  <Text style={[styles.optionsItemTitle, { color: '#EF4444' }]}>Report Profile</Text>
+                  <Text style={[styles.optionsItemSub, { color: TEXT3 }]}>Flag inappropriate content or suspicious activity</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={TEXT3} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -662,13 +822,13 @@ const styles = StyleSheet.create({
   },
 
   // Masthead
-  profileMasthead: { paddingHorizontal: 16, marginBottom: 12 },
+  profileMasthead: { paddingHorizontal: 16, marginBottom: 10 },
   mastheadTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     marginTop: -46,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   avatarBorderWrapper: {
     width: 98,
@@ -692,10 +852,10 @@ const styles = StyleSheet.create({
   },
 
   // Identity
-  identityBlock: { marginBottom: 16 },
-  nameBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  identityBlock: { marginBottom: 10 },
+  nameBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
   profileName: { fontSize: 22, fontWeight: '800', letterSpacing: -0.4 },
-  usernameText: { fontSize: 13, fontWeight: '500', marginBottom: 6 },
+  usernameText: { fontSize: 13, fontWeight: '500', marginBottom: 4 },
   verifiedBadge: {
     width: 16,
     height: 16,
@@ -703,28 +863,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  metaPillsRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
+  metaPillsRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
   badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   badgePillText: { fontSize: 11.5, fontWeight: '600' },
-  bioText: { fontSize: 13.5, lineHeight: 19 },
-  expandBioText: { fontSize: 12, fontWeight: '700', marginTop: 3 },
+  bioText: { fontSize: 13.5, lineHeight: 18.5 },
+  expandBioText: { fontSize: 12, fontWeight: '700', marginTop: 2 },
 
   // Stats Card
-  statsCardWrapper: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  statsCardContainer: {
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    alignItems: 'center',
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -737,19 +893,24 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  statsScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
   statBlock: {
-    width: '33.333%',
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 2,
   },
   statIconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   statValue: {
     fontSize: 15,
@@ -759,23 +920,26 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 10.5,
     fontWeight: '600',
-    marginTop: 1,
+    marginTop: 2,
+    textAlign: 'center',
   },
 
   // Segmented Tabs
-  tabBarSection: { marginBottom: 12 },
-  tabScroll: { paddingHorizontal: 16, gap: 8 },
+  tabBarSection: { marginTop: 6, marginBottom: 16 },
+  tabScroll: { paddingHorizontal: 16, gap: 10 },
   tabPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 7.5,
-    borderRadius: 20,
+    gap: 7,
+    paddingHorizontal: 18,
+    paddingVertical: 9.5,
+    borderRadius: 24,
+    overflow: 'hidden',
+    position: 'relative',
   },
   tabPillActive: {},
   tabPillInactive: { borderWidth: StyleSheet.hairlineWidth },
-  tabLabel: { fontSize: 12.5 },
+  tabLabel: { fontSize: 13.5 },
 
   // Cards & Rows
   contentArea: { paddingHorizontal: 16 },
@@ -791,7 +955,49 @@ const styles = StyleSheet.create({
   joinedEventMetaText: { flexShrink: 1, fontSize: 12.5, fontWeight: '500' },
   cardSectionHeader: { fontSize: 15, fontWeight: '700', marginBottom: 14, letterSpacing: -0.2 },
 
-  // Details Tab
+  // Details Tab (Two Column Grid)
+  twoColumnGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  detailTile: {
+    width: '48%',
+    flexGrow: 1,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'flex-start',
+  },
+  detailTileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  detailTileIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailTileLabel: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  detailTileValue: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  tilePillsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 3,
+  },
   detailItemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
   detailIconContainer: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   detailLabel: { fontSize: 11.5, fontWeight: '500' },
@@ -806,33 +1012,65 @@ const styles = StyleSheet.create({
   aboutPillText: { fontSize: 11.5, fontWeight: '600' },
   metricsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    alignItems: 'stretch',
+    gap: 6,
   },
   metricCard: {
-    width: '48%',
-    flexGrow: 1,
-    padding: 12,
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   metricIconBg: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  metricValue: { fontSize: 15.5, fontWeight: '800' },
-  metricLabel: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+  metricValue: { fontSize: 13.5, fontWeight: '800', textAlign: 'center' },
+  metricLabel: { fontSize: 9.5, fontWeight: '600', marginTop: 2, textAlign: 'center' },
 
   // Empty States
   emptyCard: { alignItems: 'center', paddingVertical: 32, gap: 8 },
   emptyIconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 16, fontWeight: '700', marginTop: 4 },
   emptySubtitle: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
+
+  // Profile Options Bottom Sheet
+  optionsSheetContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 4 },
+  optionsUserTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 8,
+  },
+  optionsUserName: { fontSize: 15, fontWeight: '700' },
+  optionsUserHandle: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  optionsList: { borderRadius: 14, overflow: 'hidden' },
+  optionsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  optionsIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  optionsTextWrap: { flex: 1, marginRight: 8 },
+  optionsItemTitle: { fontSize: 14.5, fontWeight: '600' },
+  optionsItemSub: { fontSize: 11.5, marginTop: 1 },
 
   notFoundTitle: { fontSize: 22, fontWeight: '800', marginTop: 16 },
   notFoundSub: { fontSize: 15, marginTop: 6, marginBottom: 24 },

@@ -5,12 +5,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme';
 import { useChatsQuery, useChatSocket, useUnreadChatCountQuery } from '../../api/chat';
 import { useConnectionsListQuery } from '../../api/connections';
 import { useAuthStore } from '../../store/authStore';
 import Avatar from '../../components/common/Avatar';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { Conversation } from '../../types';
 
 type ChatTab = 'all' | 'unread' | 'groups';
@@ -105,6 +106,14 @@ export default function ChatListScreen() {
     refetch();
   }, [refetch]);
 
+  const G = colors.primary;
+  const BG = colors.background;
+  const SURF = colors.surface;
+  const BORDER = colors.border;
+  const TEXT = colors.text;
+  const TEXT2 = colors.textSecondary;
+  const TEXT3 = colors.textMuted;
+
   const renderChatItem = (item: Conversation) => {
     const isUnread = (item.unreadCount || 0) > 0;
     const timeStr = formatMsgTime(item.lastMessage?.createdAt || item.lastMessageAt);
@@ -118,22 +127,22 @@ export default function ChatListScreen() {
           styles.chatCard,
           {
             backgroundColor: isUnread
-              ? (isDark ? 'rgba(45,106,45,0.18)' : '#F0FDF4')
-              : (isDark ? 'rgba(255,255,255,0.02)' : colors.surface),
+              ? (isDark ? 'rgba(22, 163, 74, 0.12)' : '#F0FDF4')
+              : SURF,
             borderColor: isUnread
-              ? (isDark ? 'rgba(45,106,45,0.4)' : '#BBF7D0')
-              : (isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'),
+              ? (isDark ? 'rgba(22, 163, 74, 0.35)' : '#BBF7D0')
+              : BORDER,
           },
         ]}
-        activeOpacity={0.7}
+        activeOpacity={0.75}
         onPress={() => router.push(`/chat/${item.id}` as any)}
       >
-        {/* Avatar with status */}
+        {/* Avatar with status indicator */}
         <View style={styles.avatarContainer}>
           <Avatar
             url={item.participant?.avatarUrl || ''}
             name={item.participant?.displayName || item.participant?.username || 'User'}
-            size={52}
+            size={50}
             online={item.participant?.isOnline}
           />
           {isGroup && (
@@ -151,7 +160,7 @@ export default function ChatListScreen() {
                 style={[
                   styles.displayName,
                   {
-                    color: colors.text,
+                    color: TEXT,
                     fontWeight: isUnread ? '800' : '700',
                   },
                 ]}
@@ -160,7 +169,7 @@ export default function ChatListScreen() {
                 {item.participant?.displayName || item.participant?.username || 'Community Member'}
               </Text>
               {(item.participant as any)?.isVerified && (
-                <Ionicons name="shield-checkmark" size={14} color="#16A34A" style={{ marginLeft: 3 }} />
+                <Ionicons name="shield-checkmark" size={14} color="#16A34A" style={{ marginLeft: 4 }} />
               )}
             </View>
 
@@ -168,8 +177,8 @@ export default function ChatListScreen() {
               style={[
                 styles.timeText,
                 {
-                  color: isUnread ? '#16A34A' : colors.textMuted,
-                  fontWeight: isUnread ? '800' : '500',
+                  color: isUnread ? '#16A34A' : TEXT3,
+                  fontWeight: isUnread ? '700' : '500',
                 },
               ]}
             >
@@ -187,8 +196,8 @@ export default function ChatListScreen() {
                 style={[
                   styles.messagePreview,
                   {
-                    color: isUnread ? colors.text : colors.textMuted,
-                    fontWeight: isUnread ? '700' : '400',
+                    color: isUnread ? TEXT : TEXT3,
+                    fontWeight: isUnread ? '600' : '400',
                   },
                 ]}
                 numberOfLines={1}
@@ -211,19 +220,19 @@ export default function ChatListScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+    <View style={[styles.container, { backgroundColor: BG, paddingTop: insets.top }]}>
+      {/* ── Header ────────────────────────────────────────────── */}
+      <View style={[styles.header, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
         <TouchableOpacity
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
-          style={styles.headerBtn}
+          style={[styles.headerBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <Ionicons name="arrow-back" size={20} color={G} />
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
+          <Text style={[styles.headerTitle, { color: TEXT }]}>Messages</Text>
           {totalUnread > 0 && (
             <View style={styles.headerUnreadBadge}>
               <Text style={styles.headerUnreadText}>{totalUnread} new</Text>
@@ -232,58 +241,78 @@ export default function ChatListScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.headerNewBtn, { backgroundColor: colors.primary }]}
+          style={[styles.headerNewBtn, { backgroundColor: G }]}
           onPress={() => router.push('/chat/new' as any)}
           activeOpacity={0.85}
         >
-          <Feather name="edit" size={16} color="#FFF" />
+          <Ionicons name="create-outline" size={16} color="#FFF" />
           <Text style={styles.headerNewBtnText}>New</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 30 }}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={G} />
         }
       >
-        {/* Search Bar */}
+        {/* ── Search Bar ────────────────────────────────────────── */}
         <View style={styles.searchSection}>
-          <View style={[styles.searchBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#F1F5F9' }]}>
-            <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
+          <View style={[styles.searchBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9', borderColor: BORDER }]}>
+            <Ionicons name="search" size={17} color={TEXT3} style={{ marginRight: 8 }} />
             <TextInput
               placeholder="Search conversations, members, or groups..."
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={TEXT3}
               value={searchText}
               onChangeText={setSearchText}
-              style={[styles.searchInput, { color: colors.text }]}
+              style={[styles.searchInput, { color: TEXT }]}
             />
             {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')}>
-                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              <TouchableOpacity onPress={() => setSearchText('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={17} color={TEXT3} />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
-        {/* Active / Contacts Strip (from real backend connections) */}
+        {/* ── Active / Connected Community Contacts ─────────────── */}
         {activeContacts.length > 0 && (
           <View style={styles.activeNowSection}>
-            <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>COMMUNITY CONTACTS</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionHeading, { color: TEXT3 }]}>COMMUNITY CONTACTS</Text>
+              <View style={[styles.contactCountBadge, { backgroundColor: isDark ? colors.elevation2 : '#F1F5F9' }]}>
+                <Text style={[styles.contactCountText, { color: TEXT3 }]}>{activeContacts.length}</Text>
+              </View>
+            </View>
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeMembersScroll}>
+              {/* Quick start new chat avatar */}
+              <TouchableOpacity
+                style={styles.activeMemberItem}
+                activeOpacity={0.75}
+                onPress={() => router.push('/chat/new' as any)}
+              >
+                <View style={[styles.newChatAvatarWrap, { borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#CBD5E1' }]}>
+                  <Ionicons name="add" size={22} color={G} />
+                </View>
+                <Text style={[styles.activeMemberName, { color: TEXT3 }]} numberOfLines={1}>
+                  New
+                </Text>
+              </TouchableOpacity>
+
               {activeContacts.map((u) => (
                 <TouchableOpacity
                   key={u.id}
                   style={styles.activeMemberItem}
-                  activeOpacity={0.7}
+                  activeOpacity={0.75}
                   onPress={() => router.push(`/chat/new?participantId=${u.id}` as any)}
                 >
                   <View style={styles.activeAvatarWrapper}>
                     <Avatar url={u.avatarUrl} name={u.displayName || u.username} size={48} />
                     {u.isOnline && <View style={styles.onlineDot} />}
                   </View>
-                  <Text style={[styles.activeMemberName, { color: colors.text }]} numberOfLines={1}>
+                  <Text style={[styles.activeMemberName, { color: TEXT }]} numberOfLines={1}>
                     {u.displayName || u.username}
                   </Text>
                 </TouchableOpacity>
@@ -292,28 +321,52 @@ export default function ChatListScreen() {
           </View>
         )}
 
-        {/* Category Filter Tabs */}
+        {/* ── Category Filter Tabs ──────────────────────────────── */}
         <View style={styles.tabsRow}>
           <TouchableOpacity
-            style={[styles.tabChip, activeTab === 'all' && { backgroundColor: colors.primary }]}
+            style={[
+              styles.tabChip,
+              activeTab === 'all'
+                ? { backgroundColor: G, borderColor: G }
+                : { backgroundColor: SURF, borderColor: BORDER },
+            ]}
             onPress={() => setActiveTab('all')}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.tabChipText, { color: activeTab === 'all' ? '#FFF' : colors.textSecondary }]}>
+            <Text style={[styles.tabChipText, { color: activeTab === 'all' ? '#FFF' : TEXT2 }]}>
               All Messages
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabChip, activeTab === 'unread' && { backgroundColor: colors.primary }]}
+            style={[
+              styles.tabChip,
+              activeTab === 'unread'
+                ? { backgroundColor: G, borderColor: G }
+                : { backgroundColor: SURF, borderColor: BORDER },
+            ]}
             onPress={() => setActiveTab('unread')}
+            activeOpacity={0.8}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Text style={[styles.tabChipText, { color: activeTab === 'unread' ? '#FFF' : colors.textSecondary }]}>
+              <Text style={[styles.tabChipText, { color: activeTab === 'unread' ? '#FFF' : TEXT2 }]}>
                 Unread
               </Text>
               {totalUnread > 0 && (
-                <View style={[styles.miniBadge, { backgroundColor: activeTab === 'unread' ? '#FFF' : colors.primary }]}>
-                  <Text style={[styles.miniBadgeText, { color: activeTab === 'unread' ? colors.primary : '#FFF' }]}>
+                <View
+                  style={[
+                    styles.miniBadge,
+                    {
+                      backgroundColor: activeTab === 'unread' ? '#FFF' : (isDark ? 'rgba(22,163,74,0.2)' : '#DCFCE7'),
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.miniBadgeText,
+                      { color: activeTab === 'unread' ? G : '#166534' },
+                    ]}
+                  >
                     {totalUnread}
                   </Text>
                 </View>
@@ -322,16 +375,22 @@ export default function ChatListScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabChip, activeTab === 'groups' && { backgroundColor: colors.primary }]}
+            style={[
+              styles.tabChip,
+              activeTab === 'groups'
+                ? { backgroundColor: G, borderColor: G }
+                : { backgroundColor: SURF, borderColor: BORDER },
+            ]}
             onPress={() => setActiveTab('groups')}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.tabChipText, { color: activeTab === 'groups' ? '#FFF' : colors.textSecondary }]}>
+            <Text style={[styles.tabChipText, { color: activeTab === 'groups' ? '#FFF' : TEXT2 }]}>
               Communities & Groups
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Conversation List */}
+        {/* ── Conversation List ─────────────────────────────────── */}
         <View style={styles.chatListWrap}>
           {isLoading ? (
             /* Loading Skeletons */
@@ -342,14 +401,14 @@ export default function ChatListScreen() {
                   style={[
                     styles.chatCard,
                     {
-                      backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0',
+                      backgroundColor: SURF,
+                      borderColor: BORDER,
                       opacity: 0.6,
                     },
                   ]}
                 >
                   <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: isDark ? '#334155' : '#E2E8F0' }} />
-                  <View style={{ flex: 1, marginLeft: 12, gap: 6 }}>
+                  <View style={{ flex: 1, marginLeft: 12, gap: 8 }}>
                     <View style={{ width: '45%', height: 14, borderRadius: 4, backgroundColor: isDark ? '#334155' : '#E2E8F0' }} />
                     <View style={{ width: '75%', height: 11, borderRadius: 4, backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }} />
                   </View>
@@ -358,24 +417,24 @@ export default function ChatListScreen() {
             </View>
           ) : filteredChats.length === 0 ? (
             /* Empty State */
-            <View style={styles.emptyContainer}>
-              <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
-                <Ionicons name="chatbubbles-outline" size={36} color={colors.textMuted} />
+            <View style={[styles.emptyContainer, { backgroundColor: SURF, borderColor: BORDER }]}>
+              <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : colors.primaryContainer }]}>
+                <Ionicons name="chatbubbles-outline" size={36} color={G} />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              <Text style={[styles.emptyTitle, { color: TEXT }]}>
                 {searchText ? 'No Matching Messages' : 'No Conversations Yet'}
               </Text>
-              <Text style={[styles.emptySub, { color: colors.textMuted }]}>
+              <Text style={[styles.emptySub, { color: TEXT3 }]}>
                 {searchText
                   ? 'Try searching for another community member or keyword.'
-                  : 'Start direct conversations with community members and friends.'}
+                  : 'Start direct conversations with community members, groups, and friends.'}
               </Text>
               <TouchableOpacity
-                style={[styles.startChatBtn, { backgroundColor: colors.primary }]}
+                style={[styles.startChatBtn, { backgroundColor: G }]}
                 onPress={() => router.push('/chat/new' as any)}
                 activeOpacity={0.85}
               >
-                <Feather name="plus" size={15} color="#FFF" />
+                <Ionicons name="add" size={17} color="#FFF" />
                 <Text style={styles.startChatBtnText}>Start New Message</Text>
               </TouchableOpacity>
             </View>
@@ -401,9 +460,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -413,7 +472,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
     letterSpacing: -0.3,
   },
@@ -432,13 +491,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 12,
+    paddingHorizontal: 13,
     paddingVertical: 7,
-    borderRadius: 20,
+    borderRadius: 12,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+      android: { elevation: 1 },
+    }),
   },
   headerNewBtnText: {
     color: '#FFF',
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '700',
   },
 
@@ -453,7 +516,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     height: 42,
-    borderRadius: 12,
+    borderRadius: 13,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,
@@ -467,12 +531,26 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-  sectionHeading: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     marginBottom: 10,
+  },
+  sectionHeading: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  contactCountBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  contactCountText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   activeMembersScroll: {
     paddingHorizontal: 16,
@@ -480,8 +558,17 @@ const styles = StyleSheet.create({
   },
   activeMemberItem: {
     alignItems: 'center',
-    width: 58,
-    gap: 4,
+    width: 60,
+    gap: 5,
+  },
+  newChatAvatarWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activeAvatarWrapper: {
     position: 'relative',
@@ -511,17 +598,17 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   tabChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   tabChipText: {
     fontSize: 12,
     fontWeight: '700',
   },
   miniBadge: {
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 8,
   },
@@ -539,10 +626,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 4 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 3 },
       android: { elevation: 1 },
     }),
   },
@@ -579,7 +666,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   displayName: {
-    fontSize: 14.5,
+    fontSize: 15,
+    letterSpacing: -0.2,
   },
   timeText: {
     fontSize: 11.5,
@@ -590,8 +678,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   messagePreview: {
-    fontSize: 12.5,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 17,
   },
   unreadBadge: {
     minWidth: 20,
@@ -613,13 +701,17 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 36,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+    borderWidth: 1,
     gap: 8,
+    marginTop: 6,
   },
   emptyIconCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
@@ -629,18 +721,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   emptySub: {
-    fontSize: 12.5,
+    fontSize: 13,
     textAlign: 'center',
-    maxWidth: 240,
-    lineHeight: 17,
+    maxWidth: 260,
+    lineHeight: 18,
   },
   startChatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     paddingHorizontal: 16,
     paddingVertical: 9,
-    borderRadius: 20,
+    borderRadius: 12,
     marginTop: 6,
   },
   startChatBtnText: {

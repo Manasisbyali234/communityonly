@@ -245,7 +245,7 @@ export default function CreatePost() {
     >
       {/* HEADER */}
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 16), borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-        <TouchableOpacity onPress={() => router.replace('/(tabs)' as any)} style={styles.headerClose} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={styles.headerClose} activeOpacity={0.7}>
           <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>New Post</Text>

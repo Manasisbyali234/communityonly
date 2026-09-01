@@ -29,11 +29,15 @@ export default function StoryDetailScreen() {
     await shareUrl(msg, link);
   };
 
+  const handleBack = () => {
+    router.replace('/(tabs)/explore?tab=stories' as any);
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <View style={[styles.navbar, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+          <TouchableOpacity onPress={handleBack} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.navTitle, { color: colors.text }]}>Community Story</Text>
@@ -50,7 +54,7 @@ export default function StoryDetailScreen() {
     return (
       <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <View style={[styles.navbar, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+          <TouchableOpacity onPress={handleBack} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.navTitle, { color: colors.text }]}>Community Story</Text>
@@ -76,7 +80,7 @@ export default function StoryDetailScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Navbar */}
       <View style={[styles.navbar, { backgroundColor: colors.cardBg, borderBottomColor: colors.border, paddingTop: insets.top > 0 ? insets.top + 6 : 14 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+        <TouchableOpacity onPress={handleBack} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.navTitle, { color: colors.text }]} numberOfLines={1}>Our People</Text>
