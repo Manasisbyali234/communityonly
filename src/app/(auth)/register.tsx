@@ -16,6 +16,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
 import { useToastStore } from '../../store/toastStore';
 import { pickImage, PickedImage } from '../../utils/imagePicker';
@@ -84,6 +86,7 @@ const registerSchema = z
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterScreen() {
+  const insets = useSafeAreaInsets();
   const { colors: C, spacing, typography: T, roundness, isDark } = useTheme();
   const router = useRouter();
   const { ref } = useLocalSearchParams<{ ref?: string }>();
@@ -95,6 +98,7 @@ export default function RegisterScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showDobPicker, setShowDobPicker] = useState(false);
 
   const {
     control,
@@ -131,6 +135,10 @@ export default function RegisterScreen() {
 
   const selectedDistrict = watch('district');
   const selectedGender = watch('gender');
+  const passwordVal = watch('password') || '';
+  const hasMinLen = passwordVal.length >= 8;
+  const hasUpper = /[A-Z]/.test(passwordVal);
+  const hasNumber = /[0-9]/.test(passwordVal);
 
   const handlePickPhoto = async () => {
     try {
@@ -239,7 +247,15 @@ export default function RegisterScreen() {
       style={[styles.container, { backgroundColor: C.background }]}
     >
       {/* ── Top Bar ────────────────────────────────────────────── */}
-      <View style={[styles.topBar, { borderBottomColor: C.borderSecondary }]}>
+      <View
+        style={[
+          styles.topBar,
+          {
+            borderBottomColor: C.borderSecondary,
+            paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 48 : 36) + 8,
+          },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => {
             if (step > 1) {
@@ -417,26 +433,67 @@ export default function RegisterScreen() {
                 <Controller
                   control={control}
                   name="dob"
-                  render={({ field: { onChange, value } }) => (
-                    <View
-                      style={[
-                        styles.inputWrapper,
-                        {
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
-                          borderColor: errors.dob ? C.error : C.border,
-                        },
-                      ]}
-                    >
-                      <Ionicons name="calendar-outline" size={18} color={C.primary} style={styles.inputLeftIcon} />
-                      <TextInput
-                        style={[styles.inputWithIcon, { color: C.text }]}
-                        placeholder="YYYY-MM-DD"
-                        placeholderTextColor={C.textMuted}
-                        value={value}
-                        onChangeText={onChange}
-                      />
-                    </View>
-                  )}
+                  render={({ field: { onChange, value } }) => {
+                    const parsedDate = value && !isNaN(new Date(value).getTime())
+                      ? new Date(value + (value.includes('T') ? '' : 'T12:00:00'))
+                      : new Date(2000, 0, 1);
+
+                    return (
+                      <>
+                        <TouchableOpacity
+                          activeOpacity={0.75}
+                          onPress={() => setShowDobPicker(true)}
+                          style={[
+                            styles.inputWrapper,
+                            {
+                              backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
+                              borderColor: errors.dob ? C.error : C.border,
+                            },
+                          ]}
+                        >
+                          <Ionicons name="calendar-outline" size={18} color={C.primary} style={styles.inputLeftIcon} />
+                          <Text
+                            style={[
+                              styles.inputWithIconText,
+                              { color: value ? C.text : C.textMuted },
+                            ]}
+                          >
+                            {value || 'YYYY-MM-DD'}
+                          </Text>
+                        </TouchableOpacity>
+
+                        {showDobPicker && (
+                          <DateTimePicker
+                            value={parsedDate}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            maximumDate={new Date()}
+                            minimumDate={new Date(1920, 0, 1)}
+                            onChange={(event, selectedDate) => {
+                              if (Platform.OS !== 'ios') {
+                                setShowDobPicker(false);
+                              }
+                              if (selectedDate && event.type !== 'dismissed') {
+                                const yyyy = selectedDate.getFullYear();
+                                const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                                const dd = String(selectedDate.getDate()).padStart(2, '0');
+                                onChange(`${yyyy}-${mm}-${dd}`);
+                              }
+                            }}
+                          />
+                        )}
+
+                        {showDobPicker && Platform.OS === 'ios' && (
+                          <TouchableOpacity
+                            style={[styles.dateDoneBtn, { backgroundColor: C.primary }]}
+                            onPress={() => setShowDobPicker(false)}
+                          >
+                            <Text style={styles.dateDoneBtnText}>Done</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    );
+                  }}
                 />
                 {errors.dob && <Text style={[styles.errorText, { color: C.error }]}>{errors.dob.message}</Text>}
               </View>
@@ -484,7 +541,7 @@ export default function RegisterScreen() {
               <Text style={[styles.label, { color: C.text }]}>Mobile Number *</Text>
               <View style={styles.phoneInputRow}>
                 <View style={[styles.phonePrefix, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9', borderColor: C.border }]}>
-                  <Text style={[styles.phoneFlag, { marginRight: 4 }]}>🇮🇳</Text>
+                  <Text style={styles.phoneFlag}>🇮🇳</Text>
                   <Text style={[styles.phonePrefixText, { color: C.text }]}>+91</Text>
                 </View>
                 <Controller
@@ -568,7 +625,7 @@ export default function RegisterScreen() {
                     <Ionicons name="lock-closed-outline" size={18} color={C.primary} style={styles.inputLeftIcon} />
                     <TextInput
                       style={[styles.inputWithIcon, { color: C.text }]}
-                      placeholder="Min. 8 chars, 1 uppercase, 1 number"
+                      placeholder="Create a password"
                       placeholderTextColor={C.textMuted}
                       secureTextEntry={!showPassword}
                       value={value}
@@ -623,6 +680,40 @@ export default function RegisterScreen() {
                 )}
               />
               {errors.confirmPassword && <Text style={[styles.errorText, { color: C.error }]}>{errors.confirmPassword.message}</Text>}
+
+              {/* Password Rules shown below confirm password */}
+              <View style={styles.passwordRulesBox}>
+                <View style={styles.passwordRuleItem}>
+                  <Ionicons
+                    name={hasMinLen ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={13}
+                    color={hasMinLen ? '#16A34A' : C.textMuted}
+                  />
+                  <Text style={[styles.passwordRuleText, { color: hasMinLen ? '#16A34A' : C.textMuted }]}>
+                    Minimum 8 characters
+                  </Text>
+                </View>
+                <View style={styles.passwordRuleItem}>
+                  <Ionicons
+                    name={hasUpper ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={13}
+                    color={hasUpper ? '#16A34A' : C.textMuted}
+                  />
+                  <Text style={[styles.passwordRuleText, { color: hasUpper ? '#16A34A' : C.textMuted }]}>
+                    At least 1 uppercase letter (A-Z)
+                  </Text>
+                </View>
+                <View style={styles.passwordRuleItem}>
+                  <Ionicons
+                    name={hasNumber ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={13}
+                    color={hasNumber ? '#16A34A' : C.textMuted}
+                  />
+                  <Text style={[styles.passwordRuleText, { color: hasNumber ? '#16A34A' : C.textMuted }]}>
+                    At least 1 number (0-9)
+                  </Text>
+                </View>
+              </View>
             </View>
 
             <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: C.primary }]} onPress={handleNextStep}>
@@ -929,7 +1020,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 54 : 20,
     paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -966,11 +1056,11 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: 18,
-    paddingTop: 16,
+    paddingTop: 10,
     paddingBottom: 48,
   },
   stepBox: {
-    gap: 14,
+    gap: 10,
   },
   stepHeading: {
     fontSize: 20,
@@ -979,19 +1069,20 @@ const styles = StyleSheet.create({
     lineHeight: 25,
   },
   stepNotice: {
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 4,
-    marginBottom: 4,
+    fontSize: 12.5,
+    lineHeight: 17,
+    marginTop: 2,
+    marginBottom: 0,
   },
   topMiniLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    borderWidth: 1,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 1.5,
   },
   topMiniLogoImg: {
     width: '100%',
@@ -1000,27 +1091,28 @@ const styles = StyleSheet.create({
   stepHeadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    marginTop: 4,
-    marginBottom: 8,
+    gap: 12,
+    marginTop: 0,
+    marginBottom: 2,
   },
   stepIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   photoPickerContainer: {
     alignItems: 'center',
-    marginVertical: 12,
+    marginTop: 2,
+    marginBottom: 6,
   },
   photoOuterRing: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     borderWidth: 2,
-    padding: 3,
+    padding: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -1039,7 +1131,7 @@ const styles = StyleSheet.create({
   photoCircle: {
     width: '100%',
     height: '100%',
-    borderRadius: 48,
+    borderRadius: 41,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1052,15 +1144,15 @@ const styles = StyleSheet.create({
   photoPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
   },
   cameraIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   photoPlaceholderText: {
     fontSize: 11,
@@ -1079,17 +1171,17 @@ const styles = StyleSheet.create({
   },
   photoHelperWrap: {
     alignItems: 'center',
-    marginTop: 10,
-    gap: 2,
+    marginTop: 6,
+    gap: 1,
   },
   photoMainLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   photoSubLabel: {
-    fontSize: 11.5,
+    fontSize: 11,
     textAlign: 'center',
-    maxWidth: 290,
+    maxWidth: 280,
   },
   fieldGroup: {
     gap: 6,
@@ -1115,9 +1207,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     padding: 0,
   },
+  inputWithIconText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  dateDoneBtn: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 6,
+  },
+  dateDoneBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   eyeBtn: {
     padding: 4,
     marginLeft: 6,
+  },
+  passwordRulesBox: {
+    paddingHorizontal: 2,
+    marginTop: 2,
+    gap: 4,
+  },
+  passwordRuleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  passwordRuleText: {
+    fontSize: 11.5,
+    fontWeight: '500',
   },
   phoneFlag: {
     fontSize: 16,
@@ -1156,15 +1278,18 @@ const styles = StyleSheet.create({
   },
   phoneInputRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   phonePrefix: {
-    width: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 5,
   },
   phonePrefixText: {
     fontSize: 14,

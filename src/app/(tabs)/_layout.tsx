@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Avatar from '../../components/common/Avatar';
+import { useChatsQuery } from '../../api/chat';
 
 // All creation options available in the app
 const CREATE_OPTIONS = [
@@ -43,47 +44,98 @@ const CREATE_OPTIONS = [
 ];
 
 // Modern floating center "Create" action button
-function CreatePostTabIcon({ focused }: { focused: boolean; color: string }) {
-  const { colors } = useTheme();
+function CreatePostTabIcon({ focused }: { focused: boolean; color?: string }) {
+  const { colors, isDark } = useTheme();
   return (
-    <View style={styles.fabWrapper}>
-      <LinearGradient
-        colors={focused ? [colors.secondary, '#BF360C'] : [colors.primaryLight, colors.primary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+    <View style={styles.createTabContainer}>
+      <View
         style={[
-          styles.fab,
+          styles.fabOuterRing,
           {
-            shadowColor: focused ? colors.secondary : colors.primary,
+            backgroundColor: colors.surface,
+            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
           },
         ]}
       >
-        <Ionicons name="add" size={26} color="#FFFFFF" />
-      </LinearGradient>
+        <LinearGradient
+          colors={
+            focused
+              ? [colors.secondary || '#D97706', '#B45309']
+              : [colors.primaryLight || '#4A8505', colors.primary || '#2D6A2D']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fab}
+        >
+          <Ionicons name="add" size={26} color="#FFFFFF" />
+        </LinearGradient>
+      </View>
+      <Text
+        style={[
+          styles.tabLabel,
+          {
+            color: focused ? (colors.secondary || '#D97706') : colors.textMuted,
+            fontWeight: focused ? '700' : '500',
+          },
+        ]}
+        numberOfLines={1}
+      >
+        Create
+      </Text>
     </View>
   );
 }
 
-// Nav Tab Icon wrapper
+// Nav Tab Item component with active pill & micro-label
 function TabItem({
   focused,
   activeIcon,
   inactiveIcon,
-  color,
+  label,
+  badgeCount,
 }: {
   focused: boolean;
   activeIcon: string;
   inactiveIcon: string;
-  color: string;
+  label: string;
+  badgeCount?: number;
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+
   return (
     <View style={styles.tabItemContainer}>
-      <Ionicons
-        name={(focused ? activeIcon : inactiveIcon) as any}
-        size={focused ? 27 : 23}
-        color={focused ? colors.primary : colors.textMuted}
-      />
+      <View
+        style={[
+          styles.iconPill,
+          focused && {
+            backgroundColor: isDark ? 'rgba(74, 133, 5, 0.22)' : 'rgba(74, 133, 5, 0.12)',
+          },
+        ]}
+      >
+        <Ionicons
+          name={(focused ? activeIcon : inactiveIcon) as any}
+          size={20}
+          color={focused ? colors.primary : colors.textMuted}
+        />
+
+        {!!badgeCount && badgeCount > 0 && (
+          <View style={[styles.badge, { backgroundColor: '#EF4444', borderColor: colors.surface }]}>
+            <Text style={styles.badgeText}>{badgeCount > 99 ? '99+' : badgeCount}</Text>
+          </View>
+        )}
+      </View>
+
+      <Text
+        style={[
+          styles.tabLabel,
+          {
+            color: focused ? colors.primary : colors.textMuted,
+            fontWeight: focused ? '700' : '500',
+          },
+        ]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -94,9 +146,11 @@ export default function TabsLayout() {
   const [createMenuVisible, setCreateMenuVisible] = useState(false);
   const user = useAuthStore((s) => s.user);
   const { isApproved } = resolveUserApproval(user);
+  const { data: conversations = [] } = useChatsQuery();
+  const unreadChatCount = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
 
   const insets = useSafeAreaInsets();
-  const tabBarBottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 8);
+  const tabBarBottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 8 : 6);
 
   const handleCreateOptionPress = (route: string) => {
     setCreateMenuVisible(false);
@@ -115,9 +169,9 @@ export default function TabsLayout() {
             backgroundColor: colors.surface,
             borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
             borderTopWidth: StyleSheet.hairlineWidth,
-            height: 54 + tabBarBottomPadding,
+            height: 58 + tabBarBottomPadding,
             paddingBottom: tabBarBottomPadding,
-            paddingTop: 6,
+            paddingTop: 4,
             ...Platform.select({
               ios: {
                 shadowColor: '#000',
@@ -129,7 +183,7 @@ export default function TabsLayout() {
             }),
           },
           tabBarItemStyle: {
-            paddingVertical: 2,
+            paddingVertical: 1,
           },
         }}
       >
@@ -137,12 +191,12 @@ export default function TabsLayout() {
           name="index"
           options={{
             href: isApproved ? undefined : null,
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused }) => (
               <TabItem
                 focused={focused}
                 activeIcon="home"
                 inactiveIcon="home-outline"
-                color={color as string}
+                label="Home"
               />
             ),
           }}
@@ -151,12 +205,12 @@ export default function TabsLayout() {
           name="explore"
           options={{
             href: isApproved ? undefined : null,
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused }) => (
               <TabItem
                 focused={focused}
                 activeIcon="compass"
                 inactiveIcon="compass-outline"
-                color={color as string}
+                label="Explore"
               />
             ),
           }}
@@ -173,8 +227,8 @@ export default function TabsLayout() {
           }}
           options={{
             href: isApproved ? undefined : null,
-            tabBarIcon: ({ focused, color }) => (
-              <CreatePostTabIcon focused={createMenuVisible} color={color as string} />
+            tabBarIcon: ({ focused }) => (
+              <CreatePostTabIcon focused={createMenuVisible} />
             ),
           }}
         />
@@ -182,12 +236,13 @@ export default function TabsLayout() {
           name="chat"
           options={{
             href: isApproved ? undefined : null,
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused }) => (
               <TabItem
                 focused={focused}
                 activeIcon="chatbubbles"
                 inactiveIcon="chatbubbles-outline"
-                color={color as string}
+                label="Chat"
+                badgeCount={unreadChatCount}
               />
             ),
           }}
@@ -195,12 +250,12 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="profile"
           options={{
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused }) => (
               <TabItem
                 focused={focused}
                 activeIcon="person"
                 inactiveIcon="person-outline"
-                color={color as string}
+                label="Profile"
               />
             ),
           }}
@@ -241,12 +296,12 @@ export default function TabsLayout() {
           name="settings"
           options={{
             href: isApproved ? null : undefined,
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused }) => (
               <TabItem
                 focused={focused}
                 activeIcon="settings"
                 inactiveIcon="settings-outline"
-                color={color as string}
+                label="Settings"
               />
             ),
           }}
@@ -294,39 +349,75 @@ const styles = StyleSheet.create({
   tabItemContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 42,
-    width: 48,
+    width: 58,
+    paddingTop: 1,
   },
-  activeDot: {
-    width: 4.5,
-    height: 4.5,
-    borderRadius: 2.25,
-    marginTop: 2,
-  },
-  avatarWrapper: {
-    borderRadius: 18,
-    borderWidth: 2,
-    padding: 1,
-  },
-  fabWrapper: {
-    top: 0,
+  iconPill: {
+    width: 40,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
-  fab: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  tabLabel: {
+    fontSize: 10,
+    marginTop: 2,
+    letterSpacing: -0.1,
+    textAlign: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '800',
+    lineHeight: 11,
+  },
+  avatarWrapper: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+    padding: 0.5,
+  },
+  createTabContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 58,
+  },
+  fabOuterRing: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 3,
+    marginTop: -14,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowColor: '#2D6A2D',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
       },
-      android: { elevation: 4 },
+      android: { elevation: 6 },
     }),
+  },
+  fab: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sheetContent: {
     flex: 1,

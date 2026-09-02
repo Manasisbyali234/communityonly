@@ -399,6 +399,11 @@ export default function HomeFeed() {
                 ]}
               >
                 <View style={styles.tabTitleWrap}>
+                  <Ionicons
+                    name={featuredTab === 'communities' ? 'people' : 'people-outline'}
+                    size={14.5}
+                    color={featuredTab === 'communities' ? colors.primary : colors.textMuted}
+                  />
                   <Text
                     style={[
                       styles.tabToggleText,
@@ -445,6 +450,11 @@ export default function HomeFeed() {
                 ]}
               >
                 <View style={styles.tabTitleWrap}>
+                  <Ionicons
+                    name={featuredTab === 'our-people' ? 'book' : 'book-outline'}
+                    size={14}
+                    color={featuredTab === 'our-people' ? colors.primary : colors.textMuted}
+                  />
                   <Text
                     style={[
                       styles.tabToggleText,
@@ -704,7 +714,7 @@ export default function HomeFeed() {
         {renderCommunitiesAndOurPeopleTabs()}
         <View style={styles.feedDivider}>
           <Text style={[styles.feedTitle, { color: colors.text }]}>Feed</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/explore' as any)}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/explore?tab=feed' as any)}>
             <Text style={[styles.seeAllText, { color: colors.primary }]}>See all</Text>
           </TouchableOpacity>
         </View>
@@ -1034,10 +1044,11 @@ const styles = StyleSheet.create({
   },
   tabTitleWrap: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 4.5,
   },
   tabToggleText: {
-    fontSize: 16,
+    fontSize: 14.5,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
@@ -1045,8 +1056,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   tabSuperBadge: {
-    marginTop: -4,
-    marginLeft: 3,
+    marginTop: -3,
+    marginLeft: 2,
     paddingHorizontal: 4.5,
     paddingVertical: 1,
     borderRadius: 8,
@@ -1188,7 +1199,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 12,
   },
-  feedTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
+  feedTitle: { fontSize: 19, fontWeight: '800', letterSpacing: -0.4 },
 
   // ── Our People ──────────────────────────────────────────────────────────
   ourPeopleSection: { marginBottom: 20 },

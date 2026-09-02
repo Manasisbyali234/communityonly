@@ -316,23 +316,24 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                 {post.community?.name || post.author.displayName}
               </Text>
             </TouchableOpacity>
-            {post.community && (
-              <View style={[styles.communityPill, { backgroundColor: colors.primaryContainer + '60' }]}>
-                <Ionicons name="people" size={10} color={colors.primary} />
-                <Text style={[styles.communityPillText, { color: colors.primary }]}>Group</Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.metaRow}>
             {post.community && (
-              <TouchableOpacity onPress={navigateToAuthor}>
-                <Text style={[styles.authorName, { color: colors.textMuted }]}>
-                  {post.author.displayName}
-                </Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity onPress={navigateToAuthor} style={styles.authorTouchable}>
+                  <Text style={[styles.authorName, { color: colors.textMuted }]} numberOfLines={1}>
+                    {post.author.displayName}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={[styles.metaDot, { color: colors.textMuted }]}>•</Text>
+                <View style={[styles.communityPill, { backgroundColor: colors.primaryContainer + '60' }]}>
+                  <Ionicons name="people" size={9.5} color={colors.primary} />
+                  <Text style={[styles.communityPillText, { color: colors.primary }]}>Group</Text>
+                </View>
+                <Text style={[styles.metaDot, { color: colors.textMuted }]}>•</Text>
+              </>
             )}
-            {post.community && <Text style={[styles.metaDot, { color: colors.textMuted }]}>•</Text>}
             <Text style={[styles.timeText, { color: colors.textMuted }]}>
               {timeAgo(post.createdAt)}
             </Text>
@@ -766,16 +767,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.3,
   },
+  authorTouchable: {
+    maxWidth: 140,
+  },
   communityPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 5,
   },
   communityPillText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
   },
   metaRow: {

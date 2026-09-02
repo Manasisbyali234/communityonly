@@ -398,8 +398,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 16,
-    paddingBottom: 28,
+    justifyContent: 'center',
+    paddingVertical: 20,
   },
   heroSection: {
     alignItems: 'center',
