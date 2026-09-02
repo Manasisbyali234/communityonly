@@ -38,7 +38,7 @@
       "backgroundColor": "#00000000"
     },
     "web": {
-      "output": "static",
+      "output": "server",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
