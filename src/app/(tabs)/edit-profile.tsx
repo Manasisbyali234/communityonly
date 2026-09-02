@@ -33,6 +33,7 @@ import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
 import { pickImage, uploadProfilePhoto, uploadCoverPhoto, PickedImage } from '../../utils/imagePicker';
+import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
 
 const BASE = API_BASE_URL.replace('/api/v1', '');
 const toAbsUrl = (url?: string | null) =>
@@ -40,6 +41,7 @@ const toAbsUrl = (url?: string | null) =>
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters').max(30, 'Name must be under 30 characters'),
+  familyName: z.string().max(50, 'Family name must be under 50 characters').optional(),
   bio: z.string().max(160, 'Bio must be under 160 characters').optional(),
   avatarUrl: z.string().url('Enter a valid image URL').or(z.literal('')).optional(),
   village: z.string().max(50, 'Village must be under 50 characters').optional(),
@@ -60,9 +62,16 @@ export default function EditProfile() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { user, updateProfile } = useAuthStore();
   const showToast = useToastStore((state) => state.showToast);
+  const getUserById = useUserApprovalStore((s) => s.getUserById);
+  const resubmitUser = useUserApprovalStore((s) => s.resubmitUser);
+  const { isApproved, status: currentStatus, managedUser: managed } = resolveUserApproval(user);
+  const isRejectedOrPending = currentStatus === 'REJECTED' || currentStatus === 'PENDING' || currentStatus === 'RESUBMITTED';
+  const rejectionReason = managed?.rejectionReason || user?.rejectionReason;
 
   const handleBack = () => {
-    if (from === 'settings' || from === '/(tabs)/settings') {
+    if (from === 'approval-status' || isRejectedOrPending) {
+      router.replace('/(auth)/approval-status' as any);
+    } else if (from === 'settings' || from === '/(tabs)/settings') {
       router.replace('/(tabs)/settings' as any);
     } else if (from === 'profile' || from === '/(tabs)/profile') {
       router.replace('/(tabs)/profile' as any);
@@ -102,6 +111,7 @@ export default function EditProfile() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       displayName: user?.displayName || '',
+      familyName: (managed?.familyName || (user as any)?.familyName) || '',
       bio: user?.bio || '',
       avatarUrl: user?.avatarUrl || '',
       village: user?.village || '',
@@ -281,6 +291,27 @@ export default function EditProfile() {
       if (avatarUrl) updated.avatarUrl = avatarUrl;
       if (coverImage !== undefined) updated.coverImage = coverImage;
       updateProfile(updated);
+
+      if (isRejectedOrPending || from === 'approval-status') {
+        if (user?.id) {
+          resubmitUser(user.id, {
+            displayName: data.displayName,
+            familyName: data.familyName,
+            bio: data.bio || undefined,
+            avatarUrl: avatarUrl || undefined,
+            village: data.village || undefined,
+            occupation: data.occupation || undefined,
+            languages: data.languages || undefined,
+            interests: data.interests || undefined,
+          });
+        }
+        updateProfile({ approvalStatus: 'RESUBMITTED' });
+        showToast('Profile resubmitted for Admin review', 'success');
+        router.replace('/(auth)/approval-status' as any);
+        return;
+      }
+
+      showToast('Profile updated successfully', 'success');
       if (from === 'settings' || from === '/(tabs)/settings') {
         router.replace('/(tabs)/settings' as any);
       } else {
@@ -311,13 +342,17 @@ export default function EditProfile() {
         >
           <Ionicons name="arrow-back" size={22} color={TEXT} />
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: TEXT }]}>Edit Profile</Text>
+        <Text style={[styles.navTitle, { color: TEXT }]}>
+          {isRejectedOrPending ? 'Resubmit Profile' : 'Edit Profile'}
+        </Text>
         <TouchableOpacity
           onPress={handleSubmit(onSubmit)}
           disabled={isSubmitting}
           style={styles.saveHeaderBtn}
         >
-          <Text style={[styles.saveHeaderBtnText, { color: G }]}>Save</Text>
+          <Text style={[styles.saveHeaderBtnText, { color: G }]}>
+            {isRejectedOrPending ? 'Resubmit' : 'Save'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -326,6 +361,22 @@ export default function EditProfile() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Rejection Feedback Banner */}
+        {currentStatus === 'REJECTED' && (
+          <View style={[styles.rejectionNotice, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2', borderColor: '#FCA5A5' }]}>
+            <Ionicons name="alert-circle" size={22} color="#DC2626" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rejectionNoticeTitle}>Rejection Feedback from Administrator</Text>
+              <Text style={[styles.rejectionNoticeDesc, { color: TEXT }]}>
+                "{rejectionReason || 'Please review your profile details and resubmit for approval.'}"
+              </Text>
+              <Text style={[styles.rejectionNoticeHint, { color: TEXT3 }]}>
+                Update the highlighted fields below and tap "Resubmit for Approval".
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* ── Cover & Avatar Header Masthead ──────────────────────────── */}
         <View style={styles.mastheadSection}>
           {/* Cover Container */}
@@ -426,6 +477,23 @@ export default function EditProfile() {
                       onBlur={onBlur}
                       leftIcon="person-outline"
                       error={errors.displayName?.message}
+                      containerStyle={styles.fieldItem}
+                    />
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="familyName"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      label="Family Name / Okka *"
+                      placeholder="e.g. Mundodi / Kodendera"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      leftIcon="people-outline"
+                      error={errors.familyName?.message}
                       containerStyle={styles.fieldItem}
                     />
                   )}
@@ -645,7 +713,7 @@ export default function EditProfile() {
 
           {/* ── Main Save Button CTA ─────────────────────────────────── */}
           <Button
-            title="Update Changes"
+            title={isRejectedOrPending ? 'Resubmit for Approval' : 'Update Changes'}
             onPress={handleSubmit(onSubmit)}
             loading={isSubmitting}
             variant="primary"
@@ -971,5 +1039,31 @@ const styles = StyleSheet.create({
   photoSheetCancelText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  rejectionNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 4,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  rejectionNoticeTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#DC2626',
+    marginBottom: 4,
+  },
+  rejectionNoticeDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontStyle: 'italic',
+    marginBottom: 4,
+  },
+  rejectionNoticeHint: {
+    fontSize: 11,
   },
 });

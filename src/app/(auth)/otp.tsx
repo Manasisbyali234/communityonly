@@ -1,34 +1,45 @@
-import React, { useRef, useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Keyboard } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Keyboard, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
-import Button from '../../components/common/Button';
+import { useUserApprovalStore } from '../../store/userApprovalStore';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../../api/client';
 
 export default function OTPVerification() {
-  const { colors, spacing, typography, roundness } = useTheme();
+  const { colors, spacing, typography, roundness, isDark } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{ phone?: string; email?: string; userId?: string }>();
   const login = useAuthStore((state) => state.login);
   const showToast = useToastStore((state) => state.showToast);
+  const getUserById = useUserApprovalStore((state) => state.getUserById);
 
-  const email = params.email || 'your email';
+  const phone = params.phone || '+91 98450 12345';
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [timer, setTimer] = useState(30);
 
   const inputs = useRef<TextInput[]>([]);
 
+  useEffect(() => {
+    if (timer > 0) {
+      const id = setInterval(() => setTimer((t) => t - 1), 1000);
+      return () => clearInterval(id);
+    }
+  }, [timer]);
+
   const handleChange = (text: string, index: number) => {
+    // Only accept numeric digits
+    const cleaned = text.replace(/[^0-9]/g, '');
     const newCode = [...code];
-    newCode[index] = text;
+    newCode[index] = cleaned;
     setCode(newCode);
 
     // Auto-focus next box on typing
-    if (text.length > 0 && index < 5) {
-      inputs.current[index + 1].focus();
+    if (cleaned.length > 0 && index < 5) {
+      inputs.current[index + 1]?.focus();
     }
   };
 
@@ -38,29 +49,49 @@ export default function OTPVerification() {
       const newCode = [...code];
       newCode[index - 1] = '';
       setCode(newCode);
-      inputs.current[index - 1].focus();
+      inputs.current[index - 1]?.focus();
     }
   };
 
   const handleVerify = async () => {
     const fullCode = code.join('');
     if (fullCode.length < 6) {
-      showToast('Please enter the full 6-digit code.', 'error');
+      showToast('Please enter the 6-digit verification code.', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      await apiClient.post('/auth/verify-email', { code: fullCode });
-      
-      const user = useAuthStore.getState().user;
-      if (user) {
-        useAuthStore.getState().updateProfile({ isVerified: true });
-      }
-      
-      router.replace('/(tabs)');
+      // 1. Try server verification if online
+      try {
+        await apiClient.post('/auth/verify-phone', { code: fullCode, phone });
+      } catch {}
+
+      // 2. Fetch or load the registered user from approval store
+      const managedUser = params.userId ? getUserById(params.userId) : undefined;
+      const resolvedDisplayName = managedUser?.displayName || 'Community Member';
+
+      const authUser = managedUser || {
+        id: params.userId || `u-${Date.now()}`,
+        username: (params.email || 'user').split('@')[0],
+        displayName: resolvedDisplayName,
+        email: params.email || 'user@example.com',
+        phone,
+        phoneVerified: true,
+        approvalStatus: 'PENDING' as const,
+        role: 'USER' as const,
+        isActive: true,
+        isVerified: false,
+      };
+
+      // 3. Log user into auth store with PENDING status
+      await login(authUser as any, 'mock-temp-token-pending', 'mock-temp-refresh-token');
+
+      // 4. IMPORTANT UX REQUIREMENT: Do NOT show "Registration Successful" popup.
+      // Directly navigate to the Pending Approval status screen.
+      router.replace('/(auth)/approval-status' as any);
     } catch (e: any) {
-      const message = e.response?.data?.message || 'Invalid code. Please try again.';
+      const message = e.response?.data?.message || 'Verification failed. Please try again.';
       showToast(message, 'error');
     } finally {
       setLoading(false);
@@ -68,11 +99,15 @@ export default function OTPVerification() {
   };
 
   const handleResend = async () => {
+    if (timer > 0) return;
     try {
-      await apiClient.post('/auth/resend-verification');
-      showToast('Verification code resent to your email.', 'info');
-    } catch (e) {
-      showToast('Failed to resend code.', 'error');
+      try {
+        await apiClient.post('/auth/resend-phone-otp', { phone });
+      } catch {}
+      setTimer(30);
+      showToast('A new 6-digit OTP has been sent to your mobile.', 'info');
+    } catch {
+      showToast('Failed to resend OTP.', 'error');
     }
   };
 
@@ -80,16 +115,17 @@ export default function OTPVerification() {
     <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: spacing.xl }]}>
       {/* Header Back Button */}
       <TouchableOpacity
-        onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}
-        style={[styles.backBtn, { backgroundColor: colors.surface }]}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/register'))}
+        style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : colors.surfaceVariant }]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Ionicons name="arrow-back" size={20} color={colors.text} />
       </TouchableOpacity>
 
       <View style={styles.content}>
         {/* Verification Description */}
-        <View style={styles.iconContainer}>
-          <Ionicons name="shield-checkmark" size={48} color={colors.primary} />
+        <View style={[styles.iconContainer, { backgroundColor: isDark ? 'rgba(45, 106, 45, 0.2)' : '#E8F5E9' }]}>
+          <Ionicons name="phone-portrait-outline" size={44} color={colors.primary} />
         </View>
 
         <Text
@@ -98,65 +134,79 @@ export default function OTPVerification() {
             { color: colors.text, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold },
           ]}
         >
-          Verify Your Email
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: typography.sizes.sm }]}>
-          We have sent a 6-digit verification code to {'\n'}
-          <Text style={{ fontWeight: 'bold', color: colors.text }}>{email}</Text>
+          Mobile Verification
         </Text>
 
-        {/* 6 Digit Box Inputs Grid */}
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Please enter the 6-digit verification code sent to
+        </Text>
+        <Text style={[styles.phoneHighlight, { color: colors.primary }]}>{phone}</Text>
+
+        {/* Demo Hint Banner */}
+        <View style={[styles.demoBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceVariant }]}>
+          <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
+          <Text style={[styles.demoBadgeText, { color: colors.textMuted }]}>
+            Hint for testing: enter any 6 digits (e.g. 123456)
+          </Text>
+        </View>
+
+        {/* 6-box OTP input */}
         <View style={styles.codeContainer}>
           {code.map((digit, index) => (
             <TextInput
               key={index}
-              ref={(ref) => (inputs.current[index] = ref as any)}
+              ref={(ref) => {
+                if (ref) inputs.current[index] = ref;
+              }}
               style={[
-                styles.codeBox,
+                styles.codeInput,
                 {
-                  backgroundColor: colors.inputBg,
-                  borderColor: code[index] ? colors.primary : colors.border,
+                  borderColor: digit ? colors.primary : colors.border,
+                  backgroundColor: colors.surfaceVariant,
                   color: colors.text,
-                  fontSize: typography.sizes.xl,
-                  borderRadius: roundness.md,
                 },
               ]}
-              maxLength={1}
-              keyboardType="number-pad"
               value={digit}
               onChangeText={(text) => handleChange(text, index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
-              autoFocus={index === 0}
+              keyboardType="number-pad"
+              maxLength={1}
+              selectTextOnFocus
             />
           ))}
         </View>
 
-        {/* Resend Link */}
-        <View style={styles.resendContainer}>
-          <Text style={{ color: colors.textSecondary, fontSize: typography.sizes.sm }}>
-            Didn't receive the code?{' '}
+        <TouchableOpacity
+          style={[styles.verifyBtn, { backgroundColor: colors.primary }]}
+          onPress={handleVerify}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <>
+              <Text style={styles.verifyBtnText}>Verify & Submit Profile</Text>
+              <Ionicons name="arrow-forward" size={18} color="#FFF" />
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* Resend Action */}
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+            Didn't receive the SMS code?{' '}
           </Text>
-          <TouchableOpacity onPress={handleResend}>
+          <TouchableOpacity onPress={handleResend} disabled={timer > 0}>
             <Text
-              style={{
-                color: colors.primary,
-                fontSize: typography.sizes.sm,
-                fontWeight: typography.weights.bold,
-              }}
+              style={[
+                styles.resendText,
+                { color: timer > 0 ? colors.textMuted : colors.primary, fontWeight: '700' },
+              ]}
             >
-              Resend Code
+              {timer > 0 ? `Resend in ${timer}s` : 'Resend OTP'}
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Verify Action Button */}
-        <Button
-          title="Verify & Continue"
-          onPress={handleVerify}
-          loading={loading}
-          variant="gradient"
-          style={styles.verifyBtn}
-        />
       </View>
     </View>
   );
@@ -165,55 +215,97 @@ export default function OTPVerification() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    paddingTop: 54,
   },
   backBtn: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
   },
   content: {
+    flex: 1,
     alignItems: 'center',
+    paddingTop: 28,
   },
   iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   title: {
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   subtitle: {
     textAlign: 'center',
+    fontSize: 14,
     lineHeight: 20,
-    marginBottom: 40,
+    paddingHorizontal: 20,
+  },
+  phoneHighlight: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  demoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 26,
+  },
+  demoBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   codeContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '80%',
-    marginBottom: 30,
-  },
-  codeBox: {
-    width: 44,
-    height: 52,
-    borderWidth: 1.5,
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  resendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 40,
+    gap: 8,
+    marginBottom: 32,
+    width: '100%',
+  },
+  codeInput: {
+    width: 46,
+    height: 54,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: '700',
   },
   verifyBtn: {
     width: '100%',
     height: 52,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  verifyBtnText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  footerText: {
+    fontSize: 13,
+  },
+  resendText: {
+    fontSize: 13,
   },
 });

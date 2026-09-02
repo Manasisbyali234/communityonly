@@ -24,7 +24,7 @@ export default function AppearanceScreen() {
   return (
     <View style={[styles.container, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <View style={[styles.navbar, { borderBottomColor: C.borderSecondary }]}>
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/settings')} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/settings')} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="arrow-back" size={22} color={C.text} />
         </TouchableOpacity>
         <Text style={[styles.navTitle, { color: C.text, fontSize: T.sizes.lg }]}>Appearance</Text>

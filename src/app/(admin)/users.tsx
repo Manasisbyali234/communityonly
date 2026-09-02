@@ -11,13 +11,16 @@ import { adminApiClient } from '../../api/adminClient';
 import { fmtDateTime, fmtDate } from '../../utils/adminUtils';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
+import { useUserApprovalStore } from '../../store/userApprovalStore';
 
-type FilterType = 'ALL' | 'ACTIVE' | 'ADMINS';
+type FilterType = 'ALL' | 'PENDING' | 'APPROVED' | 'SUSPENDED' | 'ADMINS';
 
 const FILTERS: { id: FilterType; label: string; countKey?: string }[] = [
-  { id: 'ALL',    label: 'All Members' },
-  { id: 'ACTIVE', label: 'Active' },
-  { id: 'ADMINS', label: 'Admins & Staff' },
+  { id: 'ALL',       label: 'All Members' },
+  { id: 'PENDING',   label: 'Pending / Review 🟠' },
+  { id: 'APPROVED',  label: 'Approved 🟢' },
+  { id: 'SUSPENDED', label: 'Suspended ⚫' },
+  { id: 'ADMINS',    label: 'Admins & Staff' },
 ];
 
 const MOCK_USERS = [
@@ -136,28 +139,40 @@ export default function AdminUsers() {
     setLoading(true);
     try {
       const params: any = { skip, take: 20, q: search || undefined };
-      if (filter === 'ACTIVE') params.status = 'active';
+      if (filter === 'APPROVED') params.status = 'active';
       if (filter === 'ADMINS') params.role = 'ADMIN';
+      if (filter === 'PENDING') params.status = 'pending';
+      if (filter === 'SUSPENDED') params.status = 'suspended';
 
       const res = await adminApiClient.get('/admin-panel/users', { params }).catch(() => null);
       if (res?.data?.data?.users && Array.isArray(res.data.data.users) && res.data.data.users.length > 0) {
         setUsers(res.data.data.users);
         setTotal(res.data.data.total ?? res.data.data.users.length);
       } else {
-        // Fallback to local mock data for testing/demo
-        let list = [...MOCK_USERS];
-        if (filter === 'ACTIVE') list = list.filter((u) => u.isActive && !u.isBanned);
-        if (filter === 'ADMINS') list = list.filter((u) => u.role === 'ADMIN' || u.role === 'MODERATOR');
-        if (search) {
-          const q = search.toLowerCase();
-          list = list.filter((u) =>
-            u.displayName.toLowerCase().includes(q) ||
-            u.username.toLowerCase().includes(q) ||
-            u.email.toLowerCase().includes(q) ||
-            (u.village && u.village.toLowerCase().includes(q)) ||
-            (u.occupation && u.occupation.toLowerCase().includes(q))
-          );
+        const managedStoreUsers = useUserApprovalStore.getState().users;
+        let list = [...managedStoreUsers];
+
+        if (filter === 'PENDING') {
+          list = list.filter((u) => u.approvalStatus === 'PENDING' || u.approvalStatus === 'RESUBMITTED');
+        } else if (filter === 'APPROVED') {
+          list = list.filter((u) => u.approvalStatus === 'APPROVED' || (!u.approvalStatus && u.isActive && !u.isBanned));
+        } else if (filter === 'SUSPENDED') {
+          list = list.filter((u) => u.approvalStatus === 'SUSPENDED' || !!u.isBanned);
+        } else if (filter === 'ADMINS') {
+          list = list.filter((u) => u.role === 'ADMIN' || u.role === 'MODERATOR');
         }
+
+      if (search) {
+        const q = search.toLowerCase();
+        list = list.filter((u) =>
+          u.displayName.toLowerCase().includes(q) ||
+          u.username.toLowerCase().includes(q) ||
+          (u.email && u.email.toLowerCase().includes(q)) ||
+          (u.village && u.village.toLowerCase().includes(q)) ||
+          (u.familyName && u.familyName.toLowerCase().includes(q)) ||
+          (u.occupation && u.occupation.toLowerCase().includes(q))
+        );
+      }
         setUsers(list);
         setTotal(list.length);
       }
@@ -219,8 +234,9 @@ export default function AdminUsers() {
     });
     if (!ok) return;
     try {
+      useUserApprovalStore.getState().suspendUser(u.id);
       await adminApiClient.put(`/admin-panel/users/${u.id}/ban`, { reason: 'Admin action' }).catch(() => null);
-      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, isBanned: true, isActive: false } : x));
+      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, approvalStatus: 'SUSPENDED', isBanned: true, isActive: false } : x));
       showToast(`User @${u.username} suspended.`, 'success');
     } catch {
       showToast('Failed to suspend user', 'error');
@@ -238,8 +254,9 @@ export default function AdminUsers() {
     });
     if (!ok) return;
     try {
+      useUserApprovalStore.getState().reactivateUser(u.id);
       await adminApiClient.put(`/admin-panel/users/${u.id}/unban`).catch(() => null);
-      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, isBanned: false, isActive: true } : x));
+      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, approvalStatus: 'APPROVED', isBanned: false, isActive: true } : x));
       showToast(`User @${u.username} reactivated.`, 'success');
     } catch {
       showToast('Failed to reactivate user', 'error');
@@ -342,11 +359,21 @@ export default function AdminUsers() {
                     </View>
 
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <Text style={s.userNameText} numberOfLines={1}>{u.displayName}</Text>
-
+                        {u.approvalStatus === 'PENDING' ? (
+                          <View style={[s.statusPill, { backgroundColor: '#FEF3C7' }]}><Text style={[s.statusPillText, { color: '#D97706' }]}>🟠 Pending</Text></View>
+                        ) : u.approvalStatus === 'RESUBMITTED' ? (
+                          <View style={[s.statusPill, { backgroundColor: '#DBEAFE' }]}><Text style={[s.statusPillText, { color: '#2563EB' }]}>🔵 Resubmitted</Text></View>
+                        ) : u.approvalStatus === 'REJECTED' ? (
+                          <View style={[s.statusPill, { backgroundColor: '#FEE2E2' }]}><Text style={[s.statusPillText, { color: '#DC2626' }]}>🔴 Rejected</Text></View>
+                        ) : u.approvalStatus === 'SUSPENDED' || isBanned ? (
+                          <View style={[s.statusPill, { backgroundColor: '#F1F5F9' }]}><Text style={[s.statusPillText, { color: '#475569' }]}>⚫ Suspended</Text></View>
+                        ) : (
+                          <View style={[s.statusPill, { backgroundColor: '#DCFCE7' }]}><Text style={[s.statusPillText, { color: '#16A34A' }]}>🟢 Approved</Text></View>
+                        )}
                       </View>
-                      <Text style={s.userHandleText}>@{u.username}</Text>
+                      <Text style={s.userHandleText}>@{u.username} {u.familyName ? `• ${u.familyName}` : ''}</Text>
                     </View>
 
                     <View style={[s.roleBadge, { backgroundColor: roleBg }]}>

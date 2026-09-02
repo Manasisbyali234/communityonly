@@ -1,12 +1,13 @@
-import React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Pressable } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useThemeStore } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useConfirmStore } from '../../store/confirmStore';
+import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
 import Avatar from '../../components/common/Avatar';
 
 interface SettingsRow {
@@ -22,6 +23,8 @@ interface SettingsRow {
   isDestructive?: boolean;
   badgeText?: string;
   badgeIcon?: keyof typeof Ionicons.glyphMap;
+  badgeBg?: string;
+  badgeTextColor?: string;
   onPress?: () => void;
 }
 
@@ -34,10 +37,29 @@ export default function SettingsScreen() {
   const { colors: C, typography: T, roundness, isDark, shadows } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const { themeMode } = useThemeStore();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const confirm = useConfirmStore((s) => s.confirm);
+  const { isApproved, status: currentStatus, managedUser } = resolveUserApproval(user);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+
+  const handleBack = () => {
+    if (from === 'approval-status' || (!isApproved && from !== 'profile')) {
+      router.replace('/(auth)/approval-status' as any);
+    } else if (from && from !== 'settings' && from !== '/(tabs)/settings') {
+      router.replace(from as any);
+    } else {
+      router.replace('/(tabs)/profile' as any);
+    }
+  };
+
+  useEffect(() => {
+    if (managedUser?.approvalStatus && user && user.approvalStatus !== managedUser.approvalStatus) {
+      useAuthStore.getState().updateProfile({ approvalStatus: managedUser.approvalStatus });
+    }
+  }, [managedUser?.approvalStatus, user]);
 
   const handleLogout = async () => {
     const ok = await confirm({
@@ -55,41 +77,56 @@ export default function SettingsScreen() {
   };
 
   const sections: SettingsSection[] = [
-    {
-      title: 'PREFERENCES',
-      rows: [
-        {
-          id: 'appearance',
-          icon: 'color-palette-outline',
-          iconBgLight: '#EEF2FF',
-          iconBgDark: 'rgba(99, 102, 241, 0.22)',
-          iconColorLight: '#4F46E5',
-          iconColorDark: '#818CF8',
-          label: 'Appearance',
-          sub: 'Theme & display mode',
-          route: '/(tabs)/settings/appearance',
-          badgeText: themeMode === 'dark' ? 'Dark' : 'Light',
-          badgeIcon: themeMode === 'dark' ? 'moon' : 'sunny',
-        },
-        {
-          id: 'notifications',
-          icon: 'notifications-outline',
-          iconBgLight: '#FFF7ED',
-          iconBgDark: 'rgba(234, 88, 12, 0.22)',
-          iconColorLight: '#EA580C',
-          iconColorDark: '#FB923C',
-          label: 'Notifications',
-          sub: 'Push alerts, likes, comments & updates',
-          route: '/(tabs)/settings/notifications',
-        },
-      ],
-    },
+    ...(isApproved
+      ? [
+          {
+            title: 'PREFERENCES',
+            rows: [
+              {
+                id: 'appearance',
+                icon: 'color-palette-outline' as const,
+                iconBgLight: '#EEF2FF',
+                iconBgDark: 'rgba(99, 102, 241, 0.22)',
+                iconColorLight: '#4F46E5',
+                iconColorDark: '#818CF8',
+                label: 'Appearance',
+                sub: 'Theme & display mode',
+                route: '/(tabs)/settings/appearance',
+                badgeText: themeMode === 'dark' ? 'Dark' : 'Light',
+                badgeIcon: (themeMode === 'dark' ? 'moon' : 'sunny') as any,
+              },
+              {
+                id: 'notifications',
+                icon: 'notifications-outline' as const,
+                iconBgLight: '#FFF7ED',
+                iconBgDark: 'rgba(234, 88, 12, 0.22)',
+                iconColorLight: '#EA580C',
+                iconColorDark: '#FB923C',
+                label: 'Notifications',
+                sub: 'Push notifications & activity alerts',
+                route: '/(tabs)/settings/notifications',
+              },
+            ],
+          },
+        ]
+      : []),
     {
       title: 'SECURITY & PRIVACY',
       rows: [
         {
+          id: 'verification-status',
+          icon: 'shield-checkmark-outline' as const,
+          iconBgLight: '#F0FDF4',
+          iconBgDark: 'rgba(22, 163, 74, 0.22)',
+          iconColorLight: '#16A34A',
+          iconColorDark: '#4ADE80',
+          label: 'Approval Status',
+          sub: 'Profile verification & community standing',
+          route: '/(auth)/approval-status?from=settings',
+        },
+        {
           id: 'account',
-          icon: 'person-circle-outline',
+          icon: 'person-circle-outline' as const,
           iconBgLight: '#EFF6FF',
           iconBgDark: 'rgba(37, 99, 235, 0.22)',
           iconColorLight: '#2563EB',
@@ -98,25 +135,40 @@ export default function SettingsScreen() {
           sub: 'Personal details, security & account data',
           route: '/(tabs)/settings/account',
         },
-        {
-          id: 'privacy',
-          icon: 'lock-closed-outline',
-          iconBgLight: '#ECFDF5',
-          iconBgDark: 'rgba(5, 150, 105, 0.22)',
-          iconColorLight: '#059669',
-          iconColorDark: '#34D399',
-          label: 'Privacy',
-          sub: 'Private account, messaging & visibility',
-          route: '/(tabs)/settings/privacy',
-        },
+        ...(isApproved
+          ? [
+              {
+                id: 'privacy',
+                icon: 'lock-closed-outline' as const,
+                iconBgLight: '#ECFDF5',
+                iconBgDark: 'rgba(5, 150, 105, 0.22)',
+                iconColorLight: '#059669',
+                iconColorDark: '#34D399',
+                label: 'Privacy',
+                sub: 'Private account, messaging & visibility',
+                route: '/(tabs)/settings/privacy',
+              },
+            ]
+          : []),
       ],
     },
     {
       title: 'SUPPORT & LEGAL',
       rows: [
         {
+          id: 'help-support',
+          icon: 'help-buoy-outline' as const,
+          iconBgLight: '#EFF6FF',
+          iconBgDark: 'rgba(37, 99, 235, 0.22)',
+          iconColorLight: '#2563EB',
+          iconColorDark: '#60A5FA',
+          label: 'Help / Support',
+          sub: 'Contact admin & community assistance',
+          onPress: () => setShowSupportModal(true),
+        },
+        {
           id: 'privacy-policy',
-          icon: 'shield-checkmark-outline',
+          icon: 'shield-checkmark-outline' as const,
           iconBgLight: '#F0FDFA',
           iconBgDark: 'rgba(13, 148, 136, 0.22)',
           iconColorLight: '#0D9488',
@@ -127,7 +179,7 @@ export default function SettingsScreen() {
         },
         {
           id: 'terms',
-          icon: 'document-text-outline',
+          icon: 'document-text-outline' as const,
           iconBgLight: '#F8FAFC',
           iconBgDark: 'rgba(100, 116, 139, 0.22)',
           iconColorLight: '#64748B',
@@ -143,7 +195,7 @@ export default function SettingsScreen() {
       rows: [
         {
           id: 'logout',
-          icon: 'log-out-outline',
+          icon: 'log-out-outline' as const,
           iconBgLight: '#FEF2F2',
           iconBgDark: 'rgba(220, 38, 38, 0.22)',
           iconColorLight: '#DC2626',
@@ -162,7 +214,7 @@ export default function SettingsScreen() {
       {/* Refined Navigation Bar */}
       <View style={[styles.navbar, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : C.borderSecondary }]}>
         <TouchableOpacity
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/profile' as any))}
+          onPress={handleBack}
           style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           activeOpacity={0.7}
@@ -273,16 +325,30 @@ export default function SettingsScreen() {
                       </View>
 
                       {row.badgeText && (
-                        <View style={[styles.valueBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : C.surfaceVariant }]}>
+                        <View
+                          style={[
+                            styles.valueBadge,
+                            {
+                              backgroundColor:
+                                row.badgeBg ??
+                                (isDark ? 'rgba(255,255,255,0.08)' : C.surfaceVariant),
+                            },
+                          ]}
+                        >
                           {row.badgeIcon && (
                             <Ionicons
                               name={row.badgeIcon}
                               size={12}
-                              color={C.textSecondary}
+                              color={row.badgeTextColor ?? C.textSecondary}
                               style={{ marginRight: 4 }}
                             />
                           )}
-                          <Text style={[styles.valueBadgeText, { color: C.textSecondary }]}>
+                          <Text
+                            style={[
+                              styles.valueBadgeText,
+                              { color: row.badgeTextColor ?? C.textSecondary },
+                            ]}
+                          >
                             {row.badgeText}
                           </Text>
                         </View>
@@ -333,6 +399,68 @@ export default function SettingsScreen() {
           <Text style={[styles.versionText, { color: C.textMuted }]}>Version 1.0.0</Text>
         </View>
       </ScrollView>
+
+      {/* ── Help / Support Modal ── */}
+      <Modal visible={showSupportModal} transparent animationType="fade" onRequestClose={() => setShowSupportModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowSupportModal(false)}>
+          <Pressable
+            style={[styles.modalBox, { backgroundColor: C.cardBg, borderColor: C.border }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.supportModalHeader}>
+              <View style={[styles.supportIconBox, { backgroundColor: '#EFF6FF' }]}>
+                <Ionicons name="help-buoy" size={26} color="#2563EB" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.supportModalTitle, { color: C.text }]}>Community Support</Text>
+                <Text style={[styles.supportModalSub, { color: C.textMuted }]}>
+                  We are here to help you with approval & app assistance.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowSupportModal(false)}
+                style={[styles.modalCloseBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : C.surfaceVariant }]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={20} color={C.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.supportBody}>
+              <View style={[styles.supportRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC', borderColor: C.border }]}>
+                <Ionicons name="mail-outline" size={20} color={C.primary} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.supportRowLabel, { color: C.textMuted }]}>Email Helpdesk</Text>
+                  <Text style={[styles.supportRowVal, { color: C.text }]}>support@gowdasangama.com</Text>
+                </View>
+              </View>
+
+              <View style={[styles.supportRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC', borderColor: C.border }]}>
+                <Ionicons name="call-outline" size={20} color="#16A34A" />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.supportRowLabel, { color: C.textMuted }]}>Phone Support</Text>
+                  <Text style={[styles.supportRowVal, { color: C.text }]}>+91 98450 12345</Text>
+                </View>
+              </View>
+
+              <View style={[styles.supportRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC', borderColor: C.border }]}>
+                <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.supportRowLabel, { color: C.textMuted }]}>WhatsApp Helpline</Text>
+                  <Text style={[styles.supportRowVal, { color: C.text }]}>+91 98450 12345</Text>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalDoneBtn, { backgroundColor: C.primary }]}
+              onPress={() => setShowSupportModal(false)}
+            >
+              <Text style={styles.modalDoneBtnText}>Got it, Thanks!</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -515,5 +643,85 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
     opacity: 0.7,
+  },
+
+  // Support Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalBox: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  supportModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  supportIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  supportModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  supportModalSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  supportBody: {
+    gap: 10,
+    marginBottom: 18,
+  },
+  supportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  supportRowLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  supportRowVal: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  modalDoneBtn: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalDoneBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

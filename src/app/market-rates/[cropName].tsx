@@ -223,7 +223,7 @@ function SkeletonCard({ colors }: { colors: any }) {
 
 export default function CropDetailScreen() {
   const { cropName } = useLocalSearchParams<{ cropName: string }>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -582,6 +582,29 @@ export default function CropDetailScreen() {
           </>
         ) : null}
 
+        {/* ── Data Source & Price Disclaimer ── */}
+        <View
+          style={[
+            styles.disclaimerCard,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+            },
+          ]}
+        >
+          <View style={styles.disclaimerHeader}>
+            <View style={[styles.disclaimerIconWrap, { backgroundColor: colors.primary + '18' }]}>
+              <Ionicons name="information" size={13} color={colors.primary} />
+            </View>
+            <Text style={[styles.disclaimerTitle, { color: colors.text }]}>
+              Source & Price Disclaimer
+            </Text>
+          </View>
+          <Text style={[styles.disclaimerText, { color: colors.textSecondary }]}>
+            Market rates are fetched from official APMC (Agricultural Produce Market Committee) and Agmarknet mandi daily arrival records. Prices are indicative and subject to commodity grade, moisture content, variety, and auction timing. The app is not responsible for any data mismatch, reporting delays, or incorrect price variations.
+          </Text>
+        </View>
+
       </ScrollView>
 
       {/* ── Filter Modal ── */}
@@ -763,4 +786,35 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: '600' },
   applyBtn: { borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   applyBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+
+  // ── Disclaimer Card ──
+  disclaimerCard: {
+    marginTop: 18,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  disclaimerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  disclaimerIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disclaimerTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+  },
+  disclaimerText: {
+    fontSize: 11,
+    lineHeight: 16.5,
+  },
 });

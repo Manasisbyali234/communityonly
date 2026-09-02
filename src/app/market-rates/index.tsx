@@ -119,6 +119,14 @@ export default function MarketRatesScreen() {
             ))}
           </View>
         )}
+
+        {/* Disclaimer Note */}
+        <View style={[styles.disclaimerCard, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
+          <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
+          <Text style={[styles.disclaimerText, { color: colors.textMuted }]}>
+            Prices are sourced from official APMC & Agmarknet market arrivals. The app is not responsible for data mismatch or price discrepancies.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -196,4 +204,21 @@ const styles = StyleSheet.create({
 
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12, width: '100%' },
   emptyText: { fontSize: 15, fontWeight: '600' },
+
+  disclaimerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  disclaimerText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+  },
 });

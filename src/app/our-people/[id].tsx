@@ -10,12 +10,25 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
 import { useStoryQuery, STORY_CATEGORIES } from '../../api/ourPeople';
 import { shareUrl } from '../../utils/shareUtils';
+import { useAuthStore } from '../../store/authStore';
+import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
+import { useToastStore } from '../../store/toastStore';
 
 export default function StoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const currentUser = useAuthStore((s) => s.user);
+  const showToast = useToastStore((s) => s.showToast);
+  const { isApproved } = resolveUserApproval(currentUser);
+
+  React.useEffect(() => {
+    if (!isApproved) {
+      showToast('Community profiles and stories are restricted until approved.', 'warning');
+      router.replace('/(auth)/approval-status');
+    }
+  }, [isApproved]);
 
   const { data: story, isLoading } = useStoryQuery(id);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -32,6 +45,10 @@ export default function StoryDetailScreen() {
   const handleBack = () => {
     router.replace('/(tabs)/explore?tab=stories' as any);
   };
+
+  if (!isApproved) {
+    return null;
+  }
 
   if (isLoading) {
     return (

@@ -43,11 +43,15 @@ export default function JobDetailScreen() {
 
   const handleBack = () => {
     if (from === 'my-applications') {
-      router.replace('/jobs/my-applications' as any);
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/jobs/my-applications' as any);
+      }
     } else if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/jobs' as any);
+      router.replace('/(tabs)/jobs' as any);
     }
   };
   const { user } = useAuthStore();
@@ -223,7 +227,7 @@ export default function JobDetailScreen() {
             title="Browse All Jobs"
             variant="primary"
             size="md"
-            onPress={() => router.replace('/jobs' as any)}
+            onPress={() => router.replace('/(tabs)/jobs' as any)}
             style={{ marginTop: 16 }}
           />
         </View>

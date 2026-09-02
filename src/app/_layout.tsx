@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
+import { useUserApprovalStore, resolveUserApproval } from '../store/userApprovalStore';
 import { useTheme } from '../theme';
 import Toast from '../components/common/Toast';
 import ConfirmationModal from '../components/common/ConfirmationModal';
@@ -150,10 +151,39 @@ function RootLayoutContent() {
         navigate('/(admin)/dashboard');
       }
     } else {
-      if (inAuthGroup || inAdminGroup || !inAppGroup) {
-        // Restore the originally requested URL (e.g. /explore?tab=members) if available
-        const restored = resolveIntendedRoute(intendedPath);
-        navigate(restored ?? '/(tabs)');
+      // Check user approval status
+      const { isApproved } = resolveUserApproval(user);
+
+      if (!isApproved) {
+        // Pending, Rejected, Resubmitted, or Suspended user access control
+        const top = segments[0] as string | undefined;
+        const sub = segments[1] as string | undefined;
+        const subSub = segments[2] as string | undefined;
+
+        // Block member profiles and other community routes explicitly
+        const isMemberProfile = sub === 'user' || sub === 'our-people';
+
+        // Allowed only:
+        // - Approval Status: /(auth)/approval-status
+        // - Own Profile: /(tabs)/profile
+        // - Edit Profile: /(tabs)/edit-profile
+        // - Settings (for logout, support, terms, privacy): /(tabs)/settings
+        const isStrictlyAllowed =
+          (top === '(auth)' && sub === 'approval-status') ||
+          (top === '(tabs)' && sub === 'profile' && !subSub) ||
+          (top === '(tabs)' && sub === 'edit-profile') ||
+          (top === '(tabs)' && sub === 'settings');
+
+        if (!isStrictlyAllowed || isMemberProfile) {
+          navigate('/(auth)/approval-status');
+          return;
+        }
+      } else {
+        if (inAuthGroup || inAdminGroup || !inAppGroup) {
+          // Restore the originally requested URL (e.g. /explore?tab=members) if available
+          const restored = resolveIntendedRoute(intendedPath);
+          navigate(restored ?? '/(tabs)');
+        }
       }
     }
   }, [isLoggedIn, isOnboarded, isLoading, tokensInitialized, segments]);

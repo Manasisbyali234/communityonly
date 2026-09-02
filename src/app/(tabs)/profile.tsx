@@ -24,6 +24,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useUserPostsQuery } from '../../api/feed';
 import { useNotificationsQuery, useUnreadCountQuery, useUnreadChatCountQuery, useChatSocket, useNotificationSocket, useChatsQuery } from '../../api/chat';
 import { useAuthStore } from '../../store/authStore';
+import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
 import { useEventsQuery, useMyEventsQuery } from '../../api/event';
 import { useCommunitiesQuery } from '../../api/community';
 import { apiClient } from '../../api/client';
@@ -129,12 +130,12 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width: SW } = useWindowDimensions();
+  const { user, updateProfile } = useAuthStore();
+  const { isApproved, status: currentStatus } = resolveUserApproval(user);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('about');
   const [bioExpanded, setBioExpanded] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
-
-  const { user, updateProfile } = useAuthStore();
   const { data: posts = [], isLoading: postsLoading } = useUserPostsQuery(user?.id || '');
   const { data: unreadCount = 0 } = useUnreadCountQuery();
   const { data: conversations = [] } = useChatsQuery();
@@ -253,7 +254,13 @@ export default function ProfileScreen() {
           ]}
         />
         <TouchableOpacity
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          onPress={() => {
+            if (!isApproved) {
+              router.replace('/(auth)/approval-status');
+            } else {
+              router.canGoBack() ? router.back() : router.replace('/(tabs)');
+            }
+          }}
           style={[
             styles.floatingActionBtn,
             { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
@@ -268,44 +275,61 @@ export default function ProfileScreen() {
         </Animated.Text>
 
         <View style={styles.navRight}>
-          <TouchableOpacity
-            style={[
-              styles.floatingActionBtn,
-              { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
-            ]}
-            onPress={() => router.push('/notifications' as any)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="notifications-outline" size={19} color={TEXT} />
-            {unreadCount > 0 && (
-              <View style={[styles.bellBadge, { backgroundColor: colors.secondary || '#EF4444' }]}>
-                <Text style={styles.bellBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          {isApproved && (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.floatingActionBtn,
+                  { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
+                ]}
+                onPress={() => router.push('/notifications' as any)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="notifications-outline" size={19} color={TEXT} />
+                {unreadCount > 0 && (
+                  <View style={[styles.bellBadge, { backgroundColor: colors.secondary || '#EF4444' }]}>
+                    <Text style={styles.bellBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.floatingActionBtn,
+                  { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
+                ]}
+                onPress={() => router.push('/(tabs)/chat' as any)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={19} color={TEXT} />
+                {unreadChatCount > 0 && (
+                  <View style={[styles.bellBadge, { backgroundColor: '#EF4444' }]}>
+                    <Text style={styles.bellBadgeText}>{unreadChatCount > 99 ? '99+' : unreadChatCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+
+          {!isApproved && (
+            <TouchableOpacity
+              style={[
+                styles.floatingActionBtn,
+                { backgroundColor: isDark ? 'rgba(217, 119, 6, 0.25)' : '#FEF3C7', borderColor: '#F59E0B' },
+              ]}
+              onPress={() => router.push('/(auth)/approval-status?from=settings' as any)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="shield-checkmark-outline" size={19} color="#D97706" />
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[
               styles.floatingActionBtn,
               { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
             ]}
-            onPress={() => router.push('/(tabs)/chat' as any)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chatbubble-ellipses-outline" size={19} color={TEXT} />
-            {unreadChatCount > 0 && (
-              <View style={[styles.bellBadge, { backgroundColor: '#EF4444' }]}>
-                <Text style={styles.bellBadgeText}>{unreadChatCount > 99 ? '99+' : unreadChatCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.floatingActionBtn,
-              { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
-            ]}
-            onPress={() => router.push('/settings' as any)}
+            onPress={() => router.push({ pathname: '/(tabs)/settings', params: { from: 'profile' } } as any)}
             activeOpacity={0.7}
           >
             <Ionicons name="settings-outline" size={19} color={TEXT} />
@@ -384,16 +408,18 @@ export default function ProfileScreen() {
                 <Ionicons name="share-social-outline" size={17} color={TEXT} />
               </Pressable>
 
-              <Pressable
-                accessibilityLabel="Open media gallery"
-                style={({ pressed }) => [
-                  styles.iconUtilityButton,
-                  { borderColor: BORDER, backgroundColor: pressed ? (isDark ? '#27272A' : '#F4F4F5') : SURF },
-                ]}
-                onPress={() => router.push('/(tabs)/media-gallery' as any)}
-              >
-                <Ionicons name="images-outline" size={17} color={TEXT} />
-              </Pressable>
+              {isApproved && (
+                <Pressable
+                  accessibilityLabel="Open media gallery"
+                  style={({ pressed }) => [
+                    styles.iconUtilityButton,
+                    { borderColor: BORDER, backgroundColor: pressed ? (isDark ? '#27272A' : '#F4F4F5') : SURF },
+                  ]}
+                  onPress={() => router.push('/(tabs)/media-gallery' as any)}
+                >
+                  <Ionicons name="images-outline" size={17} color={TEXT} />
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -428,6 +454,34 @@ export default function ProfileScreen() {
               ) : null}
             </View>
 
+            {/* Approval Status Banner for Pending Users */}
+            {!isApproved && (
+              <TouchableOpacity
+                style={[
+                  styles.pendingApprovalBanner,
+                  {
+                    backgroundColor: isDark ? 'rgba(217, 119, 6, 0.18)' : '#FEF3C7',
+                    borderColor: '#F59E0B',
+                  },
+                ]}
+                onPress={() => router.push('/(auth)/approval-status?from=settings' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.pendingBannerIcon, { backgroundColor: '#F59E0B' }]}>
+                  <Ionicons name="time" size={16} color="#FFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.pendingBannerTitle, { color: isDark ? '#FBBF24' : '#92400E' }]}>
+                    Profile Pending Admin Approval
+                  </Text>
+                  <Text style={[styles.pendingBannerSub, { color: isDark ? '#FDE68A' : '#B45309' }]}>
+                    Community directory, events & connections are restricted. Tap to view status.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={isDark ? '#FBBF24' : '#92400E'} />
+              </TouchableOpacity>
+            )}
+
             {/* Bio Text */}
             <Text style={[styles.bioText, { color: TEXT2 }]} numberOfLines={bioExpanded ? undefined : 2}>
               {user?.bio || 'Passionate community member connecting traditions and future growth.'}
@@ -450,7 +504,7 @@ export default function ProfileScreen() {
                 icon: 'people',
                 color: G,
                 bg: G + '14',
-                onPress: () => router.push('/(tabs)/chat' as any),
+                onPress: isApproved ? () => router.push('/(tabs)/chat' as any) : undefined,
               },
               {
                 label: 'Following',
@@ -458,7 +512,7 @@ export default function ProfileScreen() {
                 icon: 'person-add',
                 color: '#3B82F6',
                 bg: '#3B82F614',
-                onPress: () => router.push('/(tabs)/explore?tab=members' as any),
+                onPress: isApproved ? () => router.push('/(tabs)/explore?tab=members' as any) : undefined,
               },
               {
                 label: 'Events',
@@ -466,7 +520,7 @@ export default function ProfileScreen() {
                 icon: 'calendar',
                 color: '#0891B2',
                 bg: '#0891B214',
-                onPress: () => setActiveTab('events'),
+                onPress: isApproved ? () => setActiveTab('events') : undefined,
               },
               {
                 label: 'Member Since',
@@ -502,7 +556,7 @@ export default function ProfileScreen() {
         {/* ── Segmented Pill Tab Bar ────────────────────────────────────────── */}
         <View style={styles.tabBarSection}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScroll}>
-            {TABS.map((tab) => {
+            {(isApproved ? TABS : TABS.filter((t) => t.id === 'about')).map((tab) => {
               const active = activeTab === tab.id;
               return (
                 <Pressable
@@ -613,7 +667,7 @@ export default function ProfileScreen() {
                   </View>
 
                   {/* Languages */}
-                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                  <View style={[styles.detailTileFull, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
                     <View style={styles.detailTileHeader}>
                       <View style={[styles.detailTileIcon, { backgroundColor: '#8B5CF614' }]}>
                         <Ionicons name="language" size={13} color="#8B5CF6" />
@@ -636,7 +690,7 @@ export default function ProfileScreen() {
                   </View>
 
                   {/* Interests */}
-                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                  <View style={[styles.detailTileFull, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
                     <View style={styles.detailTileHeader}>
                       <View style={[styles.detailTileIcon, { backgroundColor: '#F59E0B14' }]}>
                         <Ionicons name="sparkles" size={13} color="#F59E0B" />
@@ -676,10 +730,12 @@ export default function ProfileScreen() {
                     activeOpacity={0.7}
                     accessibilityLabel="View communities"
                   >
-                    <View style={[styles.metricIconBg, { backgroundColor: G + '14' }]}>
-                      <Ionicons name="globe" size={14} color={G} />
+                    <View style={styles.metricTopRow}>
+                      <View style={[styles.metricIconBg, { backgroundColor: G + '14' }]}>
+                        <Ionicons name="globe" size={13} color={G} />
+                      </View>
+                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{myCommunities.length || user?.communitiesCount || 0}</Text>
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{myCommunities.length || user?.communitiesCount || 0}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Communities</Text>
                   </TouchableOpacity>
 
@@ -689,10 +745,12 @@ export default function ProfileScreen() {
                     activeOpacity={0.7}
                     accessibilityLabel="View events"
                   >
-                    <View style={[styles.metricIconBg, { backgroundColor: '#3B82F614' }]}>
-                      <Ionicons name="calendar" size={14} color="#3B82F6" />
+                    <View style={styles.metricTopRow}>
+                      <View style={[styles.metricIconBg, { backgroundColor: '#3B82F614' }]}>
+                        <Ionicons name="calendar" size={13} color="#3B82F6" />
+                      </View>
+                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{myEvents.length}</Text>
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{myEvents.length}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Events</Text>
                   </TouchableOpacity>
 
@@ -702,10 +760,12 @@ export default function ProfileScreen() {
                     activeOpacity={0.7}
                     accessibilityLabel="View connections"
                   >
-                    <View style={[styles.metricIconBg, { backgroundColor: '#8B5CF614' }]}>
-                      <Ionicons name="people" size={14} color="#8B5CF6" />
+                    <View style={styles.metricTopRow}>
+                      <View style={[styles.metricIconBg, { backgroundColor: '#8B5CF614' }]}>
+                        <Ionicons name="people" size={13} color="#8B5CF6" />
+                      </View>
+                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{typeof connectionCount === 'number' ? connectionCount : (connectionCount as any)?.count ?? 0}</Text>
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{typeof connectionCount === 'number' ? connectionCount : (connectionCount as any)?.count ?? 0}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Connections</Text>
                   </TouchableOpacity>
 
@@ -715,10 +775,12 @@ export default function ProfileScreen() {
                     activeOpacity={0.7}
                     accessibilityLabel="Edit profile"
                   >
-                    <View style={[styles.metricIconBg, { backgroundColor: '#F59E0B14' }]}>
-                      <Ionicons name="ribbon" size={14} color="#F59E0B" />
+                    <View style={styles.metricTopRow}>
+                      <View style={[styles.metricIconBg, { backgroundColor: '#F59E0B14' }]}>
+                        <Ionicons name="ribbon" size={13} color="#F59E0B" />
+                      </View>
+                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{memberYear}</Text>
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{memberYear}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Member</Text>
                   </TouchableOpacity>
                 </View>
@@ -739,7 +801,7 @@ export default function ProfileScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.detailLabel, { color: TEXT3 }]}>Verification Status</Text>
-                    <Text style={[styles.detailValue, { color: G, fontWeight: '700' }]}>
+                    <Text style={[styles.detailValue, { color: G, fontSize: 12.5, fontWeight: '600' }]}>
                       {user?.isVerified ? '✓ Verified Community Member' : 'Active Community Member'}
                     </Text>
                   </View>
@@ -1325,6 +1387,13 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     justifyContent: 'flex-start',
   },
+  detailTileFull: {
+    width: '100%',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'flex-start',
+  },
   detailTileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1394,27 +1463,33 @@ const styles = StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    gap: 8,
+    gap: 6,
   },
   metricCard: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
+    paddingVertical: 9,
+    paddingHorizontal: 3,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  metricIconBg: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  metricTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    gap: 5,
+    marginBottom: 2,
   },
-  metricValue: { fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
-  metricLabel: { fontSize: 10, fontWeight: '600', marginTop: 2, textAlign: 'center', lineHeight: 13 },
+  metricIconBg: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricValue: { fontSize: 14.5, fontWeight: '800', letterSpacing: -0.2 },
+  metricLabel: { fontSize: 10, fontWeight: '600', marginTop: 1, textAlign: 'center', lineHeight: 13 },
 
   // Events Tab
   eventCardRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 14, gap: 12 },
@@ -1524,4 +1599,31 @@ const styles = StyleSheet.create({
   emptyIconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 16, fontWeight: '700', marginTop: 4 },
   emptySubtitle: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
+
+  // Pending Approval Banner
+  pendingApprovalBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 12,
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  pendingBannerIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingBannerTitle: {
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
+  pendingBannerSub: {
+    fontSize: 11.5,
+    marginTop: 1,
+  },
 });

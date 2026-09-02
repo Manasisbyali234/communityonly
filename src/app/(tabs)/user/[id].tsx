@@ -26,6 +26,7 @@ import Skeleton from '../../../components/feedback/Skeleton';
 import Button from '../../../components/common/Button';
 import Avatar from '../../../components/common/Avatar';
 import { useAuthStore } from '../../../store/authStore';
+import { useUserApprovalStore, resolveUserApproval } from '../../../store/userApprovalStore';
 import { useConnectionStatusQuery, useSendConnectionRequestMutation } from '../../../api/connections';
 import { shareUrl } from '../../../utils/shareUtils';
 import { useUserJoinedEventsQuery } from '../../../api/event';
@@ -77,9 +78,22 @@ export default function UserProfileScreen() {
   const { data: userPosts = [], isLoading: postsLoading } = useUserPostsQuery(id);
   const { data: joinedEvents = [], isLoading: eventsLoading } = useUserJoinedEventsQuery(id);
   const currentUser = useAuthStore((s) => s.user);
+  const { isApproved } = resolveUserApproval(currentUser);
+
+  React.useEffect(() => {
+    if (!isApproved) {
+      showToast('Community member profiles are locked until your profile is approved.', 'warning');
+      router.replace('/(auth)/approval-status');
+    }
+  }, [isApproved]);
+
   const isOwnProfile = currentUser?.id === user?.id;
   const { data: connStatus = 'NONE' } = useConnectionStatusQuery(id, currentUser?.id);
   const sendRequest = useSendConnectionRequestMutation();
+
+  if (!isApproved) {
+    return null;
+  }
 
   const handleConnect = () => {
     if (connStatus !== 'NONE' || sendRequest.isPending) return;
@@ -535,7 +549,7 @@ export default function UserProfileScreen() {
                   </View>
 
                   {/* Languages */}
-                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                  <View style={[styles.detailTileFull, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
                     <View style={styles.detailTileHeader}>
                       <View style={[styles.detailTileIcon, { backgroundColor: '#8B5CF614' }]}>
                         <Ionicons name="language" size={13} color="#8B5CF6" />
@@ -556,7 +570,7 @@ export default function UserProfileScreen() {
                   </View>
 
                   {/* Interests */}
-                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                  <View style={[styles.detailTileFull, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
                     <View style={styles.detailTileHeader}>
                       <View style={[styles.detailTileIcon, { backgroundColor: '#F59E0B14' }]}>
                         <Ionicons name="sparkles" size={13} color="#F59E0B" />
@@ -587,39 +601,47 @@ export default function UserProfileScreen() {
 
                 <View style={styles.metricsGrid}>
                   <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
-                    <View style={[styles.metricIconBg, { backgroundColor: G + '14' }]}>
-                      <Ionicons name="globe" size={14} color={G} />
+                    <View style={styles.metricTopRow}>
+                      <View style={[styles.metricIconBg, { backgroundColor: G + '14' }]}>
+                        <Ionicons name="globe" size={13} color={G} />
+                      </View>
+                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.communitiesCount ?? 0}</Text>
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.communitiesCount ?? 0}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Communities</Text>
                   </View>
 
                   <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
-                    <View style={[styles.metricIconBg, { backgroundColor: '#8B5CF614' }]}>
-                      <Ionicons name="people" size={14} color="#8B5CF6" />
+                    <View style={styles.metricTopRow}>
+                      <View style={[styles.metricIconBg, { backgroundColor: '#8B5CF614' }]}>
+                        <Ionicons name="people" size={13} color="#8B5CF6" />
+                      </View>
+                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.followersCount ?? 0}</Text>
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.followersCount ?? 0}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Followers</Text>
                   </View>
 
                   <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
-                    <View style={[styles.metricIconBg, { backgroundColor: '#3B82F614' }]}>
-                      <Ionicons name="person-add" size={14} color="#3B82F6" />
+                    <View style={styles.metricTopRow}>
+                      <View style={[styles.metricIconBg, { backgroundColor: '#3B82F614' }]}>
+                        <Ionicons name="person-add" size={13} color="#3B82F6" />
+                      </View>
+                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.followingCount ?? 0}</Text>
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{user.followingCount ?? 0}</Text>
                     <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Following</Text>
                   </View>
 
                   <View style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}>
-                    <View style={[styles.metricIconBg, { backgroundColor: '#F59E0B14' }]}>
-                      <Ionicons name="ribbon" size={14} color="#F59E0B" />
+                    <View style={styles.metricTopRow}>
+                      <View style={[styles.metricIconBg, { backgroundColor: '#F59E0B14' }]}>
+                        <Ionicons name="ribbon" size={13} color="#F59E0B" />
+                      </View>
+                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1} adjustsFontSizeToFit>
+                        {(user.joinedAt || user.createdAt)
+                          ? new Date(user.joinedAt || user.createdAt!).getFullYear().toString()
+                          : '2026'}
+                      </Text>
                     </View>
-                    <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1} adjustsFontSizeToFit>
-                      {(user.joinedAt || user.createdAt)
-                        ? new Date(user.joinedAt || user.createdAt!).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                        : '2026'}
-                    </Text>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Member Since</Text>
+                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Member</Text>
                   </View>
                 </View>
               </View>
@@ -637,7 +659,7 @@ export default function UserProfileScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.detailLabel, { color: TEXT3 }]}>Verification</Text>
-                    <Text style={[styles.detailValue, { color: G, fontWeight: '700' }]}>
+                    <Text style={[styles.detailValue, { color: G, fontSize: 12.5, fontWeight: '600' }]}>
                       {user.isVerified ? '✓ Verified Community Member' : 'Active Community Member'}
                     </Text>
                   </View>
@@ -969,6 +991,13 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     justifyContent: 'flex-start',
   },
+  detailTileFull: {
+    width: '100%',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'flex-start',
+  },
   detailTileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1017,23 +1046,29 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 2,
+    paddingVertical: 9,
+    paddingHorizontal: 3,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  metricIconBg: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  metricTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    gap: 5,
+    marginBottom: 2,
   },
-  metricValue: { fontSize: 13.5, fontWeight: '800', textAlign: 'center' },
-  metricLabel: { fontSize: 9.5, fontWeight: '600', marginTop: 2, textAlign: 'center' },
+  metricIconBg: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricValue: { fontSize: 14.5, fontWeight: '800', letterSpacing: -0.2 },
+  metricLabel: { fontSize: 10, fontWeight: '600', marginTop: 1, textAlign: 'center', lineHeight: 13 },
 
   // Empty States
   emptyCard: { alignItems: 'center', paddingVertical: 32, gap: 8 },

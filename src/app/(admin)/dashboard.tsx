@@ -10,6 +10,7 @@ import { C, LoadingOverlay, useIsMobile } from '../../components/admin/AdminUI';
 import { adminApiClient } from '../../api/adminClient';
 import { useAdminStore } from '../../store/adminStore';
 import { formatDistanceToNow, fmtDate, fmtTime } from '../../utils/adminUtils';
+import { useUserApprovalStore } from '../../store/userApprovalStore';
 
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -55,11 +56,11 @@ const METRIC_GROUPS: { groupTitle: string; icon: string; items: MetricItem[] }[]
 ];
 
 const QUICK_NAV = [
+  { label: 'Pending Profiles',    sub: 'Approve new user signups',    icon: 'user-check',    route: '/(admin)/pending-profiles',  color: '#D97706', bg: '#FEF3C7' },
   { label: 'Business Directory',  sub: 'Approve & manage businesses', icon: 'shopping-bag',  route: '/(admin)/business',          color: '#16A34A', bg: '#DCFCE7' },
-  { label: 'Community Help',   sub: 'Review urgent help requests', icon: 'life-buoy',     route: '/(admin)/community-help',    color: '#DC2626', bg: '#FEE2E2' },
+  { label: 'Community Help',      sub: 'Review urgent help requests', icon: 'life-buoy',     route: '/(admin)/community-help',    color: '#DC2626', bg: '#FEE2E2' },
   { label: 'Our People Stories',  sub: 'Publish inspiring journeys', icon: 'book-open',     route: '/(admin)/community-stories', color: '#D97706', bg: '#FEF9C3' },
   { label: 'Matrimony Profiles',  sub: 'Review verified matches',     icon: 'heart',         route: '/(admin)/matrimony',         color: '#E11D48', bg: '#FFE4E6' },
-  { label: 'Jobs & Referrals',    sub: 'Moderate career listings',    icon: 'briefcase',     route: '/(admin)/jobs',              color: '#2563EB', bg: '#DBEAFE' },
   { label: 'User Directory',      sub: 'Manage member roles',         icon: 'users',         route: '/(admin)/users',             color: '#7C3AED', bg: '#EDE9FE' },
 ];
 
@@ -67,6 +68,15 @@ export default function AdminDashboard() {
   const { width: screenW } = useWindowDimensions();
   const isMobile = useIsMobile();
   const router = useRouter();
+  const users = useUserApprovalStore((s) => s.users);
+  const approvalStats = useMemo(() => {
+    const total = users.length;
+    const pending = users.filter((u) => u.approvalStatus === 'PENDING' || u.approvalStatus === 'RESUBMITTED').length;
+    const approved = users.filter((u) => u.approvalStatus === 'APPROVED').length;
+    const rejected = users.filter((u) => u.approvalStatus === 'REJECTED').length;
+    const suspended = users.filter((u) => u.approvalStatus === 'SUSPENDED').length;
+    return { total, pending, approved, rejected, suspended };
+  }, [users]);
 
   const [stats, setStats] = useState<Record<string, number>>({
     totalUsers: 1420,
@@ -218,6 +228,95 @@ export default function AdminDashboard() {
             <Text style={s.errorText}>{error}</Text>
           </View>
         ) : null}
+
+        {/* User Management & Approval Statistics (Requirement 10) */}
+        <View style={s.sectionWrap}>
+          <View style={s.sectionHeaderRow}>
+            <View>
+              <Text style={s.sectionTitle}>User Management Approvals</Text>
+              <Text style={s.sectionSub}>Profile review queue & member account statuses</Text>
+            </View>
+            <TouchableOpacity
+              style={s.headerLinkBtn}
+              onPress={() => router.push('/(admin)/pending-profiles' as any)}
+            >
+              <Text style={s.headerLinkText}>View Pending Queue</Text>
+              <Feather name="arrow-right" size={14} color="#16A34A" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={s.approvalStatsGrid}>
+            <TouchableOpacity
+              style={[s.approvalStatCard, { borderLeftColor: '#2563EB', borderLeftWidth: 4 }]}
+              onPress={() => router.push('/(admin)/users' as any)}
+              activeOpacity={0.8}
+            >
+              <View style={s.approvalStatTop}>
+                <Text style={s.approvalStatLabel}>Total Users</Text>
+                <Feather name="users" size={16} color="#2563EB" />
+              </View>
+              <Text style={s.approvalStatNumber}>{approvalStats.total}</Text>
+              <Text style={s.approvalStatSub}>All registered members</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[s.approvalStatCard, s.approvalStatCardHighlight, { borderLeftColor: '#D97706', borderLeftWidth: 4 }]}
+              onPress={() => router.push('/(admin)/pending-profiles' as any)}
+              activeOpacity={0.8}
+            >
+              <View style={s.approvalStatTop}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[s.approvalStatLabel, { color: '#B45309', fontWeight: '700' }]}>Pending Approval</Text>
+                  <View style={s.pendingPill}>
+                    <Text style={s.pendingPillText}>Action Required</Text>
+                  </View>
+                </View>
+                <Feather name="clock" size={16} color="#D97706" />
+              </View>
+              <Text style={[s.approvalStatNumber, { color: '#B45309' }]}>{approvalStats.pending}</Text>
+              <Text style={[s.approvalStatSub, { color: '#92400E' }]}>Tap to review profiles →</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[s.approvalStatCard, { borderLeftColor: '#16A34A', borderLeftWidth: 4 }]}
+              onPress={() => router.push('/(admin)/pending-profiles' as any)}
+              activeOpacity={0.8}
+            >
+              <View style={s.approvalStatTop}>
+                <Text style={s.approvalStatLabel}>Approved</Text>
+                <Feather name="check-circle" size={16} color="#16A34A" />
+              </View>
+              <Text style={[s.approvalStatNumber, { color: '#16A34A' }]}>{approvalStats.approved}</Text>
+              <Text style={s.approvalStatSub}>Active community access</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[s.approvalStatCard, { borderLeftColor: '#DC2626', borderLeftWidth: 4 }]}
+              onPress={() => router.push('/(admin)/pending-profiles' as any)}
+              activeOpacity={0.8}
+            >
+              <View style={s.approvalStatTop}>
+                <Text style={s.approvalStatLabel}>Rejected</Text>
+                <Feather name="x-circle" size={16} color="#DC2626" />
+              </View>
+              <Text style={[s.approvalStatNumber, { color: '#DC2626' }]}>{approvalStats.rejected}</Text>
+              <Text style={s.approvalStatSub}>Awaiting resubmission</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[s.approvalStatCard, { borderLeftColor: '#475569', borderLeftWidth: 4 }]}
+              onPress={() => router.push('/(admin)/users' as any)}
+              activeOpacity={0.8}
+            >
+              <View style={s.approvalStatTop}>
+                <Text style={s.approvalStatLabel}>Suspended</Text>
+                <Feather name="slash" size={16} color="#475569" />
+              </View>
+              <Text style={[s.approvalStatNumber, { color: '#475569' }]}>{approvalStats.suspended}</Text>
+              <Text style={s.approvalStatSub}>Disabled accounts</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Quick Nav Jump Grid */}
         <View style={s.sectionWrap}>
@@ -536,4 +635,66 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.bg,
   },
   viewMoreText: { fontSize: 12.5, fontWeight: '700', color: C.accent },
+
+  // User Management Approval Stats
+  headerLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerLinkText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  approvalStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 4,
+  },
+  approvalStatCard: {
+    flex: 1,
+    minWidth: 170,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    gap: 4,
+  },
+  approvalStatCardHighlight: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  approvalStatTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  approvalStatLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  pendingPill: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  pendingPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  approvalStatNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  approvalStatSub: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
 });

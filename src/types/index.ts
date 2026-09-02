@@ -26,6 +26,23 @@ export interface User {
   interests?: string;
   phone?: string;
   phoneNumber?: string;
+  phoneVerified?: boolean;
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'RESUBMITTED' | 'SUSPENDED';
+  rejectionReason?: string;
+  approvalHistory?: Array<{ status: string; date: string; reason?: string; adminName?: string }>;
+  familyName?: string;
+  dob?: string;
+  gender?: 'Male' | 'Female' | 'Other';
+  country?: string;
+  state?: string;
+  district?: string;
+  city?: string;
+  nativePlace?: string;
+  currentLocation?: string;
+  company?: string;
+  profession?: string;
+  education?: string;
+  skills?: string;
 }
 
 export interface Community {

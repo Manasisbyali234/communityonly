@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAdminStore } from '../../store/adminStore';
 import { useAuthStore } from '../../store/authStore';
 import { adminApiClient } from '../../api/adminClient';
+import { useUserApprovalStore } from '../../store/userApprovalStore';
 
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -22,10 +23,11 @@ function WebOverlay({ visible, onClose, children }: { visible: boolean; onClose:
 }
 
 const NAV_MAIN: { label: string; icon: FeatherIconName; key: string }[] = [
-  { label: 'Dashboard',       icon: 'layout',       key: 'dashboard' },
-  { label: 'Users',           icon: 'users',        key: 'users' },
-  { label: 'Profiles',        icon: 'user',         key: 'profiles' },
-  { label: 'Communities',     icon: 'globe',        key: 'communities' },
+  { label: 'Dashboard',        icon: 'layout',       key: 'dashboard' },
+  { label: 'Users',            icon: 'users',        key: 'users' },
+  { label: 'Pending Profiles', icon: 'user-check',   key: 'pending-profiles' },
+  { label: 'Profiles',         icon: 'user',         key: 'profiles' },
+  { label: 'Communities',      icon: 'globe',        key: 'communities' },
   { label: 'Events',          icon: 'calendar',     key: 'events' },
   { label: 'Stories',         icon: 'book-open',    key: 'stories' },
   { label: 'Referrals',       icon: 'share-2',      key: 'referrals' },
@@ -87,10 +89,19 @@ export default function AdminShell({ children, title }: Props) {
     router.replace('/(auth)/login' as any);
   };
 
+  const users = useUserApprovalStore((s) => s.users);
+  const pendingProfilesCount = users.filter((u) => u.approvalStatus === 'PENDING' || u.approvalStatus === 'RESUBMITTED').length;
+
   const renderItem = (item: typeof NAV_MAIN[0]) => {
     const active = currentKey === item.key;
-    const commCount = item.key === 'communities' ? pendingData.communities.length
-      : item.key === 'events' ? pendingData.events.length : 0;
+    const badgeCount =
+      item.key === 'pending-profiles'
+        ? pendingProfilesCount
+        : item.key === 'communities'
+        ? pendingData.communities.length
+        : item.key === 'events'
+        ? pendingData.events.length
+        : 0;
     return (
       <Pressable
         key={item.key}
@@ -105,9 +116,9 @@ export default function AdminShell({ children, title }: Props) {
           <Feather name={item.icon} size={16} color={active ? '#16A34A' : '#64748B'} />
         </View>
         <Text style={[s.navLabel, active && s.navLabelActive]}>{item.label}</Text>
-        {commCount > 0 && (
-          <View style={s.navBadge}>
-            <Text style={s.navBadgeText}>{commCount > 99 ? '99+' : commCount}</Text>
+        {badgeCount > 0 && (
+          <View style={[s.navBadge, item.key === 'pending-profiles' && { backgroundColor: '#D97706' }]}>
+            <Text style={s.navBadgeText}>{badgeCount > 99 ? '99+' : badgeCount}</Text>
           </View>
         )}
       </Pressable>

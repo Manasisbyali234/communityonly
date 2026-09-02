@@ -11,6 +11,7 @@ import { useToastStore } from '../../store/toastStore';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiClient } from '../../api/client';
 import { adminApiClient } from '../../api/adminClient';
@@ -23,7 +24,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
-  const { colors, spacing, typography, palette, roundness } = useTheme();
+  const { colors, spacing, typography, palette, roundness, isDark } = useTheme();
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const adminLogin = useAdminStore((state) => state.login);
@@ -93,24 +94,31 @@ export default function Login() {
       >
         {/* Branding Logo Area */}
         <View style={styles.logoContainer}>
-          <LinearGradient
-            colors={[palette.gradientStart, palette.gradientMiddle, palette.gradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.logoIcon, { borderRadius: roundness.xl }]}
+          <View
+            style={[
+              styles.logoWrapper,
+              {
+                backgroundColor: '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+              },
+            ]}
           >
-            <Ionicons name="sparkles" size={32} color={palette.white} />
-          </LinearGradient>
+            <Image
+              source={require('../../../assets/images/logo.png')}
+              style={styles.logoImage}
+              contentFit="contain"
+            />
+          </View>
           <Text
             style={[
               styles.logoText,
-              { color: colors.text, fontSize: typography.sizes.xxxl, fontWeight: typography.weights.black },
+              { color: colors.text, fontSize: 20, fontWeight: '700' },
             ]}
           >
-            COMMUNITY
+            Gowda Sangama
           </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: typography.sizes.sm }]}>
-            Sign in to connect and collaborate
+          <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: 11.5 }]}>
+            Connecting Our People
           </Text>
         </View>
 
@@ -209,21 +217,44 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
-  logoIcon: {
-    width: 64,
-    height: 64,
+  logoWrapper: {
+    width: 108,
+    height: 108,
+    borderRadius: 26,
+    borderWidth: 1,
+    padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   logoText: {
-    letterSpacing: 2,
+    letterSpacing: -0.2,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   subtitle: {
-    marginTop: 4,
+    marginTop: 2,
     fontWeight: '500',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+    lineHeight: 15,
   },
   formContainer: {
     width: '100%',

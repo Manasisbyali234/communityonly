@@ -6,6 +6,7 @@ import { Platform, View, StyleSheet, TouchableOpacity, Text, ScrollView } from '
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet from '../../components/common/BottomSheet';
 import { useAuthStore } from '../../store/authStore';
+import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Avatar from '../../components/common/Avatar';
 
@@ -92,6 +93,8 @@ export default function TabsLayout() {
   const router = useRouter();
   const [createMenuVisible, setCreateMenuVisible] = useState(false);
   const user = useAuthStore((s) => s.user);
+  const { isApproved } = resolveUserApproval(user);
+
   const insets = useSafeAreaInsets();
   const tabBarBottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 8);
 
@@ -133,6 +136,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="index"
           options={{
+            href: isApproved ? undefined : null,
             tabBarIcon: ({ focused, color }) => (
               <TabItem
                 focused={focused}
@@ -146,6 +150,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="explore"
           options={{
+            href: isApproved ? undefined : null,
             tabBarIcon: ({ focused, color }) => (
               <TabItem
                 focused={focused}
@@ -161,10 +166,13 @@ export default function TabsLayout() {
           listeners={{
             tabPress: (e) => {
               e.preventDefault();
-              setCreateMenuVisible(true);
+              if (isApproved) {
+                setCreateMenuVisible(true);
+              }
             },
           }}
           options={{
+            href: isApproved ? undefined : null,
             tabBarIcon: ({ focused, color }) => (
               <CreatePostTabIcon focused={createMenuVisible} color={color as string} />
             ),
@@ -173,6 +181,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="chat"
           options={{
+            href: isApproved ? undefined : null,
             tabBarIcon: ({ focused, color }) => (
               <TabItem
                 focused={focused}
@@ -228,7 +237,20 @@ export default function TabsLayout() {
         <Tabs.Screen name="post/[id]" options={{ href: null }} />
         <Tabs.Screen name="edit-profile" options={{ href: null }} />
         <Tabs.Screen name="notifications" options={{ href: null }} />
-        <Tabs.Screen name="settings" options={{ href: null }} />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            href: isApproved ? null : undefined,
+            tabBarIcon: ({ focused, color }) => (
+              <TabItem
+                focused={focused}
+                activeIcon="settings"
+                inactiveIcon="settings-outline"
+                color={color as string}
+              />
+            ),
+          }}
+        />
         <Tabs.Screen name="settings/appearance" options={{ href: null }} />
         <Tabs.Screen name="settings/privacy" options={{ href: null }} />
         <Tabs.Screen name="settings/notifications" options={{ href: null }} />

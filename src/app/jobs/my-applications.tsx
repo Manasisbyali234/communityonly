@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator, Platform, ScrollView,
@@ -23,7 +23,16 @@ export default function MyJobApplicationsScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const { data: applications = [], isLoading } = useMyJobApplicationsQuery();
+
+  const handleBack = () => {
+    if (from && from !== 'my-applications') {
+      router.replace(from as any);
+    } else {
+      router.replace('/(tabs)/jobs' as any);
+    }
+  };
 
   const stats = {
     total: applications.length,
@@ -35,7 +44,7 @@ export default function MyJobApplicationsScreen() {
   return (
     <View style={[s.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/jobs' as any))} style={s.backBtn} accessibilityLabel="Go back to hiring companies">
+        <TouchableOpacity onPress={handleBack} style={s.backBtn} accessibilityLabel="Go back to hiring companies">
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -66,7 +75,7 @@ export default function MyJobApplicationsScreen() {
           <Text style={[s.emptyTitle, { color: colors.text }]}>No applications yet</Text>
           <Text style={[s.emptyText, { color: colors.textMuted }]}>Browse jobs and apply to get started</Text>
           <TouchableOpacity style={[s.browseBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push('/jobs' as any)}>
+            onPress={() => router.replace('/(tabs)/jobs' as any)}>
             <Text style={s.browseBtnText}>Browse Jobs</Text>
           </TouchableOpacity>
         </View>

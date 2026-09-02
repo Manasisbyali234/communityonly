@@ -737,7 +737,7 @@ export default function HomeFeed() {
             />
           </View>
           <View>
-            <Text style={[styles.appBarTitle, { color: colors.text, fontSize: isSmallScreen ? 15 : 17 }]}>
+            <Text style={[styles.appBarTitle, { color: colors.text, fontSize: isSmallScreen ? 13 : 14 }]}>
               Gowda Sangama
             </Text>
             <Text style={[styles.appBarSub, { color: colors.textMuted }]}>
@@ -863,20 +863,21 @@ const styles = StyleSheet.create({
       android: { elevation: 4 },
     }),
   },
-  appBarBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  appBarBrand: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   logoMark: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 58,
+    height: 58,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 2,
   },
   logoImg: {
     width: '100%',
     height: '100%',
   },
-  appBarTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  appBarSub: { fontSize: 11, fontWeight: '500', marginTop: 1 },
+  appBarTitle: { fontSize: 14.5, fontWeight: '700', letterSpacing: -0.2, lineHeight: 19 },
+  appBarSub: { fontSize: 10.5, fontWeight: '500', marginTop: 1, letterSpacing: 0.1, lineHeight: 14 },
   appBarActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   appBarBtn: {
     width: 40, height: 40, borderRadius: 20,

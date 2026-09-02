@@ -168,7 +168,7 @@ export default function CompanyJobsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/jobs' as any)}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/jobs' as any)}
           style={styles.backBtn}
         >
           <Ionicons name="arrow-back" size={20} color={CARD} />

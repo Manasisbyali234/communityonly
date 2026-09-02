@@ -2,6 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   StyleSheet, Text, View, Pressable,
   TouchableOpacity, Share, Platform, Modal,
+  TextInput, ActivityIndicator, ScrollView,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
@@ -19,6 +20,16 @@ import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useAuthStore } from '../../store/authStore';
 import { useRouter } from 'expo-router';
+import { apiClient } from '../../api/client';
+
+const PRESET_REPORT_REASONS = [
+  { id: 'spam', label: 'Spam or Fraud', desc: 'Commercial ads, scams, or bot activity' },
+  { id: 'hate', label: 'Hate Speech or Harassment', desc: 'Attacks on community, religion, or individuals' },
+  { id: 'false_info', label: 'Misinformation / False News', desc: 'Misleading community news or false claims' },
+  { id: 'inappropriate', label: 'Inappropriate or Vulgar Content', desc: 'Explicit, abusive, or sensitive media' },
+  { id: 'defamation', label: 'Defamation / Personal Attack', desc: 'Targeting a family or member with slander' },
+  { id: 'other', label: 'Other Concern', desc: 'Provide custom details in the box below' },
+];
 
 const CARD_H_MARGIN = 16;
 const MEDIA_HEIGHT = 320;
@@ -109,6 +120,32 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   const [imageAspectRatio, setImageAspectRatio] = useState(SINGLE_IMAGE_FALLBACK_ASPECT_RATIO);
   const moreBtnRef = useRef<View>(null);
   const mediaUri = post.mediaUrl || (post.images && post.images[0]);
+
+  // Report modal state
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [selectedReason, setSelectedReason] = useState<string>('Spam or Fraud');
+  const [reportDescription, setReportDescription] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  const handleSubmitReport = async () => {
+    setIsSubmittingReport(true);
+    try {
+      await apiClient
+        .post(`/posts/${post.id}/report`, {
+          reason: selectedReason,
+          description: reportDescription.trim(),
+        })
+        .catch(() => null);
+
+      showToast('Thank you. Post has been reported for review.', 'success');
+      setReportModalVisible(false);
+      setReportDescription('');
+    } catch {
+      showToast('Failed to submit report. Please try again.', 'error');
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
 
   // Sync like state from server whenever the post prop updates
   useEffect(() => {
@@ -327,7 +364,9 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                   style={styles.dropdownItem}
                   onPress={() => {
                     setMenuVisible(false);
-                    showToast('Post reported. Thank you!', 'info');
+                    setSelectedReason('Spam or Fraud');
+                    setReportDescription('');
+                    setReportModalVisible(true);
                   }}
                 >
                   <View style={[styles.dropdownIconBox, { backgroundColor: '#FFEBEE' }]}>
@@ -364,6 +403,156 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
               )}
             </View>
           </View>
+        </Modal>
+
+        {/* ── Report Post Modal ── */}
+        <Modal
+          visible={reportModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setReportModalVisible(false)}
+        >
+          <Pressable style={styles.reportModalBackdrop} onPress={() => setReportModalVisible(false)}>
+            <Pressable
+              style={[
+                styles.reportModalCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <View style={styles.reportHeader}>
+                <View style={styles.reportIconBox}>
+                  <Ionicons name="flag" size={18} color="#E53935" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.reportTitle, { color: colors.text }]}>Report Post</Text>
+                  <Text style={[styles.reportSubtitle, { color: colors.textMuted }]}>
+                    Why are you reporting this post?
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setReportModalVisible(false)}
+                  style={[
+                    styles.reportCloseBtn,
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' },
+                  ]}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+                {/* Preset Reasons */}
+                <Text style={[styles.reportSectionLabel, { color: colors.textMuted }]}>
+                  SELECT A REASON
+                </Text>
+                <View style={styles.presetList}>
+                  {PRESET_REPORT_REASONS.map((reason) => {
+                    const isSelected = selectedReason === reason.label;
+                    return (
+                      <TouchableOpacity
+                        key={reason.id}
+                        style={[
+                          styles.presetCard,
+                          {
+                            backgroundColor: isSelected
+                              ? (isDark ? 'rgba(229, 57, 53, 0.15)' : '#FFEBEE')
+                              : (isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC'),
+                            borderColor: isSelected
+                              ? '#E53935'
+                              : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border),
+                          },
+                        ]}
+                        onPress={() => setSelectedReason(reason.label)}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          style={[
+                            styles.presetRadio,
+                            { borderColor: isSelected ? '#E53935' : colors.border },
+                          ]}
+                        >
+                          {isSelected && <View style={styles.presetRadioDot} />}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              styles.presetLabel,
+                              {
+                                color: isSelected ? '#E53935' : colors.text,
+                                fontWeight: isSelected ? '700' : '600',
+                              },
+                            ]}
+                          >
+                            {reason.label}
+                          </Text>
+                          <Text style={[styles.presetDesc, { color: colors.textMuted }]}>
+                            {reason.desc}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Description box to enter reason manually */}
+                <Text style={[styles.reportSectionLabel, { color: colors.textMuted, marginTop: 16 }]}>
+                  ADDITIONAL DETAILS / ENTER REASON MANUALLY
+                </Text>
+                <TextInput
+                  style={[
+                    styles.reportTextInput,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
+                  placeholder="Explain the issue or enter details (optional)..."
+                  placeholderTextColor={colors.textMuted}
+                  multiline
+                  numberOfLines={3}
+                  value={reportDescription}
+                  onChangeText={setReportDescription}
+                  textAlignVertical="top"
+                />
+              </ScrollView>
+
+              {/* Actions */}
+              <View style={styles.reportActionsRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.reportCancelBtn,
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9' },
+                  ]}
+                  onPress={() => setReportModalVisible(false)}
+                  disabled={isSubmittingReport}
+                >
+                  <Text style={[styles.reportCancelText, { color: colors.text }]}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.reportSubmitBtn, isSubmittingReport && { opacity: 0.6 }]}
+                  onPress={handleSubmitReport}
+                  disabled={isSubmittingReport}
+                >
+                  {isSubmittingReport ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="flag" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.reportSubmitText}>Submit Report</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       </View>
 
@@ -801,6 +990,132 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '700',
     letterSpacing: -0.2,
+  },
+
+  // ── Report Modal Styles ────────────────────────────────────────────────────
+  reportModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  reportModalCard: {
+    width: '100%',
+    maxWidth: 440,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  reportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  reportIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFEBEE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  reportSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  reportCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  presetList: {
+    gap: 8,
+  },
+  presetCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    gap: 12,
+  },
+  presetRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  presetRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E53935',
+  },
+  presetLabel: {
+    fontSize: 14,
+  },
+  presetDesc: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  reportTextInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 13.5,
+    minHeight: 80,
+  },
+  reportActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 18,
+  },
+  reportCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reportSubmitBtn: {
+    flex: 1.4,
+    backgroundColor: '#E53935',
+    paddingVertical: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportSubmitText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 
