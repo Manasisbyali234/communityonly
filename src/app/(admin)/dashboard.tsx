@@ -10,7 +10,6 @@ import { C, LoadingOverlay, useIsMobile } from '../../components/admin/AdminUI';
 import { adminApiClient } from '../../api/adminClient';
 import { useAdminStore } from '../../store/adminStore';
 import { formatDistanceToNow, fmtDate, fmtTime } from '../../utils/adminUtils';
-import { useUserApprovalStore } from '../../store/userApprovalStore';
 
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -68,15 +67,13 @@ export default function AdminDashboard() {
   const { width: screenW } = useWindowDimensions();
   const isMobile = useIsMobile();
   const router = useRouter();
-  const users = useUserApprovalStore((s) => s.users);
-  const approvalStats = useMemo(() => {
-    const total = users.length;
-    const pending = users.filter((u) => u.approvalStatus === 'PENDING' || u.approvalStatus === 'RESUBMITTED').length;
-    const approved = users.filter((u) => u.approvalStatus === 'APPROVED').length;
-    const rejected = users.filter((u) => u.approvalStatus === 'REJECTED').length;
-    const suspended = users.filter((u) => u.approvalStatus === 'SUSPENDED').length;
-    return { total, pending, approved, rejected, suspended };
-  }, [users]);
+  const [approvalStats, setApprovalStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    suspended: 0,
+  });
 
   const [stats, setStats] = useState<Record<string, number>>({
     totalUsers: 1420,
@@ -113,12 +110,23 @@ export default function AdminDashboard() {
         setLoading(false);
         return;
       }
-      const [statsRes, activityRes] = await Promise.all([
+      const [statsRes, activityRes, approvalsRes] = await Promise.all([
         adminApiClient.get('/admin-panel/dashboard').catch(() => null),
         adminApiClient.get('/admin-panel/recent-activity').catch(() => null),
+        adminApiClient.get('/admin-panel/profile-approvals', { params: { status: 'ALL', take: 100 } }).catch(() => null),
       ]);
       if (statsRes?.data?.data) {
         setStats((prev) => ({ ...prev, ...statsRes.data.data }));
+      }
+      const approvals = approvalsRes?.data?.data?.users;
+      if (Array.isArray(approvals)) {
+        setApprovalStats({
+          total: approvalsRes?.data?.data?.total ?? approvals.length,
+          pending: approvals.filter((u: any) => u.approvalStatus === 'PENDING' || u.approvalStatus === 'RESUBMITTED').length,
+          approved: approvals.filter((u: any) => u.approvalStatus === 'APPROVED').length,
+          rejected: approvals.filter((u: any) => u.approvalStatus === 'REJECTED').length,
+          suspended: approvals.filter((u: any) => u.approvalStatus === 'SUSPENDED').length,
+        });
       }
       if (activityRes?.data?.data && Array.isArray(activityRes.data.data)) {
         setActivity(activityRes.data.data);

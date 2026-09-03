@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,18 @@ import {
   StyleSheet,
   Modal,
   TextInput,
+  ActivityIndicator,
   Platform,
   Alert,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import AdminShell from '../../components/admin/AdminShell';
 import { C, SearchBar, EmptyState, useIsMobile } from '../../components/admin/AdminUI';
-import { useUserApprovalStore, ManagedUser } from '../../store/userApprovalStore';
+import { ManagedUser } from '../../store/userApprovalStore';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useAdminStore } from '../../store/adminStore';
+import { adminApiClient } from '../../api/adminClient';
 
 type TabType = 'PENDING' | 'RESUBMITTED' | 'APPROVED' | 'REJECTED' | 'ALL';
 
@@ -27,12 +29,8 @@ export default function PendingProfilesScreen() {
   const confirm = useConfirmStore((s) => s.confirm);
   const admin = useAdminStore((s) => s.admin);
 
-  const users = useUserApprovalStore((s) => s.users);
-  const approveUser = useUserApprovalStore((s) => s.approveUser);
-  const rejectUser = useUserApprovalStore((s) => s.rejectUser);
-  const suspendUser = useUserApprovalStore((s) => s.suspendUser);
-  const reactivateUser = useUserApprovalStore((s) => s.reactivateUser);
-
+  const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('PENDING');
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
@@ -42,6 +40,29 @@ export default function PendingProfilesScreen() {
   const [rejectingUser, setRejectingUser] = useState<ManagedUser | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectError, setRejectError] = useState('');
+
+  const fetchProfiles = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await adminApiClient.get('/admin-panel/profile-approvals', {
+        params: { status: 'ALL', take: 100 },
+      });
+      setUsers(res.data?.data?.users ?? []);
+    } catch (e: any) {
+      showToast(e.response?.data?.message || 'Could not load pending profiles.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, [fetchProfiles]);
+
+  const replaceUser = (updated: ManagedUser) => {
+    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+    setSelectedUser((prev) => (prev?.id === updated.id ? updated : prev));
+  };
 
   // Counts
   const counts = useMemo(() => {
@@ -102,14 +123,15 @@ export default function PendingProfilesScreen() {
       });
 
       if (confirmed) {
-        approveUser(user.id, admin?.displayName || admin?.username || 'Administrator');
+        const res = await adminApiClient.put(`/admin-panel/profile-approvals/${user.id}/approve`);
+        replaceUser(res.data?.data ?? { ...user, approvalStatus: 'APPROVED', isVerified: true });
         showToast(`Profile of ${user.displayName} approved successfully!`, 'success');
         if (showDetailModal && selectedUser?.id === user.id) {
           setShowDetailModal(false);
         }
       }
     },
-    [confirm, approveUser, admin, showToast, showDetailModal, selectedUser]
+    [confirm, showToast, showDetailModal, selectedUser]
   );
 
   // Action: Open Reject Modal
@@ -120,14 +142,17 @@ export default function PendingProfilesScreen() {
   };
 
   // Action: Confirm Reject
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!rejectionReason.trim()) {
       setRejectError('Please provide a reason for rejecting this profile.');
       return;
     }
 
     if (rejectingUser) {
-      rejectUser(rejectingUser.id, rejectionReason.trim(), admin?.displayName || admin?.username || 'Administrator');
+      const res = await adminApiClient.put(`/admin-panel/profile-approvals/${rejectingUser.id}/reject`, {
+        reason: rejectionReason.trim(),
+      });
+      replaceUser(res.data?.data ?? { ...rejectingUser, approvalStatus: 'REJECTED', rejectionReason: rejectionReason.trim() });
       showToast(`Profile of ${rejectingUser.displayName} marked as Rejected.`, 'info');
       setRejectingUser(null);
       setRejectionReason('');
@@ -224,7 +249,12 @@ export default function PendingProfilesScreen() {
         </View>
 
         {/* Profiles List */}
-        {filteredUsers.length === 0 ? (
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color="#16A34A" />
+            <Text style={styles.loadingText}>Loading profiles...</Text>
+          </View>
+        ) : filteredUsers.length === 0 ? (
           <EmptyState
             message={search ? `No profiles match "${search}"` : 'All registrations have been reviewed.'}
           />
@@ -335,7 +365,10 @@ export default function PendingProfilesScreen() {
                             isDestructive: true,
                           });
                           if (ok) {
-                            suspendUser(item.id);
+                            const res = await adminApiClient.put(`/admin-panel/profile-approvals/${item.id}/suspend`, {
+                              reason: 'Administrative suspension',
+                            });
+                            replaceUser(res.data?.data ?? { ...item, approvalStatus: 'SUSPENDED', isBanned: true, isActive: false });
                             showToast(`${item.displayName} suspended.`, 'info');
                           }
                         }}
@@ -346,8 +379,9 @@ export default function PendingProfilesScreen() {
                     ) : item.approvalStatus === 'SUSPENDED' ? (
                       <TouchableOpacity
                         style={styles.approveBtn}
-                        onPress={() => {
-                          reactivateUser(item.id);
+                        onPress={async () => {
+                          const res = await adminApiClient.put(`/admin-panel/profile-approvals/${item.id}/reactivate`);
+                          replaceUser(res.data?.data ?? { ...item, approvalStatus: 'APPROVED', isBanned: false, isActive: true });
                           showToast(`${item.displayName} reactivated!`, 'success');
                         }}
                       >
@@ -581,6 +615,16 @@ const styles = StyleSheet.create({
   },
   listGrid: {
     gap: 14,
+  },
+  loadingBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#64748B',
   },
   userCard: {
     backgroundColor: '#FFF',

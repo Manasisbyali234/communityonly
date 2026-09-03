@@ -22,6 +22,7 @@ import { useTheme } from '../../theme';
 import { useToastStore } from '../../store/toastStore';
 import { pickImage, PickedImage } from '../../utils/imagePicker';
 import { useUserApprovalStore } from '../../store/userApprovalStore';
+import { useAuthStore } from '../../store/authStore';
 import { apiClient } from '../../api/client';
 
 const KARNATAKA_DISTRICTS = [
@@ -64,10 +65,10 @@ const registerSchema = z
     confirmPassword: z.string(),
 
     // Location Details
-    country: z.string().min(2, 'Country is required'),
-    state: z.string().min(2, 'State is required'),
-    district: z.string().min(2, 'District is required'),
-    city: z.string().min(2, 'City / Town is required'),
+    country: z.string().optional(),
+    state: z.string().optional(),
+    district: z.string().optional(),
+    city: z.string().optional(),
     nativePlace: z.string().optional(),
     currentLocation: z.string().optional(),
 
@@ -92,7 +93,10 @@ export default function RegisterScreen() {
   const { ref } = useLocalSearchParams<{ ref?: string }>();
   const showToast = useToastStore((state) => state.showToast);
   const registerPendingUser = useUserApprovalStore((s) => s.registerPendingUser);
+  const login = useAuthStore((state) => state.login);
 
+  // Registration is intentionally a single identity step. The remaining
+  // profile details are collected after approval in Edit Profile.
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -152,32 +156,13 @@ export default function RegisterScreen() {
   };
 
   const handleNextStep = async () => {
-    if (step === 1) {
-      const valid = await trigger([
-        'displayName',
-        'familyName',
-        'dob',
-        'gender',
-        'phone',
-        'email',
-        'password',
-        'confirmPassword',
-      ]);
-      if (!profilePhoto) {
-        showToast('Please upload a profile photo (required)', 'error');
-        return;
-      }
-      if (valid) setStep(2);
-    } else if (step === 2) {
-      const valid = await trigger(['country', 'state', 'district', 'city']);
-      if (valid) setStep(3);
-    }
+    const valid = await trigger(['country', 'state', 'district', 'city']);
+    if (valid) setStep(3);
   };
 
   const onSubmit = async (data: RegisterFormValues) => {
     if (!profilePhoto) {
       showToast('Please upload a profile photo', 'error');
-      setStep(1);
       return;
     }
 
@@ -186,44 +171,32 @@ export default function RegisterScreen() {
       // 1. Format phone with standard format
       const rawPhone = data.phone.trim();
       const formattedPhone = rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`;
-
-      // 2. Register user in approval store with PENDING status
-      const pendingUser = registerPendingUser({
+      const username = data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const profileData = {
         displayName: data.displayName.trim(),
         familyName: data.familyName.trim(),
-        username: data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+        username,
         email: data.email.toLowerCase().trim(),
         phone: formattedPhone,
-        avatarUrl: profilePhoto,
         dob: data.dob.trim(),
         gender: data.gender,
-        country: data.country.trim(),
-        state: data.state.trim(),
-        district: data.district.trim(),
-        city: data.city.trim(),
-        nativePlace: data.nativePlace?.trim() || undefined,
-        currentLocation: data.currentLocation?.trim() || data.city.trim(),
-        occupation: data.occupation?.trim() || undefined,
-        profession: data.profession?.trim() || undefined,
-        company: data.company?.trim() || undefined,
-        education: data.education?.trim() || undefined,
-        skills: data.skills?.trim() || undefined,
+      };
+
+      const registerPayload = {
+        ...profileData,
+        password: data.password,
+        ...(ref ? { referredById: ref } : {}),
+      };
+
+      const res = await apiClient.post('/auth/register', registerPayload);
+      const { user: serverUser, accessToken, refreshToken } = res.data.data;
+      await login(serverUser, accessToken, refreshToken);
+      const pendingUser = registerPendingUser({
+        ...profileData,
+        avatarUrl: profilePhoto,
         approvalStatus: 'PENDING',
         phoneVerified: false,
       });
-
-      // Try server endpoint if online (non-blocking)
-      try {
-        await apiClient.post('/auth/register', {
-          displayName: data.displayName,
-          familyName: data.familyName,
-          email: data.email,
-          phone: formattedPhone,
-          password: data.password,
-          username: pendingUser.username,
-          ...(ref ? { referredById: ref } : {}),
-        });
-      } catch {}
 
       // 3. Move directly to Mobile OTP verification
       router.push({
@@ -231,11 +204,11 @@ export default function RegisterScreen() {
         params: {
           phone: formattedPhone,
           email: data.email,
-          userId: pendingUser.id,
+          userId: serverUser.id || pendingUser.id,
         },
       });
     } catch (e: any) {
-      showToast(e.message || 'Registration failed. Please try again.', 'error');
+      showToast(e.response?.data?.message || e.message || 'Registration failed. Please try again.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -258,9 +231,7 @@ export default function RegisterScreen() {
       >
         <TouchableOpacity
           onPress={() => {
-            if (step > 1) {
-              setStep((s) => (s - 1) as any);
-            } else if (router.canGoBack()) {
+            if (router.canGoBack()) {
               router.back();
             } else {
               router.replace('/(auth)/login');
@@ -274,7 +245,7 @@ export default function RegisterScreen() {
         <View style={styles.topBarTitleWrap}>
           <Text style={[styles.topBarTitle, { color: C.text }]}>Community Registration</Text>
           <Text style={[styles.topBarSub, { color: C.primary }]}>
-            Step {step} of 3 • {step === 1 ? 'Basic Details' : step === 2 ? 'Location' : 'Professional'}
+            Step 1 of 1 • Basic Details
           </Text>
         </View>
         <View style={[styles.topMiniLogo, { backgroundColor: '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.15)' : C.border }]}>
@@ -284,7 +255,7 @@ export default function RegisterScreen() {
 
       {/* ── Step Progress Indicator ────────────────────────────── */}
       <View style={styles.progressContainer}>
-        {[1, 2, 3].map((s) => (
+        {[1].map((s) => (
           <View
             key={s}
             style={[
@@ -716,9 +687,15 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: C.primary }]} onPress={handleNextStep}>
-              <Text style={styles.primaryBtnText}>Next Step</Text>
-              <Ionicons name="arrow-forward" size={18} color="#FFF" />
+            <TouchableOpacity
+              style={[styles.primaryBtn, { backgroundColor: C.primary }]}
+              onPress={handleSubmit(onSubmit)}
+              disabled={submitting}
+            >
+              {submitting ? <ActivityIndicator size="small" color="#FFF" /> : <>
+                <Text style={styles.primaryBtnText}>Verify Mobile & Register</Text>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#FFF" />
+              </>}
             </TouchableOpacity>
           </View>
         )}

@@ -24,7 +24,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useUserPostsQuery } from '../../api/feed';
 import { useNotificationsQuery, useUnreadCountQuery, useUnreadChatCountQuery, useChatSocket, useNotificationSocket, useChatsQuery } from '../../api/chat';
 import { useAuthStore } from '../../store/authStore';
-import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
+import { resolveUserApproval } from '../../store/userApprovalStore';
 import { useEventsQuery, useMyEventsQuery } from '../../api/event';
 import { useCommunitiesQuery } from '../../api/community';
 import { apiClient } from '../../api/client';
@@ -229,6 +229,24 @@ export default function ProfileScreen() {
   const memberYear = (user?.joinedAt || user?.createdAt)
     ? new Date(user.joinedAt || user.createdAt!).getFullYear().toString()
     : '2026';
+  const primaryNativePlace = user?.nativePlace || user?.village;
+  const primaryProfession = user?.profession || user?.occupation;
+  const registrationDetails = [
+    { label: 'Family / Okka', value: user?.familyName, icon: 'people-outline', color: G },
+    { label: 'Date of Birth', value: user?.dob, icon: 'calendar-outline', color: '#3B82F6' },
+    { label: 'Gender', value: user?.gender, icon: 'person-outline', color: '#8B5CF6' },
+    { label: 'Phone', value: user?.phone || user?.phoneNumber, icon: 'call-outline', color: '#0EA5E9' },
+    { label: 'Country', value: user?.country, icon: 'flag-outline', color: '#F59E0B' },
+    { label: 'State', value: user?.state, icon: 'map-outline', color: '#16A34A' },
+    { label: 'District', value: user?.district, icon: 'navigate-outline', color: '#EF4444' },
+    { label: 'City', value: user?.city, icon: 'business-outline', color: '#6366F1' },
+    { label: 'Current Location', value: user?.currentLocation, icon: 'location-outline', color: '#0891B2' },
+    { label: 'Company', value: user?.company, icon: 'briefcase-outline', color: '#A855F7' },
+    { label: 'Education', value: user?.education, icon: 'school-outline', color: '#2563EB' },
+  ] as const;
+  const skillTags = user?.skills
+    ? user.skills.split(',').map((skill) => skill.trim()).filter(Boolean)
+    : [];
 
   return (
     <View style={[styles.root, { backgroundColor: BG }]}>
@@ -640,8 +658,8 @@ export default function ProfileScreen() {
                       </View>
                       <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Native Place</Text>
                     </View>
-                    {user?.village ? (
-                      <Text style={[styles.detailTileValue, { color: TEXT }]} numberOfLines={1}>{user.village}</Text>
+                    {primaryNativePlace ? (
+                      <Text style={[styles.detailTileValue, { color: TEXT }]} numberOfLines={1}>{primaryNativePlace}</Text>
                     ) : (
                       <TouchableOpacity onPress={() => router.push('/(tabs)/edit-profile' as any)}>
                         <Text style={[styles.detailActionLink, { color: G, fontSize: 12 }]}>+ Add village</Text>
@@ -657,8 +675,8 @@ export default function ProfileScreen() {
                       </View>
                       <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Profession</Text>
                     </View>
-                    {user?.occupation ? (
-                      <Text style={[styles.detailTileValue, { color: TEXT }]} numberOfLines={1}>{user.occupation}</Text>
+                    {primaryProfession ? (
+                      <Text style={[styles.detailTileValue, { color: TEXT }]} numberOfLines={1}>{primaryProfession}</Text>
                     ) : (
                       <TouchableOpacity onPress={() => router.push('/(tabs)/edit-profile' as any)}>
                         <Text style={[styles.detailActionLink, { color: G, fontSize: 12 }]}>+ Add profession</Text>
@@ -714,7 +732,65 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              {/* Card 2: Community Engagement Matrix */}
+              {/* Card 2: Registration Details */}
+              <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+                <View style={styles.cardHeaderWithAction}>
+                  <View style={styles.cardHeaderTitleRow}>
+                    <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
+                      <Ionicons name="clipboard-outline" size={16} color={G} />
+                    </View>
+                    <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>Registration Details</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => router.push('/(tabs)/edit-profile' as any)}
+                    style={[styles.smallEditChip, { backgroundColor: G + '10' }]}
+                  >
+                    <Ionicons name="create-outline" size={13} color={G} />
+                    <Text style={[styles.headerActionLink, { color: G }]}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.twoColumnGrid}>
+                  {registrationDetails.map((detail) => (
+                    <View
+                      key={detail.label}
+                      style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}
+                    >
+                      <View style={styles.detailTileHeader}>
+                        <View style={[styles.detailTileIcon, { backgroundColor: detail.color + '14' }]}>
+                          <Ionicons name={detail.icon} size={13} color={detail.color} />
+                        </View>
+                        <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>{detail.label}</Text>
+                      </View>
+                      <Text style={[styles.detailTileValue, { color: detail.value ? TEXT : TEXT3 }]} numberOfLines={2}>
+                        {detail.value || 'Not specified'}
+                      </Text>
+                    </View>
+                  ))}
+
+                  <View style={[styles.detailTileFull, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
+                    <View style={styles.detailTileHeader}>
+                      <View style={[styles.detailTileIcon, { backgroundColor: '#22C55E14' }]}>
+                        <Ionicons name="construct-outline" size={13} color="#16A34A" />
+                      </View>
+                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Skills</Text>
+                    </View>
+                    {skillTags.length > 0 ? (
+                      <View style={styles.tilePillsWrap}>
+                        {skillTags.map((skill, idx) => (
+                          <View key={`${skill}-${idx}`} style={[styles.aboutPill, { backgroundColor: G + '12' }]}>
+                            <Text style={[styles.aboutPillText, { color: G }]}>{skill}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text style={[styles.detailTileValue, { color: TEXT3 }]}>Not specified</Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+
+              {/* Card 3: Community Engagement Matrix */}
               <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
                 <View style={[styles.cardHeaderTitleRow, { marginBottom: 14 }]}>
                   <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>

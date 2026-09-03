@@ -10,6 +10,7 @@ export interface User {
   role?: 'USER' | 'MODERATOR' | 'ADMIN';
   isVerified?: boolean;
   isActive?: boolean;
+  isBanned?: boolean;
   createdAt?: string;
   updatedAt?: string;
   followersCount?: number;

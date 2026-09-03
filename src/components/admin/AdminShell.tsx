@@ -6,7 +6,6 @@ import { Feather } from '@expo/vector-icons';
 import { useAdminStore } from '../../store/adminStore';
 import { useAuthStore } from '../../store/authStore';
 import { adminApiClient } from '../../api/adminClient';
-import { useUserApprovalStore } from '../../store/userApprovalStore';
 
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -50,7 +49,8 @@ export default function AdminShell({ children, title }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const [pendingData, setPendingData] = useState<{ communities: any[]; events: any[] }>({ communities: [], events: [] });
+  const [pendingProfilesCount, setPendingProfilesCount] = useState(0);
+  const [pendingData, setPendingData] = useState<{ communities: any[]; events: any[]; profiles: any[] }>({ communities: [], events: [], profiles: [] });
   const currentKey = segments[segments.length - 1] ?? '';
   const { width: screenW } = useWindowDimensions();
   const isWide = Platform.OS === 'web' && screenW >= 768;
@@ -63,15 +63,19 @@ export default function AdminShell({ children, title }: Props) {
 
   const fetchPending = useCallback(async () => {
     try {
-      const [countsRes, commRes, evtRes] = await Promise.all([
+      const [countsRes, commRes, evtRes, profilesRes] = await Promise.all([
         adminApiClient.get('/admin-panel/pending-counts'),
         adminApiClient.get('/admin-panel/communities/pending'),
         adminApiClient.get('/admin-panel/events', { params: { status: 'PENDING', take: 10 } }),
+        adminApiClient.get('/admin-panel/profile-approvals', { params: { status: 'PENDING', take: 10 } }),
       ]);
-      setPendingCount(countsRes.data?.data?.total ?? 0);
+      const counts = countsRes.data?.data ?? {};
+      setPendingCount(counts.total ?? 0);
+      setPendingProfilesCount(counts.pendingProfiles ?? 0);
       setPendingData({
         communities: commRes.data?.data?.communities ?? [],
         events: evtRes.data?.data?.events ?? [],
+        profiles: profilesRes.data?.data?.users ?? [],
       });
     } catch {}
   }, []);
@@ -88,9 +92,6 @@ export default function AdminShell({ children, title }: Props) {
     await logoutAuth();
     router.replace('/(auth)/login' as any);
   };
-
-  const users = useUserApprovalStore((s) => s.users);
-  const pendingProfilesCount = users.filter((u) => u.approvalStatus === 'PENDING' || u.approvalStatus === 'RESUBMITTED').length;
 
   const renderItem = (item: typeof NAV_MAIN[0]) => {
     const active = currentKey === item.key;
@@ -234,7 +235,7 @@ export default function AdminShell({ children, title }: Props) {
             </View>
 
             <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-              {pendingData.communities.length === 0 && pendingData.events.length === 0 && (
+              {pendingData.communities.length === 0 && pendingData.events.length === 0 && pendingData.profiles.length === 0 && (
                 <Text style={s.bellEmpty}>No pending items 🎉</Text>
               )}
 
@@ -281,13 +282,38 @@ export default function AdminShell({ children, title }: Props) {
                   ))}
                 </View>
               )}
+
+              {pendingData.profiles.length > 0 && (
+                <View>
+                  <Text style={s.bellSection}>Profiles ({pendingData.profiles.length})</Text>
+                  {pendingData.profiles.map((p) => (
+                    <TouchableOpacity
+                      key={p.id}
+                      style={s.bellItem}
+                      onPress={() => { setBellOpen(false); router.push('/(admin)/pending-profiles' as any); }}
+                    >
+                      <View style={[s.bellDot, { backgroundColor: '#16A34A' }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.bellItemTitle} numberOfLines={1}>{p.displayName || p.username}</Text>
+                        <Text style={s.bellItemSub} numberOfLines={1}>
+                          {p.familyName ? `${p.familyName} - ` : ''}{p.email || p.phone || 'New registration'}
+                        </Text>
+                      </View>
+                      <Feather name="chevron-right" size={14} color="#94A3B8" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </ScrollView>
 
             {pendingCount > 0 && (
               <View style={s.bellFooter}>
                 <TouchableOpacity
                   style={s.bellFooterBtn}
-                  onPress={() => { setBellOpen(false); router.push('/(admin)/communities' as any); }}
+                  onPress={() => {
+                    setBellOpen(false);
+                    router.push((pendingProfilesCount > 0 ? '/(admin)/pending-profiles' : '/(admin)/communities') as any);
+                  }}
                 >
                   <Text style={s.bellFooterText}>View all pending →</Text>
                 </TouchableOpacity>
@@ -307,7 +333,7 @@ export default function AdminShell({ children, title }: Props) {
                 </TouchableOpacity>
               </View>
               <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-                {pendingData.communities.length === 0 && pendingData.events.length === 0 && (
+                {pendingData.communities.length === 0 && pendingData.events.length === 0 && pendingData.profiles.length === 0 && (
                   <Text style={s.bellEmpty}>No pending items 🎉</Text>
                 )}
                 {pendingData.communities.length > 0 && (
@@ -340,10 +366,31 @@ export default function AdminShell({ children, title }: Props) {
                     ))}
                   </View>
                 )}
+                {pendingData.profiles.length > 0 && (
+                  <View>
+                    <Text style={s.bellSection}>Profiles ({pendingData.profiles.length})</Text>
+                    {pendingData.profiles.map((p) => (
+                      <TouchableOpacity key={p.id} style={s.bellItem} onPress={() => { setBellOpen(false); router.push('/(admin)/pending-profiles' as any); }}>
+                        <View style={[s.bellDot, { backgroundColor: '#16A34A' }]} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.bellItemTitle} numberOfLines={1}>{p.displayName || p.username}</Text>
+                          <Text style={s.bellItemSub} numberOfLines={1}>{p.familyName ? `${p.familyName} - ` : ''}{p.email || p.phone || 'New registration'}</Text>
+                        </View>
+                        <Feather name="chevron-right" size={14} color="#94A3B8" />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </ScrollView>
               {pendingCount > 0 && (
                 <View style={s.bellFooter}>
-                  <TouchableOpacity style={s.bellFooterBtn} onPress={() => { setBellOpen(false); router.push('/(admin)/communities' as any); }}>
+                  <TouchableOpacity
+                    style={s.bellFooterBtn}
+                    onPress={() => {
+                      setBellOpen(false);
+                      router.push((pendingProfilesCount > 0 ? '/(admin)/pending-profiles' : '/(admin)/communities') as any);
+                    }}
+                  >
                     <Text style={s.bellFooterText}>View all pending →</Text>
                   </TouchableOpacity>
                 </View>

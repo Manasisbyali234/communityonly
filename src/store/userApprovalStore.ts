@@ -483,7 +483,13 @@ export function resolveUserApproval(user?: Partial<User> | null): {
     return { isApproved: true, status: 'APPROVED' };
   }
 
-  // 1. Check local approval store (by ID, email, or username)
+  // 1. Prefer server-provided approval state when present.
+  if (user.approvalStatus) {
+    const isApproved = user.approvalStatus === 'APPROVED' && user.isActive !== false && !(user as any).isBanned;
+    return { isApproved, status: user.approvalStatus };
+  }
+
+  // 2. Fall back to local approval store for offline/demo data.
   const storeUsers = useUserApprovalStore.getState().users;
   const userEmail = user.email?.toLowerCase().trim();
   const userUsername = user.username?.toLowerCase().trim();
@@ -496,17 +502,10 @@ export function resolveUserApproval(user?: Partial<User> | null): {
       (userUsername && u.username && u.username.toLowerCase().trim() === userUsername)
   );
 
-  // If found in local approval store, respect its explicit status
   if (managed?.approvalStatus) {
     const isApproved =
       managed.approvalStatus === 'APPROVED' && !managed.isBanned && managed.isActive !== false;
     return { isApproved, status: managed.approvalStatus, managedUser: managed };
-  }
-
-  // 2. Check auth user's explicit status
-  if (user.approvalStatus) {
-    const isApproved = user.approvalStatus === 'APPROVED' && user.isActive !== false;
-    return { isApproved, status: user.approvalStatus, managedUser: managed };
   }
 
   // 3. Check for ban or suspension

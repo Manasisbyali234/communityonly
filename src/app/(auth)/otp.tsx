@@ -13,6 +13,10 @@ export default function OTPVerification() {
   const router = useRouter();
   const params = useLocalSearchParams<{ phone?: string; email?: string; userId?: string }>();
   const login = useAuthStore((state) => state.login);
+  const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const refreshToken = useAuthStore((state) => state.refreshToken);
+  const updateProfile = useAuthStore((state) => state.updateProfile);
   const showToast = useToastStore((state) => state.showToast);
   const getUserById = useUserApprovalStore((state) => state.getUserById);
 
@@ -64,28 +68,32 @@ export default function OTPVerification() {
     try {
       // 1. Try server verification if online
       try {
-        await apiClient.post('/auth/verify-phone', { code: fullCode, phone });
+        const res = await apiClient.post('/auth/verify-phone', { code: fullCode, phone });
+        const verifiedUser = res.data?.data?.user;
+        if (verifiedUser) updateProfile(verifiedUser);
       } catch {}
 
       // 2. Fetch or load the registered user from approval store
       const managedUser = params.userId ? getUserById(params.userId) : undefined;
-      const resolvedDisplayName = managedUser?.displayName || 'Community Member';
+      const resolvedDisplayName = user?.displayName || managedUser?.displayName || 'Community Member';
 
-      const authUser = managedUser || {
-        id: params.userId || `u-${Date.now()}`,
-        username: (params.email || 'user').split('@')[0],
-        displayName: resolvedDisplayName,
-        email: params.email || 'user@example.com',
-        phone,
-        phoneVerified: true,
-        approvalStatus: 'PENDING' as const,
-        role: 'USER' as const,
-        isActive: true,
-        isVerified: false,
-      };
+      if (!user || !token || !refreshToken) {
+        const authUser = managedUser || {
+          id: params.userId || `u-${Date.now()}`,
+          username: (params.email || 'user').split('@')[0],
+          displayName: resolvedDisplayName,
+          email: params.email || 'user@example.com',
+          phone,
+          phoneVerified: true,
+          approvalStatus: 'PENDING' as const,
+          role: 'USER' as const,
+          isActive: true,
+          isVerified: false,
+        };
 
-      // 3. Log user into auth store with PENDING status
-      await login(authUser as any, 'mock-temp-token-pending', 'mock-temp-refresh-token');
+        // Fallback only for offline/local demo mode.
+        await login(authUser as any, 'mock-temp-token-pending', 'mock-temp-refresh-token');
+      }
 
       // 4. IMPORTANT UX REQUIREMENT: Do NOT show "Registration Successful" popup.
       // Directly navigate to the Pending Approval status screen.

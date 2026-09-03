@@ -46,6 +46,16 @@ const profileSchema = z.object({
   avatarUrl: z.string().url('Enter a valid image URL').or(z.literal('')).optional(),
   village: z.string().max(50, 'Village must be under 50 characters').optional(),
   occupation: z.string().max(50, 'Occupation must be under 50 characters').optional(),
+  country: z.string().max(80, 'Country must be under 80 characters').optional(),
+  state: z.string().max(80, 'State must be under 80 characters').optional(),
+  district: z.string().max(80, 'District must be under 80 characters').optional(),
+  city: z.string().max(80, 'City must be under 80 characters').optional(),
+  nativePlace: z.string().max(120, 'Native place must be under 120 characters').optional(),
+  currentLocation: z.string().max(120, 'Current location must be under 120 characters').optional(),
+  profession: z.string().max(80, 'Profession must be under 80 characters').optional(),
+  company: z.string().max(120, 'Company must be under 120 characters').optional(),
+  education: z.string().max(120, 'Education must be under 120 characters').optional(),
+  skills: z.string().max(300, 'Skills must be under 300 characters').optional(),
   languages: z.string().max(100, 'Languages must be under 100 characters').optional(),
   interests: z.string().max(100, 'Interests must be under 100 characters').optional(),
 });
@@ -116,6 +126,16 @@ export default function EditProfile() {
       avatarUrl: user?.avatarUrl || '',
       village: user?.village || '',
       occupation: user?.occupation || '',
+      country: user?.country || '',
+      state: user?.state || '',
+      district: user?.district || '',
+      city: user?.city || '',
+      nativePlace: user?.nativePlace || user?.village || '',
+      currentLocation: user?.currentLocation || '',
+      profession: user?.profession || '',
+      company: user?.company || '',
+      education: user?.education || '',
+      skills: user?.skills || '',
       languages: user?.languages || '',
       interests: user?.interests || '',
     },
@@ -126,9 +146,9 @@ export default function EditProfile() {
   const currentInterests = watch('interests') || '';
 
   // Accordion state - keep one section expanded at a time
-  const [expandedSection, setExpandedSection] = useState<'basic' | 'roots' | 'interests' | null>('basic');
+  const [expandedSection, setExpandedSection] = useState<'basic' | 'roots' | 'professional' | 'interests' | null>('basic');
 
-  const toggleSection = (section: 'basic' | 'roots' | 'interests') => {
+  const toggleSection = (section: 'basic' | 'roots' | 'professional' | 'interests') => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedSection((prev) => (prev === section ? null : section));
   };
@@ -138,9 +158,12 @@ export default function EditProfile() {
     if (errors.displayName || errors.bio) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setExpandedSection('basic');
-    } else if (errors.village || errors.occupation) {
+    } else if (errors.village || errors.country || errors.state || errors.district || errors.city || errors.nativePlace || errors.currentLocation) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setExpandedSection('roots');
+    } else if (errors.occupation || errors.profession || errors.company || errors.education || errors.skills) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setExpandedSection('professional');
     } else if (errors.languages || errors.interests) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setExpandedSection('interests');
@@ -278,11 +301,22 @@ export default function EditProfile() {
 
       const res = await apiClient.put('/users/me', {
         displayName: data.displayName,
+        familyName: data.familyName || undefined,
         bio: data.bio || undefined,
         avatarUrl: avatarUrl || undefined,
         ...(coverImage !== undefined ? { coverImage } : {}),
         village: data.village || undefined,
         occupation: data.occupation || undefined,
+        country: data.country || undefined,
+        state: data.state || undefined,
+        district: data.district || undefined,
+        city: data.city || undefined,
+        nativePlace: data.nativePlace || undefined,
+        currentLocation: data.currentLocation || undefined,
+        profession: data.profession || undefined,
+        company: data.company || undefined,
+        education: data.education || undefined,
+        skills: data.skills || undefined,
         languages: data.languages || undefined,
         interests: data.interests || undefined,
       });
@@ -292,7 +326,7 @@ export default function EditProfile() {
       if (coverImage !== undefined) updated.coverImage = coverImage;
       updateProfile(updated);
 
-      if (isRejectedOrPending || from === 'approval-status') {
+      if (isRejectedOrPending) {
         if (user?.id) {
           resubmitUser(user.id, {
             displayName: data.displayName,
@@ -301,6 +335,16 @@ export default function EditProfile() {
             avatarUrl: avatarUrl || undefined,
             village: data.village || undefined,
             occupation: data.occupation || undefined,
+            country: data.country || undefined,
+            state: data.state || undefined,
+            district: data.district || undefined,
+            city: data.city || undefined,
+            nativePlace: data.nativePlace || undefined,
+            currentLocation: data.currentLocation || undefined,
+            profession: data.profession || undefined,
+            company: data.company || undefined,
+            education: data.education || undefined,
+            skills: data.skills || undefined,
             languages: data.languages || undefined,
             interests: data.interests || undefined,
           });
@@ -572,6 +616,56 @@ export default function EditProfile() {
                   )}
                 />
 
+                <View style={styles.locationGrid}>
+                  <Controller
+                    control={control}
+                    name="country"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <Input label="Country" placeholder="e.g. India" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="globe-outline" error={errors.country?.message} containerStyle={styles.fieldItem} />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="state"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <Input label="State" placeholder="e.g. Karnataka" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="map-outline" error={errors.state?.message} containerStyle={styles.fieldItem} />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.locationGrid}>
+                  <Controller
+                    control={control}
+                    name="district"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <Input label="District" placeholder="e.g. Kodagu" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="map-outline" error={errors.district?.message} containerStyle={styles.fieldItem} />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="city"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <Input label="City / Town" placeholder="e.g. Madikeri" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="business-outline" error={errors.city?.message} containerStyle={styles.fieldItem} />
+                    )}
+                  />
+                </View>
+
+                <Controller
+                  control={control}
+                  name="nativePlace"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input label="Native Place / Hometown" placeholder="e.g. Somwarpet, Kodagu" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="location-outline" error={errors.nativePlace?.message} containerStyle={styles.fieldItem} />
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="currentLocation"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input label="Current Location" placeholder="e.g. Bengaluru, Dubai" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="navigate-outline" error={errors.currentLocation?.message} containerStyle={styles.fieldItem} />
+                  )}
+                />
+
                 <Controller
                   control={control}
                   name="occupation"
@@ -592,7 +686,64 @@ export default function EditProfile() {
             )}
           </View>
 
-          {/* Group 3: Languages & Interests Accordion */}
+          {/* Group 3: Professional Details Accordion */}
+          <View style={[styles.accordionCard, { backgroundColor: SURF }]}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => toggleSection('professional')}
+              style={styles.accordionHeader}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <View style={[styles.accordionIconWrap, { backgroundColor: G + '15' }]}>
+                  <Ionicons name="briefcase-outline" size={18} color={G} />
+                </View>
+                <View style={styles.accordionTitleWrap}>
+                  <Text style={[styles.accordionTitle, { color: TEXT }]}>Professional Details</Text>
+                  <Text style={[styles.accordionSubtitle, { color: TEXT3 }]} numberOfLines={1}>
+                    {[watch('occupation'), watch('profession'), watch('company')].filter(Boolean).join(' • ') || 'Work, education & skills'}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.accordionChevronWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                <Ionicons name={expandedSection === 'professional' ? 'chevron-up' : 'chevron-down'} size={16} color={expandedSection === 'professional' ? G : TEXT3} />
+              </View>
+            </TouchableOpacity>
+
+            {expandedSection === 'professional' && (
+              <View style={styles.accordionBody}>
+                <Controller
+                  control={control}
+                  name="profession"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input label="Profession / Industry" placeholder="e.g. Information Technology" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="briefcase-outline" error={errors.profession?.message} containerStyle={styles.fieldItem} />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="company"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input label="Company / Organization" placeholder="e.g. Self-employed, Infosys" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="business-outline" error={errors.company?.message} containerStyle={styles.fieldItem} />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="education"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input label="Education" placeholder="e.g. B.E. Computer Science" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="school-outline" error={errors.education?.message} containerStyle={styles.fieldItem} />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="skills"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input label="Skills / Interests" placeholder="e.g. Organic farming, badminton" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="construct-outline" error={errors.skills?.message} containerStyle={styles.fieldItem} />
+                  )}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Group 4: Languages & Interests Accordion */}
           <View style={[styles.accordionCard, { backgroundColor: SURF }]}>
             <TouchableOpacity
               activeOpacity={0.7}
@@ -942,6 +1093,9 @@ const styles = StyleSheet.create({
   },
   fieldItem: {
     marginBottom: 0,
+  },
+  locationGrid: {
+    gap: 10,
   },
   charCounter: {
     fontSize: 11,

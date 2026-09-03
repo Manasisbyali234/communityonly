@@ -170,6 +170,8 @@ function RootLayoutContent() {
         // - Settings (for logout, support, terms, privacy): /(tabs)/settings
         const isStrictlyAllowed =
           (top === '(auth)' && sub === 'approval-status') ||
+          (top === '(auth)' && sub === 'otp') ||
+          (top === '(auth)' && sub === 'register') ||
           (top === '(tabs)' && sub === 'profile' && !subSub) ||
           (top === '(tabs)' && sub === 'edit-profile') ||
           (top === '(tabs)' && sub === 'settings');
@@ -182,7 +184,7 @@ function RootLayoutContent() {
         if (inAuthGroup || inAdminGroup || !inAppGroup) {
           // Restore the originally requested URL (e.g. /explore?tab=members) if available
           const restored = resolveIntendedRoute(intendedPath);
-          navigate(restored ?? '/(tabs)');
+          navigate(restored ?? '/(tabs)/edit-profile?from=approval-status');
         }
       }
     }

@@ -17,7 +17,8 @@ import { useTheme } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
-import { useUserApprovalStore, ManagedUser, resolveUserApproval } from '../../store/userApprovalStore';
+import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
+import { apiClient } from '../../api/client';
 
 export default function ApprovalStatusScreen() {
   const { colors: C, spacing, typography: T, roundness, isDark } = useTheme();
@@ -35,6 +36,7 @@ export default function ApprovalStatusScreen() {
 
   // Sync user state from approval store
   const { isApproved, status: currentStatus, managedUser } = resolveUserApproval(user);
+  const profileUser = managedUser || user;
   const rejectionReason = managedUser?.rejectionReason || user?.rejectionReason;
   const auditHistory = managedUser?.approvalHistory || user?.approvalHistory || [];
 
@@ -42,19 +44,26 @@ export default function ApprovalStatusScreen() {
   useEffect(() => {
     if (isApproved && from !== 'settings') {
       showToast('Welcome to Gowda Sangama! Your profile has been approved.', 'success');
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/edit-profile?from=approval-status');
     }
   }, [isApproved, from]);
 
   const handleRefreshStatus = async () => {
     setChecking(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    let latestUser = user;
+    try {
+      const res = await apiClient.get('/users/me');
+      latestUser = res.data?.data ?? res.data;
+      if (latestUser) {
+        useAuthStore.getState().updateProfile(latestUser);
+      }
+    } catch {}
     setChecking(false);
 
-    const fresh = resolveUserApproval(user);
+    const fresh = resolveUserApproval(latestUser);
     if (fresh.isApproved) {
       showToast('Your profile has been approved! Redirecting...', 'success');
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/edit-profile?from=approval-status');
       return;
     }
     showToast('Status up to date: ' + fresh.status, 'info');
@@ -172,9 +181,9 @@ export default function ApprovalStatusScreen() {
           </View>
 
           <Text style={[styles.userName, { color: C.text }]}>{user?.displayName || 'Community Member'}</Text>
-          {managedUser?.familyName ? (
+          {profileUser?.familyName ? (
             <Text style={[styles.userFamily, { color: C.textMuted }]}>
-              Family: {managedUser.familyName} • {managedUser.district || 'Karnataka'}
+              Family: {profileUser.familyName} • {profileUser.district || 'Karnataka'}
             </Text>
           ) : (
             <Text style={[styles.userFamily, { color: C.textMuted }]}>@{user?.username}</Text>
@@ -219,7 +228,7 @@ export default function ApprovalStatusScreen() {
           </View>
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: C.textMuted }]}>Family Name / Okka</Text>
-            <Text style={[styles.detailValue, { color: C.text }]}>{managedUser?.familyName || 'Not specified'}</Text>
+            <Text style={[styles.detailValue, { color: C.text }]}>{profileUser?.familyName || 'Not specified'}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: C.textMuted }]}>Mobile</Text>
@@ -232,13 +241,51 @@ export default function ApprovalStatusScreen() {
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: C.textMuted }]}>District & City</Text>
             <Text style={[styles.detailValue, { color: C.text }]}>
-              {managedUser?.city ? `${managedUser.city}, ${managedUser.district || ''}` : managedUser?.district || 'Karnataka'}
+              {profileUser?.city ? `${profileUser.city}, ${profileUser.district || ''}` : profileUser?.district || 'Karnataka'}
             </Text>
           </View>
-          {managedUser?.occupation && (
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: C.textMuted }]}>DOB / Gender</Text>
+            <Text style={[styles.detailValue, { color: C.text }]}>
+              {[profileUser?.dob, profileUser?.gender].filter(Boolean).join(' / ') || 'Not specified'}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: C.textMuted }]}>Native Place</Text>
+            <Text style={[styles.detailValue, { color: C.text }]}>{profileUser?.nativePlace || 'Not specified'}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: C.textMuted }]}>Current Location</Text>
+            <Text style={[styles.detailValue, { color: C.text }]}>{profileUser?.currentLocation || 'Not specified'}</Text>
+          </View>
+          {profileUser?.occupation && (
             <View style={styles.detailRow}>
               <Text style={[styles.detailLabel, { color: C.textMuted }]}>Occupation</Text>
-              <Text style={[styles.detailValue, { color: C.text }]}>{managedUser.occupation}</Text>
+              <Text style={[styles.detailValue, { color: C.text }]}>{profileUser.occupation}</Text>
+            </View>
+          )}
+          {profileUser?.profession && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: C.textMuted }]}>Profession</Text>
+              <Text style={[styles.detailValue, { color: C.text }]}>{profileUser.profession}</Text>
+            </View>
+          )}
+          {profileUser?.company && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: C.textMuted }]}>Company</Text>
+              <Text style={[styles.detailValue, { color: C.text }]}>{profileUser.company}</Text>
+            </View>
+          )}
+          {profileUser?.education && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: C.textMuted }]}>Education</Text>
+              <Text style={[styles.detailValue, { color: C.text }]}>{profileUser.education}</Text>
+            </View>
+          )}
+          {profileUser?.skills && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: C.textMuted }]}>Skills</Text>
+              <Text style={[styles.detailValue, { color: C.text }]}>{profileUser.skills}</Text>
             </View>
           )}
         </View>
