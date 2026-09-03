@@ -43,6 +43,30 @@ export async function pickImage(options?: PickImageOptions): Promise<PickedImage
   return { localUri: asset.uri, filename, mimeType };
 }
 
+export async function takePhoto(options?: PickImageOptions): Promise<PickedImage | null> {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    options?.onPermissionDenied?.();
+    return null;
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: options?.aspect,
+    quality: 0.8,
+  });
+
+  if (result.canceled) return null;
+
+  const asset = result.assets[0];
+  const filename = asset.uri.split('/').pop() ?? 'photo.jpg';
+  const match = /\.(\w+)$/.exec(filename);
+  const mimeType = match ? `image/${match[1].toLowerCase().replace('jpg', 'jpeg')}` : 'image/jpeg';
+
+  return { localUri: asset.uri, filename, mimeType };
+}
+
 export async function uploadImage(picked: PickedImage): Promise<string | null> {
   const formData = new FormData();
 
