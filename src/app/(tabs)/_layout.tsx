@@ -182,8 +182,24 @@ export default function TabsLayout() {
               android: { elevation: 8 },
             }),
           },
+          tabBarButton: (props) => (
+            <TouchableOpacity
+              {...(props as any)}
+              activeOpacity={1}
+              style={[props.style as any, { flex: 1 }]}
+            />
+          ),
+          tabBarButton: (props) => (
+            <TouchableOpacity
+              {...(props as any)}
+              activeOpacity={1}
+              style={[props.style as any, { flex: 1 }]}
+            />
+          ),
           tabBarItemStyle: {
             paddingVertical: 1,
+            pressColor: 'transparent',
+            pressOpacity: 1,
           },
         }}
       >
