@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAdminStore } from '../../store/adminStore';
 import { useAuthStore } from '../../store/authStore';
 import { adminApiClient } from '../../api/adminClient';
+import { useConfirmStore } from '../../store/confirmStore';
 
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -46,6 +47,7 @@ export default function AdminShell({ children, title }: Props) {
   const segments = useSegments();
   const { admin, logout } = useAdminStore();
   const logoutAuth = useAuthStore((s) => s.logout);
+  const confirm = useConfirmStore((s) => s.confirm);
   const [menuOpen, setMenuOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -87,6 +89,15 @@ export default function AdminShell({ children, title }: Props) {
   }, [fetchPending]);
 
   const handleLogout = async () => {
+    const confirmed = await confirm({
+      title: 'Log out?',
+      message: 'Are you sure you want to log out of the admin panel?',
+      confirmText: 'Yes, log out',
+      cancelText: 'No',
+      isDestructive: true,
+      icon: 'log-out',
+    });
+    if (!confirmed) return;
     try { await adminApiClient.post('/admin-auth/logout'); } catch {}
     logout();
     await logoutAuth();
