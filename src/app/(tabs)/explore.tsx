@@ -24,7 +24,7 @@ import Skeleton from '../../components/feedback/Skeleton';
 import Button from '../../components/common/Button';
 import { useSuggestedUsersQuery, useSearchUsersQuery } from '../../api/user';
 import { useEventsQuery, useMyEventsQuery, useToggleInterestMutation, useToggleLikeMutation, useShareEventMutation } from '../../api/event';
-import { useSendConnectionRequestMutation, useConnectionStatusQuery, ConnectionStatus } from '../../api/connections';
+import { useSendConnectionRequestMutation, useConnectionStatusQuery } from '../../api/connections';
 import { useAuthStore } from '../../store/authStore';
 import { useVoiceSearch } from '../../hooks/useVoiceSearch';
 import EventCommentSheet from '../../components/feed/EventCommentSheet';
@@ -200,6 +200,70 @@ function ConnectButton({ item, currentUserId }: { item: any; currentUserId?: str
       ) : (
         <Ionicons name={iconName as any} size={16} color={iconColor} />
       )}
+    </TouchableOpacity>
+  );
+}
+
+function MemberCard({ item, currentUser, colors, isDark, TEXT, TEXT2, TEXT3, SURF, BORDER, SAFFRON, router }: any) {
+  const { data: status = 'NONE' } = useConnectionStatusQuery(item.id, currentUser?.id);
+  return (
+    <TouchableOpacity
+      style={[styles.memberCard, { backgroundColor: SURF, borderColor: BORDER }]}
+      onPress={() => router.push(`/user/${item.id}?from=discover` as any)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.memberCardLeft}>
+        <View style={[styles.memberAvatarRing, { borderColor: '#2563EB' }]}>
+          <ExpoImage
+            source={item.avatarUrl
+              ? { uri: item.avatarUrl }
+              : { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName || item.username || 'U')}&background=eff6ff&color=2563eb` }
+            }
+            style={styles.memberAvatar}
+            contentFit="cover"
+          />
+        </View>
+        {item.role === 'MODERATOR' && (
+          <View style={[styles.memberBadgeDot, { backgroundColor: '#2563EB', borderColor: SURF }]}>
+            <Ionicons name="shield-checkmark" size={8} color="#FFF" />
+          </View>
+        )}
+      </View>
+      <View style={styles.memberInfo}>
+        <View style={styles.memberNameRow}>
+          <Text style={[styles.memberName, { color: TEXT }]} numberOfLines={1}>{item.displayName || item.username}</Text>
+          {item.role ? (
+            <View style={[styles.memberBadge, { backgroundColor: 'rgba(37, 99, 235, 0.12)', borderColor: 'rgba(37, 99, 235, 0.25)' }]}>
+              <Text style={[styles.memberBadgeText, { color: '#2563EB' }]}>{item.role}</Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.memberMeta}>
+          <Ionicons name="location-outline" size={12} color={SAFFRON} />
+          <Text style={[styles.memberMetaText, { color: TEXT3 }]} numberOfLines={1}>Member</Text>
+        </View>
+        <View style={styles.memberMeta}>
+          <Ionicons name="briefcase-outline" size={12} color={TEXT3} />
+          <Text style={[styles.memberMetaText, { color: TEXT3 }]} numberOfLines={1}>{item.bio || 'No bio provided'}</Text>
+        </View>
+        {(item.followersCount || 0) > 0 && (
+          <View style={styles.memberMeta}>
+            <Ionicons name="people-outline" size={12} color="#2563EB" />
+            <Text style={[styles.memberMetaText, { color: '#2563EB' }]} numberOfLines={1}>{item.followersCount} followers</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.memberActions}>
+        <ConnectButton item={item} currentUserId={currentUser?.id} />
+        {status === 'ACCEPTED' && (
+          <TouchableOpacity
+            style={[styles.msgBtn, { backgroundColor: colors.elevation1 }]}
+            onPress={() => router.push(`/chat/new?participantId=${item.id}` as any)}
+          >
+            <Ionicons name="chatbubble-outline" size={16} color={TEXT2} />
+          </TouchableOpacity>
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -452,64 +516,7 @@ export default function ExploreScreen() {
 
   // ── Member Card ────────────────────────────────────────────────────────────
   const renderMemberCard = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={[styles.memberCard, { backgroundColor: SURF, borderColor: BORDER }]}
-      onPress={() => router.push(`/user/${item.id}?from=discover` as any)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.memberCardLeft}>
-        <View style={[styles.memberAvatarRing, { borderColor: '#2563EB' }]}>
-          <ExpoImage
-            source={item.avatarUrl
-              ? { uri: item.avatarUrl }
-              : { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName || item.username || 'U')}&background=eff6ff&color=2563eb` }
-            }
-            style={styles.memberAvatar}
-            contentFit="cover"
-          />
-        </View>
-        {item.role === 'MODERATOR' && (
-          <View style={[styles.memberBadgeDot, { backgroundColor: '#2563EB', borderColor: SURF }]}>
-            <Ionicons name="shield-checkmark" size={8} color="#FFF" />
-          </View>
-        )}
-      </View>
-
-      <View style={styles.memberInfo}>
-        <View style={styles.memberNameRow}>
-          <Text style={[styles.memberName, { color: TEXT }]} numberOfLines={1}>{item.displayName || item.username}</Text>
-          {item.role ? (
-            <View style={[styles.memberBadge, { backgroundColor: 'rgba(37, 99, 235, 0.12)', borderColor: 'rgba(37, 99, 235, 0.25)' }]}>
-              <Text style={[styles.memberBadgeText, { color: '#2563EB' }]}>{item.role}</Text>
-            </View>
-          ) : null}
-        </View>
-        <View style={styles.memberMeta}>
-          <Ionicons name="location-outline" size={12} color={SAFFRON} />
-          <Text style={[styles.memberMetaText, { color: TEXT3 }]} numberOfLines={1}>Member</Text>
-        </View>
-        <View style={styles.memberMeta}>
-          <Ionicons name="briefcase-outline" size={12} color={TEXT3} />
-          <Text style={[styles.memberMetaText, { color: TEXT3 }]} numberOfLines={1}>{item.bio || 'No bio provided'}</Text>
-        </View>
-        {(item.followersCount || 0) > 0 && (
-          <View style={styles.memberMeta}>
-            <Ionicons name="people-outline" size={12} color="#2563EB" />
-            <Text style={[styles.memberMetaText, { color: '#2563EB' }]} numberOfLines={1}>{item.followersCount} followers</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.memberActions}>
-        <ConnectButton item={item} currentUserId={currentUser?.id} />
-        <TouchableOpacity 
-          style={[styles.msgBtn, { backgroundColor: colors.elevation1 }]}
-          onPress={() => router.push(`/chat/${item.id}` as any)}
-        >
-          <Ionicons name="chatbubble-outline" size={16} color={TEXT2} />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+    <MemberCard item={item} currentUser={currentUser} colors={colors} isDark={isDark} TEXT={TEXT} TEXT2={TEXT2} TEXT3={TEXT3} SURF={SURF} BORDER={BORDER} SAFFRON={SAFFRON} router={router} />
   );
 
   // ── Community Card ─────────────────────────────────────────────────────────

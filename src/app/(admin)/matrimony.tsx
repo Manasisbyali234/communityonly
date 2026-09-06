@@ -153,7 +153,7 @@ export default function AdminMatrimonyProfiles() {
                 style={[s.chip, activeTab === f.key && s.chipActive]}
                 onPress={() => setActiveTab(f.key)}
               >
-                {f.dot && <View style={[s.chipDot, { backgroundColor: f.dot }]} />}
+                {'dot' in f && f.dot ? <View style={[s.chipDot, { backgroundColor: f.dot }]} /> : null}
                 <Text style={[s.chipText, activeTab === f.key && s.chipTextActive]}>{f.label}</Text>
               </TouchableOpacity>
             ))}
@@ -299,7 +299,7 @@ export default function AdminMatrimonyProfiles() {
                 <Feather name="x" size={20} color={C.textSecond} />
               </TouchableOpacity>
             </View>
-            {!!reviewProfile && (
+            {!!reviewProfile ? (
               <ScrollView showsVerticalScrollIndicator={false}>
                 {reviewProfile.photos?.length > 0 && (
                   <View style={s.reviewPhotoGrid}>
@@ -338,7 +338,7 @@ export default function AdminMatrimonyProfiles() {
                   </View>
                 )}
               </ScrollView>
-            )}
+            ) : null}
           </View>
         </View>
       </Modal>

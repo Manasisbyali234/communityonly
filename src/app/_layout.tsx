@@ -57,25 +57,17 @@ function RootLayoutContent() {
   const lastRedirect = useRef<string | null>(null);
   const appState = useRef(AppState.currentState);
 
-  // Restore in-memory tokens when the app returns from the background.
-  // Do not navigate here: system UI such as the image picker backgrounds the
-  // app, and replacing the route would unmount the screen that opened it.
   useEffect(() => {
     if (Platform.OS === 'web') return;
     let lastBackground = 0;
     const sub = AppState.addEventListener('change', async (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        // Only redirect if the app was truly backgrounded (not just a brief inactive
-        // from a permission dialog or system overlay — require >1.5s in background)
         const now = Date.now();
         if (now - lastBackground < 1500) {
           appState.current = nextState;
           return;
         }
         await useAuthStore.getState().initSecureTokens();
-        // The auth-routing effect below will redirect only if the restored
-        // state is actually unauthenticated. Keeping the active route here is
-        // required for image/document pickers and other system activities.
       }
       if (nextState.match(/inactive|background/)) lastBackground = Date.now();
       appState.current = nextState;
@@ -85,8 +77,6 @@ function RootLayoutContent() {
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      // hasHydrated() may already be true synchronously — check first
-      // then fall back to the listener. A timeout ensures we never hang.
       if (useAuthStore.persist.hasHydrated()) {
         setTokensInitialized(true);
         return;
@@ -94,7 +84,6 @@ function RootLayoutContent() {
       let done = false;
       const finish = () => { if (!done) { done = true; setTokensInitialized(true); } };
       const unsub = useAuthStore.persist.onFinishHydration(finish);
-      // Safety timeout: if hydration never fires (e.g. empty storage), unblock after 50ms
       const timer = setTimeout(finish, 50);
       return () => { unsub(); clearTimeout(timer); };
     } else {
@@ -102,7 +91,6 @@ function RootLayoutContent() {
     }
   }, []);
 
-// Initialize socket once when authenticated and token is in memory
   useEffect(() => {
     if (isLoggedIn && tokensInitialized && token) {
       void initSocket();
@@ -112,8 +100,6 @@ function RootLayoutContent() {
     };
   }, [isLoggedIn, tokensInitialized, token]);
 
-  // A backgrounded app should not be advertised as online. Reconnect when it
-  // returns to the foreground so the server can publish the current presence.
   useEffect(() => {
     if (!isLoggedIn || !tokensInitialized || !token) return;
     const sub = AppState.addEventListener('change', (nextState) => {
@@ -128,9 +114,6 @@ function RootLayoutContent() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const inAdminGroup = segments[0] === '(admin)';
-    // Keep every authenticated, top-level feature route in the application. If a
-    // route is omitted here, the auth guard immediately replaces it with the
-    // tab home screen, making perfectly valid buttons and filters appear broken.
     const inAppGroup =
       segments[0] === '(tabs)' ||
       ['create', 'chat', 'story', 'community', 'krushi-mitra', 'market-rates',
@@ -151,24 +134,19 @@ function RootLayoutContent() {
         navigate('/(admin)/dashboard');
       }
     } else {
-      // Check user approval status
       const { isApproved } = resolveUserApproval(user);
 
       if (!isApproved) {
-        // Pending, Rejected, Resubmitted, or Suspended user access control
         const top = segments[0] as string | undefined;
         const sub = segments[1] as string | undefined;
         const subSub = segments[2] as string | undefined;
 
-        // Block member profiles and other community routes explicitly
         const isMemberProfile = sub === 'user' || sub === 'our-people';
 
-        // Allowed only:
-        // - Approval Status: /(auth)/approval-status
-        // - Own Profile: /(tabs)/profile
-        // - Edit Profile: /(tabs)/edit-profile
-        // - Settings (for logout, support, terms, privacy): /(tabs)/settings
+        // Issue 3 fix: include top === undefined (root index) so it doesn't
+        // redirect to approval-status on initial load, causing an infinite loop.
         const isStrictlyAllowed =
+          top === undefined ||
           (top === '(auth)' && sub === 'approval-status') ||
           (top === '(auth)' && sub === 'otp') ||
           (top === '(auth)' && sub === 'register') ||
@@ -182,9 +160,8 @@ function RootLayoutContent() {
         }
       } else {
         if (inAuthGroup || inAdminGroup || !inAppGroup) {
-          // Restore the originally requested URL (e.g. /explore?tab=members) if available
           const restored = resolveIntendedRoute(intendedPath);
-          navigate(restored ?? '/(tabs)/edit-profile?from=approval-status');
+          navigate(restored ?? '/(tabs)');
         }
       }
     }
