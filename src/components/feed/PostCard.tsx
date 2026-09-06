@@ -15,7 +15,7 @@ import { useTheme } from '../../theme';
 import { Post } from '../../types';
 import Avatar from '../common/Avatar';
 import VideoPostPlayer from '../common/VideoPostPlayer';
-import { useLikePostMutation, useSavePostMutation, useDeletePostMutation } from '../../api/feed';
+import { useLikePostMutation, useSavePostMutation, useDeletePostMutation, useEditPostMutation, useArchivePostMutation } from '../../api/feed';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useAuthStore } from '../../store/authStore';
@@ -106,6 +106,8 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   const likeMutation = useLikePostMutation();
   const saveMutation = useSavePostMutation();
   const deleteMutation = useDeletePostMutation();
+  const editMutation = useEditPostMutation();
+  const archiveMutation = useArchivePostMutation();
   const showToast = useToastStore((s) => s.showToast);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const isOwnPost = currentUserId === post.author.id;
@@ -120,6 +122,10 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   const [imageAspectRatio, setImageAspectRatio] = useState(SINGLE_IMAGE_FALLBACK_ASPECT_RATIO);
   const moreBtnRef = useRef<View>(null);
   const mediaUri = post.mediaUrl || (post.images && post.images[0]);
+
+  // Edit modal state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
 
   // Report modal state
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -377,30 +383,69 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                 </Pressable>
               )}
               {isOwnPost && (
-                <Pressable
-                  disabled={deleteMutation.isPending}
-                  style={[styles.dropdownItem, deleteMutation.isPending && { opacity: 0.5 }]}
-                  onPress={async () => {
-                    setMenuVisible(false);
-                    const ok = await useConfirmStore.getState().confirm({
-                      title: 'Delete this post?',
-                      message: 'This action cannot be undone and will permanently remove your post.',
-                      confirmText: 'Delete',
-                      cancelText: 'Cancel',
-                      isDestructive: true,
-                      icon: 'trash-outline',
-                    });
-                    if (!ok) return;
-                    deleteMutation.mutate(post.id, {
-                      onError: () => showToast('Failed to delete post.', 'error'),
-                    });
-                  }}
-                >
-                  <View style={[styles.dropdownIconBox, { backgroundColor: '#FFEBEE' }]}>
-                    <Ionicons name="trash-outline" size={13} color="#E53935" />
-                  </View>
-                  <Text style={[styles.dropdownText, { color: '#E53935' }]}>Delete Post</Text>
-                </Pressable>
+                <>
+                  <Pressable
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setMenuVisible(false);
+                      setEditContent(post.content);
+                      setEditModalVisible(true);
+                    }}
+                  >
+                    <View style={[styles.dropdownIconBox, { backgroundColor: '#E8F5E9' }]}>
+                      <Ionicons name="create-outline" size={13} color="#2E7D32" />
+                    </View>
+                    <Text style={[styles.dropdownText, { color: '#2E7D32' }]}>Edit Post</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.dropdownItem}
+                    onPress={async () => {
+                      setMenuVisible(false);
+                      const ok = await useConfirmStore.getState().confirm({
+                        title: 'Archive this post?',
+                        message: 'The post will be hidden from the feed but not deleted.',
+                        confirmText: 'Archive',
+                        cancelText: 'Cancel',
+                        isDestructive: false,
+                        icon: 'archive-outline',
+                      });
+                      if (!ok) return;
+                      archiveMutation.mutate(post.id, {
+                        onSuccess: () => showToast('Post archived.', 'success'),
+                        onError: () => showToast('Failed to archive post.', 'error'),
+                      });
+                    }}
+                  >
+                    <View style={[styles.dropdownIconBox, { backgroundColor: '#FFF8E1' }]}>
+                      <Ionicons name="archive-outline" size={13} color="#F57F17" />
+                    </View>
+                    <Text style={[styles.dropdownText, { color: '#F57F17' }]}>Archive Post</Text>
+                  </Pressable>
+                  <Pressable
+                    disabled={deleteMutation.isPending}
+                    style={[styles.dropdownItem, deleteMutation.isPending && { opacity: 0.5 }]}
+                    onPress={async () => {
+                      setMenuVisible(false);
+                      const ok = await useConfirmStore.getState().confirm({
+                        title: 'Delete this post?',
+                        message: 'This action cannot be undone and will permanently remove your post.',
+                        confirmText: 'Delete',
+                        cancelText: 'Cancel',
+                        isDestructive: true,
+                        icon: 'trash-outline',
+                      });
+                      if (!ok) return;
+                      deleteMutation.mutate(post.id, {
+                        onError: () => showToast('Failed to delete post.', 'error'),
+                      });
+                    }}
+                  >
+                    <View style={[styles.dropdownIconBox, { backgroundColor: '#FFEBEE' }]}>
+                      <Ionicons name="trash-outline" size={13} color="#E53935" />
+                    </View>
+                    <Text style={[styles.dropdownText, { color: '#E53935' }]}>Delete Post</Text>
+                  </Pressable>
+                </>
               )}
             </View>
           </View>

@@ -51,7 +51,7 @@ export default function MatrimonyProfileDetail() {
   const showToast = useToastStore((s) => s.showToast);
 
   const safeId = id && id !== 'undefined' ? id : '';
-  const { data: profile, isLoading } = useMatrimonyProfileQuery(safeId);
+  const { data: profile, isLoading, isError } = useMatrimonyProfileQuery(safeId);
   const expressInterest = useExpressInterestMutation();
   const likeMutation = useLikeProfileMutation();
 
@@ -162,7 +162,7 @@ export default function MatrimonyProfileDetail() {
     );
   }
 
-  if (!profile) {
+  if (!profile || isError) {
     return (
       <View style={[styles.root, styles.center, { backgroundColor: BG, paddingTop: insets.top }]}>
         <Ionicons name="heart-dislike-outline" size={64} color={TEXT3} />

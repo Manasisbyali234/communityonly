@@ -12,6 +12,8 @@ export const chatKeys = {
   unreadCount: () => [...chatKeys.all, 'unread-count'] as const,
 };
 
+const startConversationRequests = new Map<string, Promise<Conversation>>();
+
 // Fetch active chat list
 export function useChatsQuery() {
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -112,10 +114,25 @@ export function useStartConversationMutation() {
   const queryClient = useQueryClient();
   return useMutation<Conversation, Error, { participantId: string }>({
     mutationFn: async ({ participantId }) => {
-      const res = await apiClient.post<ApiResponse<Conversation>>('/messages/conversations', { participantId });
-      return res.data.data;
+      const pending = startConversationRequests.get(participantId);
+      if (pending) return pending;
+
+      const request = apiClient
+        .post<ApiResponse<Conversation>>('/messages/conversations', { participantId })
+        .then((res) => res.data.data)
+        .finally(() => startConversationRequests.delete(participantId));
+
+      startConversationRequests.set(participantId, request);
+      return request;
     },
-    onSuccess: () => {
+    onSuccess: (conversation) => {
+      queryClient.setQueryData<Conversation[]>(chatKeys.list(), (old) => {
+        if (!old) return old;
+        if (old.some((item) => item.id === conversation.id)) {
+          return old.map((item) => item.id === conversation.id ? { ...item, ...conversation } : item);
+        }
+        return [conversation, ...old];
+      });
       queryClient.invalidateQueries({ queryKey: chatKeys.list() });
     },
   });

@@ -150,6 +150,7 @@ export interface Event {
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
+  status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
   isInterested?: boolean;
   isLiked?: boolean;
   createdAt: string;
@@ -160,7 +161,35 @@ export interface Event {
 export interface Notification {
   id: string;
   recipientId: string;
-  type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'COMMUNITY_JOIN' | 'EVENT_REMINDER' | 'MENTION' | 'MESSAGE' | 'CONNECTION_REQUEST' | 'CONNECTION_ACCEPTED' | 'EVENT_INTERESTED' | 'EVENT_LIKE' | 'EVENT_COMMENT';
+  type:
+    | 'LIKE'
+    | 'COMMENT'
+    | 'FOLLOW'
+    | 'COMMUNITY_JOIN'
+    | 'EVENT_REMINDER'
+    | 'MENTION'
+    | 'MESSAGE'
+    | 'STORY_REPLY'
+    | 'STORY_LIKE'
+    | 'POST_SHARE'
+    | 'COMMUNITY_INVITE'
+    | 'CONNECTION_REQUEST'
+    | 'CONNECTION_ACCEPTED'
+    | 'COMMUNITY_APPROVED'
+    | 'COMMUNITY_REJECTED'
+    | 'POST_APPROVED'
+    | 'POST_REJECTED'
+    | 'EVENT_APPROVED'
+    | 'EVENT_REJECTED'
+    | 'EVENT_INTERESTED'
+    | 'EVENT_LIKE'
+    | 'EVENT_COMMENT'
+    | 'EVENT_SHARE'
+    | 'MATRIMONY_INTEREST_RECEIVED'
+    | 'MATRIMONY_INTEREST_ACCEPTED'
+    | 'MATRIMONY_PROFILE_APPROVED'
+    | 'MATRIMONY_PROFILE_REJECTED'
+    | 'MATRIMONY_MATCH';
   actorId?: string;
   entityId?: string;
   entityType?: string;

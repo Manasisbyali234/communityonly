@@ -20,7 +20,8 @@ const FILTERS: { id: ProfileFilter; label: string }[] = [
   { id: 'TOP_CREATORS', label: 'Top Creators 📝' },
 ];
 
-const MOCK_PROFILES = [
+/* Profiles are loaded from the admin API; never substitute fabricated users. */
+const MOCK_PROFILES: any[] = [
   {
     id: 'p-1',
     displayName: 'Chethan Gowda',
@@ -114,32 +115,12 @@ export default function AdminProfiles() {
         params: { skip, take: 20, q: search || undefined },
       }).catch(() => null);
 
-      if (res?.data?.data?.profiles && Array.isArray(res.data.data.profiles) && res.data.data.profiles.length > 0) {
-        setProfiles(res.data.data.profiles);
-        setTotal(res.data.data.total ?? res.data.data.profiles.length);
-      } else {
-        // Fallback to local mock profiles
-        let list = [...MOCK_PROFILES];
-        if (filter === 'VERIFIED') list = list.filter((p) => p.isVerified);
-        else if (filter === 'WITH_BIO') list = list.filter((p) => !!p.bio);
-        else if (filter === 'TOP_CREATORS') list = list.filter((p) => (p._count?.posts ?? 0) >= 15);
-
-        if (search) {
-          const q = search.toLowerCase();
-          list = list.filter((p) =>
-            p.displayName?.toLowerCase().includes(q) ||
-            p.username?.toLowerCase().includes(q) ||
-            (p.bio && p.bio.toLowerCase().includes(q)) ||
-            (p.village && p.village.toLowerCase().includes(q)) ||
-            (p.occupation && p.occupation.toLowerCase().includes(q))
-          );
-        }
-        setProfiles(list);
-        setTotal(list.length);
-      }
+      const live = res?.data?.data;
+      setProfiles(Array.isArray(live?.profiles) ? live.profiles : []);
+      setTotal(live?.total ?? (Array.isArray(live?.profiles) ? live.profiles.length : 0));
     } catch {
-      setProfiles(MOCK_PROFILES);
-      setTotal(MOCK_PROFILES.length);
+      setProfiles([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }

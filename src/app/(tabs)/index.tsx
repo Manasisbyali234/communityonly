@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCommunitiesQuery, useJoinCommunityMutation } from '../../api/community';
 import { usePostsQuery } from '../../api/feed';
 import { useEventsQuery } from '../../api/event';
-import { useUnreadCountQuery, useUnreadChatCountQuery, useChatSocket, useNotificationSocket, useChatsQuery } from '../../api/chat';
+import { useUnreadCountQuery, useUnreadChatCountQuery, useChatSocket, useNotificationSocket, useChatsQuery, useNotificationsQuery } from '../../api/chat';
 import { useStoriesFeedQuery, StoryGroup } from '../../api/story';
 import { usePublicStoriesQuery } from '../../api/ourPeople';
 import CommentSheet from '../../components/feed/CommentSheet';
@@ -131,6 +131,7 @@ export default function HomeFeed() {
   const { data: events = [] } = useEventsQuery();
   const { data: publicStories = [] } = usePublicStoriesQuery();
   const { data: unreadCount = 0 } = useUnreadCountQuery();
+  const { data: notifications = [] } = useNotificationsQuery();
   // Derive chat unread count from conversations cache so it stays in sync
   // with the chat list and resets immediately when a chat is opened
   const { data: conversations = [] } = useChatsQuery();
@@ -177,6 +178,24 @@ export default function HomeFeed() {
 
   const reanimatedScrollY = useSharedValue(0);
   const joinCommunityMutation = useJoinCommunityMutation();
+
+  const quickActionBadges = useMemo(() => {
+    const unread = notifications.filter((item) => !item.isRead && item.actorId !== user?.id);
+    const countWhere = (predicate: (item: typeof unread[number]) => boolean) =>
+      unread.reduce((sum, item) => sum + (predicate(item) ? 1 : 0), 0);
+
+    return {
+      communities: countWhere((item) =>
+        ['COMMUNITY_JOIN', 'COMMUNITY_INVITE', 'COMMUNITY_APPROVED', 'COMMUNITY_REJECTED'].includes(item.type)
+      ),
+      recruitment: countWhere((item) => item.entityType === 'JOB' || item.entityType === 'EMPLOYER'),
+      matrimony: countWhere((item) => item.type.startsWith('MATRIMONY_')),
+      business: countWhere((item) => item.entityType === 'BUSINESS'),
+      events: countWhere((item) => item.type.startsWith('EVENT_')),
+      help: countWhere((item) => item.entityType === 'COMMUNITY_HELP'),
+      'our-people': countWhere((item) => item.type.startsWith('STORY_')),
+    } as Record<string, number>;
+  }, [notifications]);
 
   const renderPostItem = useCallback(({ item, index }: { item: any; index: number }) => (
     <AnimatedPostCard index={index} scrollY={reanimatedScrollY} post={item} onCommentPress={handleCommentPress} onForwardPress={handleForwardPress} />
@@ -659,49 +678,66 @@ export default function HomeFeed() {
   };
 
   // ── Quick Actions ────────────────────────────────────────────────────────
-  const renderQuickActions = () => (
-    <View style={styles.quickActionsSection}>
-      <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 14 }]}>Quick Actions</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.quickActionsScroll}
-        style={styles.quickActionsScrollView}
-      >
-        {QUICK_ACTIONS.map((action) => (
-          <TouchableOpacity
-            key={action.id}
-            onPress={() => router.push(action.route as any)}
-            activeOpacity={0.75}
-            style={styles.quickActionItem}
-          >
-            <View
-              style={[
-                styles.quickActionIcon,
-                {
-                  backgroundColor: action.bg,
-                  borderColor: action.border,
-                  shadowColor: action.shadow,
-                  width: isSmallScreen ? 56 : 62,
-                  height: isSmallScreen ? 56 : 62,
-                },
-              ]}
-            >
-              <Image
-                source={action.image}
-                style={styles.quickActionImage}
-                contentFit="contain"
-                transition={200}
-              />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: colors.text }]} numberOfLines={1}>
-              {action.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
+  const renderQuickActions = () => {
+    // Issue 5: map action id → badge count using existing unread data
+    const actionBadge: Record<string, number> = {
+      ...quickActionBadges,
+      communities: quickActionBadges.communities || unreadCount,
+    };
+    return (
+      <View style={styles.quickActionsSection}>
+        <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 14 }]}>Quick Actions</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickActionsScroll}
+          style={styles.quickActionsScrollView}
+        >
+          {QUICK_ACTIONS.map((action) => {
+            const badge = actionBadge[action.id] ?? 0;
+            return (
+              <TouchableOpacity
+                key={action.id}
+                onPress={() => router.push(action.route as any)}
+                activeOpacity={0.75}
+                style={styles.quickActionItem}
+              >
+                <View style={{ position: 'relative' }}>
+                  <View
+                    style={[
+                      styles.quickActionIcon,
+                      {
+                        backgroundColor: action.bg,
+                        borderColor: action.border,
+                        shadowColor: action.shadow,
+                        width: isSmallScreen ? 56 : 62,
+                        height: isSmallScreen ? 56 : 62,
+                      },
+                    ]}
+                  >
+                    <Image
+                      source={action.image}
+                      style={styles.quickActionImage}
+                      contentFit="contain"
+                      transition={200}
+                    />
+                  </View>
+                  {badge > 0 && (
+                    <View style={[styles.quickActionBadge, { backgroundColor: colors.secondary }]}>
+                      <Text style={styles.quickActionBadgeText}>{badge > 99 ? '99+' : badge}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.quickActionLabel, { color: colors.text }]} numberOfLines={1}>
+                  {action.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
 
   // ── Header ──────────────────────────────────────────────────────────────
   const FeedHeader = (
@@ -1021,6 +1057,20 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     marginTop: 2,
   },
+  quickActionBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+  },
+  quickActionBadgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
   communitySection: { marginBottom: 20 },
   tabbedSection: { marginTop: 10, marginBottom: 20 },
   sectionHeader: {

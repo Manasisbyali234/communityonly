@@ -11,7 +11,7 @@ import Avatar from '../../components/common/Avatar';
 import { User } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { useSuggestedUsersQuery } from '../../api/user';
-import { useStartConversationMutation } from '../../api/chat';
+import { useChatsQuery, useStartConversationMutation } from '../../api/chat';
 
 export default function NewChatScreen() {
   const { colors, isDark } = useTheme();
@@ -27,20 +27,34 @@ export default function NewChatScreen() {
 
   const { user: currentUser } = useAuthStore();
   const { data: users = [], isLoading } = useSuggestedUsersQuery(30);
+  const { data: conversations = [] } = useChatsQuery();
 
   // Auto-resolve participant from query param if provided
   useEffect(() => {
     if (!participantId || hasResolvedParticipant.current) return;
 
+    const existing = conversations.find((conversation) =>
+      conversation.participants?.some((participant) => participant.userId === participantId)
+    );
+    if (existing) {
+      hasResolvedParticipant.current = true;
+      router.replace(`/chat/${existing.id}` as any);
+      return;
+    }
+
     hasResolvedParticipant.current = true;
     startConversation.mutate(
       { participantId },
       {
-        onSuccess: (conversation) => router.replace(`/chat/${conversation.id}`),
-        onError: () => { hasResolvedParticipant.current = false; },
+        onSuccess: (conversation) => router.replace(`/chat/${conversation.id}` as any),
+        onError: (error: any) => {
+          if (error?.response?.status !== 429) {
+            hasResolvedParticipant.current = false;
+          }
+        },
       }
     );
-  }, [participantId, router, startConversation]);
+  }, [participantId, conversations, router, startConversation]);
 
   // Exclude current user and admin from list
   const availableUsers = users.filter((u: any) => u.id !== currentUser?.id && u.role !== 'ADMIN');

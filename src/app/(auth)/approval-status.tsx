@@ -44,7 +44,7 @@ export default function ApprovalStatusScreen() {
   useEffect(() => {
     if (isApproved && from !== 'settings') {
       showToast('Welcome to Gowda Sangama! Your profile has been approved.', 'success');
-      router.replace('/(tabs)/edit-profile?from=approval-status');
+      router.replace('/(tabs)');
     }
   }, [isApproved, from]);
 
@@ -63,7 +63,7 @@ export default function ApprovalStatusScreen() {
     const fresh = resolveUserApproval(latestUser);
     if (fresh.isApproved) {
       showToast('Your profile has been approved! Redirecting...', 'success');
-      router.replace('/(tabs)/edit-profile?from=approval-status');
+      router.replace('/(tabs)');
       return;
     }
     showToast('Status up to date: ' + fresh.status, 'info');

@@ -20,8 +20,28 @@ import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useAdminStore } from '../../store/adminStore';
 import { adminApiClient } from '../../api/adminClient';
+import { getApiBaseUrl } from '../../api/config';
 
-type TabType = 'PENDING' | 'RESUBMITTED' | 'APPROVED' | 'REJECTED' | 'ALL';
+const toAbs = (url?: string | null): string | null => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  const base = getApiBaseUrl().replace('/api/v1', '');
+  return `${base}${url}`;
+};
+
+const UserAvatar = ({ url, name, size }: { url?: string | null; name: string; size: number }) => {
+  const abs = toAbs(url);
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  if (abs) {
+    return <Image source={{ uri: abs }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#E2E8F0' }} />;
+  }
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ fontSize: size * 0.35, fontWeight: '700', color: '#166534' }}>{initials}</Text>
+    </View>
+  );
+};
+
 
 export default function PendingProfilesScreen() {
   const isMobile = useIsMobile();
@@ -266,10 +286,7 @@ export default function PendingProfilesScreen() {
                 <View key={item.id} style={styles.userCard}>
                   {/* Card Top */}
                   <View style={styles.cardTopRow}>
-                    <Image
-                      source={{ uri: item.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }}
-                      style={styles.avatarImg}
-                    />
+                    <UserAvatar url={item.avatarUrl} name={item.displayName} size={56} />
                     <View style={styles.cardInfoCol}>
                       <View style={styles.nameRow}>
                         <Text style={styles.displayName}>{item.displayName}</Text>
@@ -419,10 +436,7 @@ export default function PendingProfilesScreen() {
             {selectedUser && (
               <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                 <View style={styles.modalAvatarRow}>
-                  <Image
-                    source={{ uri: selectedUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }}
-                    style={styles.modalAvatar}
-                  />
+                  <UserAvatar url={selectedUser.avatarUrl} name={selectedUser.displayName} size={72} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalUserName}>{selectedUser.displayName}</Text>
                     <Text style={styles.modalFamily}>Family / Okka: {selectedUser.familyName || 'N/A'}</Text>

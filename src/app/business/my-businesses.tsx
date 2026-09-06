@@ -10,7 +10,7 @@ import { useTheme } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { confirmAction } from '../../store/confirmStore';
-import { useMyBusinessesQuery, useDeleteBusinessMutation, Business, BusinessStatus } from '../../api/business';
+import { useMyBusinessesQuery, useDeleteBusinessMutation, useArchiveBusinessMutation, Business, BusinessStatus } from '../../api/business';
 
 const STATUS_CONFIG: Record<BusinessStatus, { label: string; color: string; icon: string }> = {
   APPROVED: { label: 'Approved',         color: '#16A34A', icon: 'checkmark-circle' },
@@ -20,10 +20,11 @@ const STATUS_CONFIG: Record<BusinessStatus, { label: string; color: string; icon
   WITHDRAWN:{ label: 'Withdrawn',        color: '#6B7280', icon: 'ban' },
 };
 
-function BusinessStatusCard({ business, onView, onEdit, onDelete, colors, isDark }: {
+function BusinessStatusCard({ business, onView, onEdit, onArchive, onDelete, colors, isDark }: {
   business: Business;
   onView: () => void;
   onEdit: () => void;
+  onArchive: () => void;
   onDelete: () => void;
   colors: any;
   isDark: boolean;
@@ -98,12 +99,18 @@ function BusinessStatusCard({ business, onView, onEdit, onDelete, colors, isDark
             <Text style={[styles.footerBtnText, { color: colors.primary }]}>View</Text>
           </TouchableOpacity>
         )}
-        {(business.status === 'PENDING' || business.status === 'REJECTED' || business.status === 'DRAFT') && (
+        {business.status !== 'APPROVED' && (
           <TouchableOpacity style={[styles.footerBtn, { backgroundColor: isDark ? 'rgba(79,70,229,0.12)' : '#EEF2FF' }]} onPress={onEdit}>
             <Ionicons name="create-outline" size={15} color="#4F46E5" />
             <Text style={[styles.footerBtnText, { color: '#4F46E5' }]}>
               {business.status === 'REJECTED' ? 'Edit & Resubmit' : 'Edit'}
             </Text>
+          </TouchableOpacity>
+        )}
+        {business.status !== 'WITHDRAWN' && (
+          <TouchableOpacity style={[styles.footerBtn, { backgroundColor: isDark ? 'rgba(217,119,6,0.12)' : '#FFFBEB' }]} onPress={onArchive}>
+            <Ionicons name="archive-outline" size={15} color="#D97706" />
+            <Text style={[styles.footerBtnText, { color: '#D97706' }]}>Archive</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity style={[styles.footerBtn, { backgroundColor: isDark ? 'rgba(220,38,38,0.1)' : '#FEF2F2' }]} onPress={onDelete}>
@@ -123,7 +130,25 @@ export default function MyBusinessesScreen() {
   const showToast = useToastStore((s) => s.showToast);
 
   const { data: businesses = [], isLoading, refetch } = useMyBusinessesQuery();
+  const archiveMutation = useArchiveBusinessMutation();
   const deleteMutation = useDeleteBusinessMutation();
+
+  const handleArchive = useCallback(async (business: Business) => {
+    const confirmed = await confirmAction({
+      title: 'Archive Business?',
+      message: `"${business.businessName}" will be hidden from the public directory. You can edit and resubmit it later.`,
+      confirmText: 'Archive',
+      isDestructive: false,
+      icon: 'archive-outline',
+    });
+    if (!confirmed) return;
+    try {
+      await archiveMutation.mutateAsync(business.id);
+      showToast('Business archived.', 'success');
+    } catch {
+      showToast('Failed to archive business.', 'error');
+    }
+  }, [archiveMutation, showToast]);
 
   const handleDelete = useCallback(async (business: Business) => {
     const confirmed = await confirmAction({
@@ -139,7 +164,7 @@ export default function MyBusinessesScreen() {
     } catch {
       showToast('Failed to delete business.', 'error');
     }
-  }, [deleteMutation]);
+  }, [deleteMutation, showToast]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -169,7 +194,7 @@ export default function MyBusinessesScreen() {
 
       {/* Legend */}
       <View style={[styles.legend, { backgroundColor: colors.cardBg, borderBottomColor: colors.border }]}>
-        {(['APPROVED', 'PENDING', 'REJECTED'] as BusinessStatus[]).map((s) => {
+        {(['APPROVED', 'PENDING', 'REJECTED', 'WITHDRAWN'] as BusinessStatus[]).map((s) => {
           const cfg = STATUS_CONFIG[s];
           return (
             <View key={s} style={styles.legendItem}>
@@ -195,6 +220,7 @@ export default function MyBusinessesScreen() {
               isDark={isDark}
               onView={() => router.push(`/business/${item.id}` as any)}
               onEdit={() => router.push(`/business/submit?id=${item.id}&from=my-businesses` as any)}
+              onArchive={() => handleArchive(item)}
               onDelete={() => handleDelete(item)}
             />
           )}

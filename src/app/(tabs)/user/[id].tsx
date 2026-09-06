@@ -241,16 +241,18 @@ export default function UserProfileScreen() {
                     disabled={connStatus !== 'NONE' || sendRequest.isPending}
                     onPress={handleConnect}
                   />
-                  <Pressable
-                    accessibilityLabel="Message user"
-                    style={({ pressed }) => [
-                      styles.iconUtilityButton,
-                      { borderColor: BORDER, backgroundColor: pressed ? colors.elevation1 : SURF },
-                    ]}
-                    onPress={() => router.push(`/chat/new?participantId=${user.id}` as any)}
-                  >
-                    <Ionicons name="chatbubble-ellipses-outline" size={17} color={TEXT} />
-                  </Pressable>
+                  {connStatus === 'ACCEPTED' && (
+                    <Pressable
+                      accessibilityLabel="Message user"
+                      style={({ pressed }) => [
+                        styles.iconUtilityButton,
+                        { borderColor: BORDER, backgroundColor: pressed ? colors.elevation1 : SURF },
+                      ]}
+                      onPress={() => router.push(`/chat/new?participantId=${user.id}` as any)}
+                    >
+                      <Ionicons name="chatbubble-ellipses-outline" size={17} color={TEXT} />
+                    </Pressable>
+                  )}
                 </>
               )}
               <Pressable
@@ -733,7 +735,7 @@ export default function UserProfileScreen() {
             </TouchableOpacity>
 
             {/* Send Message (if not own profile) */}
-            {!isOwnProfile && (
+            {!isOwnProfile && connStatus === 'ACCEPTED' && (
               <TouchableOpacity
                 style={[styles.optionsItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}
                 onPress={() => {

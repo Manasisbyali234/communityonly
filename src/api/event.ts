@@ -275,6 +275,47 @@ export function useCreateEventMutation() {
   });
 }
 
+export type EventInput = {
+  title: string;
+  description?: string;
+  location?: string;
+  startsAt: string;
+  endsAt?: string;
+  coverUrl?: string;
+};
+
+export function useUpdateEventMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: EventInput }) => {
+      const res = await apiClient.put<ApiResponse<Event>>(`/events/${id}`, payload, { timeout: 30000 });
+      return normalizeEvent(res.data.data);
+    },
+    onSuccess: (event) => {
+      queryClient.invalidateQueries({ queryKey: eventKeys.list() });
+      queryClient.invalidateQueries({ queryKey: eventKeys.detail(event.id) });
+      queryClient.invalidateQueries({ queryKey: eventKeys.myEvents(event.creatorId) });
+    },
+  });
+}
+
+export function useArchiveEventMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiClient.patch<ApiResponse<Event>>(`/events/${id}/archive`);
+      return normalizeEvent(res.data.data);
+    },
+    onSuccess: (event) => {
+      queryClient.invalidateQueries({ queryKey: eventKeys.list() });
+      queryClient.invalidateQueries({ queryKey: eventKeys.detail(event.id) });
+      queryClient.invalidateQueries({ queryKey: eventKeys.myEvents(event.creatorId) });
+    },
+  });
+}
+
 export function useEventParticipantsQuery(eventId: string | null) {
   return useQuery({
     queryKey: ['eventParticipants', eventId],

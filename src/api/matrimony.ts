@@ -105,10 +105,16 @@ export function useMatrimonyProfileQuery(id: string) {
   return useQuery({
     queryKey: ['matrimony-profile', id],
     queryFn: async () => {
-      const res = await apiClient.get(`/matrimony/profiles/${id}`);
-      return (res.data?.data ?? res.data) as MatrimonyProfile;
+      try {
+        const res = await apiClient.get(`/matrimony/profiles/${id}`);
+        return (res.data?.data ?? res.data) as MatrimonyProfile;
+      } catch (e: any) {
+        if (e?.response?.status === 404 || e?.response?.status === 403) return null;
+        throw e;
+      }
     },
     enabled: !!id,
+    retry: false,
   });
 }
 

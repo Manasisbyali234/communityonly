@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import AdminShell from '../../components/admin/AdminShell';
 import { C } from '../../components/admin/AdminUI';
 import { adminApiClient } from '../../api/adminClient';
+import { getApiBaseUrl } from '../../api/config';
 
 const INDUSTRIES = [
   'Technology', 'Finance', 'Healthcare', 'Education', 'Manufacturing',
@@ -19,6 +20,12 @@ const EMPTY: Record<string, string> = {
   description: '', email: '', phone: '', address: '', city: '', state: '',
 };
 
+const API_ORIGIN = getApiBaseUrl().replace('/api/v1', '');
+const toDisplayUrl = (url?: string | null) => {
+  if (!url) return '';
+  return url.startsWith('/') ? `${API_ORIGIN}${url}` : url;
+};
+
 export default function AdminAddEmployer() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -28,6 +35,7 @@ export default function AdminAddEmployer() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [logoPreviewUri, setLogoPreviewUri] = useState('');
 
   useEffect(() => {
     if (!isEdit) return;
@@ -35,7 +43,7 @@ export default function AdminAddEmployer() {
       .then(res => {
         const e = res.data?.data ?? res.data;
         setForm({
-          name: e.name ?? '', logoUrl: e.logoUrl ?? '', website: e.website ?? '',
+          name: e.name ?? '', logoUrl: toDisplayUrl(e.logoUrl), website: e.website ?? '',
           industry: e.industry ?? '', description: e.description ?? '',
           email: e.email ?? '', phone: e.phone ?? '',
           address: e.address ?? '', city: e.city ?? '', state: e.state ?? '',
@@ -48,11 +56,9 @@ export default function AdminAddEmployer() {
   const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
 
   const uploadLogo = async (formData: FormData) => {
-    const res = await adminApiClient.post('/jobs/employers/upload-logo', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await adminApiClient.post('/jobs/employers/upload-logo', formData);
     const url = res.data?.data?.url ?? res.data?.url;
-    if (url) set('logoUrl', url);
+    if (url) set('logoUrl', toDisplayUrl(url));
   };
 
   const pickLogo = async () => {
@@ -63,6 +69,7 @@ export default function AdminAddEmployer() {
       input.onchange = async (e: any) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setLogoPreviewUri(URL.createObjectURL(file));
         setLogoUploading(true);
         try {
           const fd = new FormData();
@@ -78,10 +85,15 @@ export default function AdminAddEmployer() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
     if (result.canceled) return;
     const asset = result.assets[0];
+    setLogoPreviewUri(asset.uri);
     setLogoUploading(true);
     try {
       const fd = new FormData();
-      fd.append('file', { uri: asset.uri, name: 'logo.jpg', type: 'image/jpeg' } as any);
+      fd.append('file', {
+        uri: asset.uri,
+        name: asset.fileName || 'logo.jpg',
+        type: asset.mimeType || 'image/jpeg',
+      } as any);
       await uploadLogo(fd);
     } catch { Alert.alert('Error', 'Failed to upload logo'); }
     setLogoUploading(false);
@@ -94,10 +106,13 @@ export default function AdminAddEmployer() {
     }
     setSaving(true);
     try {
+      const payload = Object.fromEntries(
+        Object.entries(form).map(([key, value]) => [key, value.trim()])
+      );
       if (isEdit) {
-        await adminApiClient.put(`/jobs/employers/${id}`, form);
+        await adminApiClient.put(`/jobs/employers/${id}`, payload);
       } else {
-        await adminApiClient.post('/jobs/employers', form);
+        await adminApiClient.post('/jobs/employers', payload);
       }
       const msg = isEdit ? 'Employer updated!' : 'Employer created!';
       if (Platform.OS === 'web') {
@@ -129,8 +144,8 @@ export default function AdminAddEmployer() {
         {/* Logo */}
         <Field label="Company Logo" optional>
           <View style={s.logoRow}>
-            {form.logoUrl ? (
-              <Image source={{ uri: form.logoUrl }} style={s.logoPreview} resizeMode="contain" />
+            {logoPreviewUri || form.logoUrl ? (
+              <Image source={{ uri: logoPreviewUri || form.logoUrl }} style={s.logoPreview} resizeMode="contain" key={logoPreviewUri || form.logoUrl} />
             ) : (
               <View style={s.logoPlaceholder}>
                 <Feather name="image" size={24} color={C.textMuted} />
@@ -142,8 +157,8 @@ export default function AdminAddEmployer() {
                 : <><Feather name="upload" size={13} color={C.accent} /><Text style={s.uploadBtnText}> Upload Logo</Text></>}
             </TouchableOpacity>
           </View>
-          {form.logoUrl ? (
-            <TouchableOpacity onPress={() => set('logoUrl', '')} style={s.removeBtn}>
+          {logoPreviewUri || form.logoUrl ? (
+            <TouchableOpacity onPress={() => { setLogoPreviewUri(''); set('logoUrl', ''); }} style={s.removeBtn}>
               <Feather name="x" size={12} color={C.danger} />
               <Text style={s.removeText}>Remove</Text>
             </TouchableOpacity>

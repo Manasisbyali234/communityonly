@@ -189,18 +189,10 @@ export default function TabsLayout() {
               style={[props.style as any, { flex: 1 }]}
             />
           ),
-          tabBarButton: (props) => (
-            <TouchableOpacity
-              {...(props as any)}
-              activeOpacity={1}
-              style={[props.style as any, { flex: 1 }]}
-            />
-          ),
           tabBarItemStyle: {
             paddingVertical: 1,
-            pressColor: 'transparent',
             pressOpacity: 1,
-          },
+          } as any,
         }}
       >
         <Tabs.Screen

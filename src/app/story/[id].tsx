@@ -118,7 +118,7 @@ export default function ViewStoryScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <StatusBar style="light" translucent backgroundColor="transparent" />
+        <StatusBar style="light" />
         <ActivityIndicator style={{ flex: 1 }} color="#FFF" />
       </View>
     );
@@ -127,7 +127,7 @@ export default function ViewStoryScreen() {
   if (!story) {
     return (
       <View style={styles.container}>
-        <StatusBar style="light" translucent backgroundColor="transparent" />
+        <StatusBar style="light" />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <Text style={{ color: '#FFF', fontSize: 16 }}>Story not found or expired.</Text>
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={{ marginTop: 20 }}>
@@ -148,7 +148,7 @@ export default function ViewStoryScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <StatusBar style="light" />
       <View style={styles.storyContainer}>
         {/* Media */}
         {story.mediaType === 'VIDEO' ? (

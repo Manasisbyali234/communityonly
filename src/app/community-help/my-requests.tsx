@@ -13,6 +13,7 @@ import { confirmAction } from '../../store/confirmStore';
 import {
   useMyHelpRequestsQuery,
   useResolveHelpRequestMutation,
+  useArchiveHelpRequestMutation,
   HELP_CATEGORIES,
   HelpRequest,
   HelpStatus,
@@ -24,6 +25,7 @@ const STATUS_TABS: { id: HelpStatus | 'ALL'; label: string }[] = [
   { id: 'PENDING', label: 'Pending' },
   { id: 'RESOLVED', label: 'Resolved' },
   { id: 'REJECTED', label: 'Rejected' },
+  { id: 'ARCHIVED', label: 'Archived' },
 ];
 
 const STATUS_CONFIG: Record<HelpStatus, { label: string; color: string; bg: string; icon: string }> = {
@@ -31,17 +33,22 @@ const STATUS_CONFIG: Record<HelpStatus, { label: string; color: string; bg: stri
   PENDING: { label: 'Pending Review', color: '#D97706', bg: '#FEF3C7', icon: 'time' },
   RESOLVED: { label: 'Resolved', color: '#059669', bg: '#ECFDF5', icon: 'checkmark-done-circle' },
   REJECTED: { label: 'Rejected', color: '#DC2626', bg: '#FEE2E2', icon: 'close-circle' },
+  ARCHIVED: { label: 'Archived', color: '#6B7280', bg: '#F3F4F6', icon: 'archive' },
 };
 
 function MyRequestCard({
   item,
   onView,
+  onEdit,
+  onArchive,
   onResolve,
   colors,
   isDark,
 }: {
   item: HelpRequest;
   onView: () => void;
+  onEdit: (item: HelpRequest) => void;
+  onArchive: (item: HelpRequest) => void;
   onResolve: (item: HelpRequest) => void;
   colors: any;
   isDark: boolean;
@@ -164,6 +171,16 @@ function MyRequestCard({
           <Text style={[styles.footerBtnText, { color: colors.text }]}>View Details</Text>
         </TouchableOpacity>
 
+        {item.status !== 'ARCHIVED' && item.status !== 'RESOLVED' ? (
+          <TouchableOpacity
+            style={[styles.footerBtn, { backgroundColor: isDark ? 'rgba(79,70,229,0.12)' : '#EEF2FF' }]}
+            onPress={() => onEdit(item)}
+          >
+            <Ionicons name="create-outline" size={14} color="#4F46E5" />
+            <Text style={[styles.footerBtnText, { color: '#4F46E5' }]}>Edit</Text>
+          </TouchableOpacity>
+        ) : null}
+
         {item.status === 'APPROVED' && (
           <TouchableOpacity
             style={[styles.footerBtn, { backgroundColor: '#ECFDF5' }]}
@@ -173,6 +190,16 @@ function MyRequestCard({
             <Text style={[styles.footerBtnText, { color: '#059669' }]}>Mark as Resolved</Text>
           </TouchableOpacity>
         )}
+
+        {item.status !== 'ARCHIVED' && item.status !== 'RESOLVED' ? (
+          <TouchableOpacity
+            style={[styles.footerBtn, { backgroundColor: isDark ? 'rgba(217,119,6,0.12)' : '#FFFBEB' }]}
+            onPress={() => onArchive(item)}
+          >
+            <Ionicons name="archive-outline" size={14} color="#D97706" />
+            <Text style={[styles.footerBtnText, { color: '#D97706' }]}>Archive</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
@@ -189,6 +216,7 @@ export default function MyHelpRequestsScreen() {
 
   const { data: requests = [], isLoading, refetch } = useMyHelpRequestsQuery();
   const resolveMutation = useResolveHelpRequestMutation();
+  const archiveMutation = useArchiveHelpRequestMutation();
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -213,6 +241,26 @@ export default function MyHelpRequestsScreen() {
       showToast('Request marked as resolved.', 'success');
     } catch {
       showToast('Failed to update request.', 'error');
+    }
+  };
+
+  const handleArchive = async (item: HelpRequest) => {
+    const confirmed = await confirmAction({
+      title: 'Archive this request?',
+      message: 'The request will be hidden from active community help pages.',
+      confirmText: 'Archive',
+      cancelText: 'Cancel',
+      isDestructive: false,
+      icon: 'archive-outline',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await archiveMutation.mutateAsync(item.id);
+      showToast('Request archived.', 'success');
+    } catch {
+      showToast('Failed to archive request.', 'error');
     }
   };
 
@@ -290,6 +338,8 @@ export default function MyHelpRequestsScreen() {
             <MyRequestCard
               item={item}
               onView={() => router.push(`/community-help/${item.id}` as any)}
+              onEdit={(request) => router.push(`/community-help/create?id=${request.id}&from=my-requests` as any)}
+              onArchive={handleArchive}
               onResolve={handleResolve}
               colors={colors}
               isDark={isDark}

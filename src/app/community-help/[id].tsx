@@ -13,6 +13,7 @@ import { useToastStore } from '../../store/toastStore';
 import { confirmAction } from '../../store/confirmStore';
 import {
   useHelpRequestQuery,
+  useArchiveHelpRequestMutation,
   useOfferHelpMutation,
   useResolveHelpRequestMutation,
   useReportHelpRequestMutation,
@@ -32,6 +33,7 @@ export default function HelpRequestDetailScreen() {
   const { data: request, isLoading } = useHelpRequestQuery(id);
   const offerHelpMutation = useOfferHelpMutation();
   const resolveMutation = useResolveHelpRequestMutation();
+  const archiveMutation = useArchiveHelpRequestMutation();
   const reportMutation = useReportHelpRequestMutation();
 
   // Helper offer modal state
@@ -105,6 +107,29 @@ export default function HelpRequestDetailScreen() {
       showToast('Request marked as resolved.', 'success');
     } catch {
       showToast('Failed to update request.', 'error');
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!request) return;
+
+    const confirmed = await confirmAction({
+      title: 'Archive this request?',
+      message: 'The request will be hidden from active community help pages.',
+      confirmText: 'Archive',
+      cancelText: 'Cancel',
+      isDestructive: false,
+      icon: 'archive-outline',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await archiveMutation.mutateAsync(request.id);
+      showToast('Request archived.', 'success');
+      router.replace('/community-help/my-requests' as any);
+    } catch {
+      showToast('Failed to archive request.', 'error');
     }
   };
 
@@ -220,6 +245,12 @@ export default function HelpRequestDetailScreen() {
           <View style={styles.pendingBanner}>
             <Ionicons name="time" size={18} color="#D97706" />
             <Text style={styles.pendingBannerText}>Under Admin Review. Visible once approved.</Text>
+          </View>
+        )}
+        {request.status === 'ARCHIVED' && (
+          <View style={styles.archivedBanner}>
+            <Ionicons name="archive" size={18} color="#6B7280" />
+            <Text style={styles.archivedBannerText}>This request is archived and hidden from active help pages.</Text>
           </View>
         )}
 
@@ -377,18 +408,39 @@ export default function HelpRequestDetailScreen() {
           {/* Action Buttons */}
             <View style={{ marginTop: 18 }}>
               {isMyRequest ? (
-                request.status !== 'RESOLVED' ? (
-                  <TouchableOpacity
-                    style={[styles.resolveCTA, { backgroundColor: '#059669' }]}
-                    onPress={handleResolve}
-                  >
-                    <Ionicons name="checkmark-done" size={18} color="#FFF" />
-                    <Text style={styles.resolveCTAText}>Mark as Resolved</Text>
-                  </TouchableOpacity>
+                request.status !== 'RESOLVED' && request.status !== 'ARCHIVED' ? (
+                  <View style={styles.ownerActionsGrid}>
+                    <TouchableOpacity
+                      style={[styles.ownerActionBtn, { backgroundColor: '#EEF2FF' }]}
+                      onPress={() => router.push(`/community-help/create?id=${request.id}&from=my-requests` as any)}
+                    >
+                      <Ionicons name="create-outline" size={16} color="#4F46E5" />
+                      <Text style={[styles.ownerActionText, { color: '#4F46E5' }]}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.ownerActionBtn, { backgroundColor: '#FFFBEB' }]}
+                      onPress={handleArchive}
+                      disabled={archiveMutation.isPending}
+                    >
+                      <Ionicons name="archive-outline" size={16} color="#D97706" />
+                      <Text style={[styles.ownerActionText, { color: '#D97706' }]}>Archive</Text>
+                    </TouchableOpacity>
+                    {request.status === 'APPROVED' ? (
+                      <TouchableOpacity
+                        style={[styles.ownerActionBtn, { backgroundColor: '#ECFDF5' }]}
+                        onPress={handleResolve}
+                      >
+                        <Ionicons name="checkmark-done" size={16} color="#059669" />
+                        <Text style={[styles.ownerActionText, { color: '#059669' }]}>Resolve</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 ) : (
                   <View style={styles.resolvedNote}>
-                    <Ionicons name="checkmark-circle" size={16} color="#059669" />
-                    <Text style={styles.resolvedNoteText}>This request is closed.</Text>
+                    <Ionicons name={request.status === 'ARCHIVED' ? 'archive' : 'checkmark-circle'} size={16} color={request.status === 'ARCHIVED' ? '#6B7280' : '#059669'} />
+                    <Text style={[styles.resolvedNoteText, request.status === 'ARCHIVED' ? { color: '#6B7280' } : null]}>
+                      {request.status === 'ARCHIVED' ? 'This request is archived.' : 'This request is closed.'}
+                    </Text>
                   </View>
                 )
               ) : hasOfferedHelp ? (
@@ -536,6 +588,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7', padding: 12, borderRadius: 12,
   },
   pendingBannerText: { color: '#92400E', fontSize: 13, fontWeight: '700' },
+  archivedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#F3F4F6', padding: 12, borderRadius: 12,
+  },
+  archivedBannerText: { color: '#4B5563', fontSize: 13, fontWeight: '700' },
 
   // Card
   card: {
@@ -608,6 +665,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14, borderRadius: 14,
   },
   resolveCTAText: { color: '#FFF', fontSize: 15.5, fontWeight: '700' },
+  ownerActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  ownerActionBtn: {
+    flexGrow: 1,
+    minWidth: 110,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  ownerActionText: { fontSize: 13, fontWeight: '800' },
   resolvedNote: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: 12,

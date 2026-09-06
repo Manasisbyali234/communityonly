@@ -111,19 +111,11 @@ export default function AdminReferrals() {
         adminApiClient.get('/referral/admin/all').catch(() => null),
         adminApiClient.get('/referral/admin/referrals').catch(() => null),
       ]);
-      if (sharesRes?.data?.data && Array.isArray(sharesRes.data.data) && sharesRes.data.data.length > 0) {
-        setShares(sharesRes.data.data);
-      } else {
-        setShares(MOCK_SHARES);
-      }
-      if (referralsRes?.data?.data && Array.isArray(referralsRes.data.data) && referralsRes.data.data.length > 0) {
-        setReferrals(referralsRes.data.data);
-      } else {
-        setReferrals(MOCK_REFERRALS);
-      }
+      setShares(Array.isArray(sharesRes?.data?.data) ? sharesRes.data.data : []);
+      setReferrals(Array.isArray(referralsRes?.data?.data) ? referralsRes.data.data : []);
     } catch {
-      setShares(MOCK_SHARES);
-      setReferrals(MOCK_REFERRALS);
+      setShares([]);
+      setReferrals([]);
     } finally {
       setLoading(false);
     }
@@ -133,8 +125,8 @@ export default function AdminReferrals() {
 
   // Analytics Metrics
   const statsOverview = useMemo(() => {
-    const totalShares = shares.length || 24;
-    const totalConversions = referrals.length || 10;
+    const totalShares = shares.length;
+    const totalConversions = referrals.length;
     const rate = totalShares > 0 ? ((totalConversions / totalShares) * 100).toFixed(1) : '0.0';
     return { totalShares, totalConversions, rate };
   }, [shares, referrals]);
@@ -437,30 +429,37 @@ export default function AdminReferrals() {
             </View>
           )
         ) : (
-          /* Leaderboard Tab */
+          /* Leaderboard Tab (derived from live referral records) */
           <View style={s.mobileListWrap}>
-            {MOCK_LEADERBOARD.map((lead) => (
+            {(() => {
+              const bySharer = new Map<string, any>();
+              shares.forEach((share: any) => {
+                const id = share.sharer?.id || share.sharer?.email || 'unknown';
+                const current = bySharer.get(id) || { name: share.sharer?.displayName || 'Community Member', email: share.sharer?.email || '', invitesSent: 0, successfulJoins: 0 };
+                current.invitesSent += 1;
+                current.successfulJoins = referrals.filter((r: any) => r.referredBy?.id === share.sharer?.id).length;
+                bySharer.set(id, current);
+              });
+              return [...bySharer.values()].sort((a, b) => b.successfulJoins - a.successfulJoins).map((lead, idx) => (
               <View key={lead.rank} style={s.leaderCard}>
                 <View style={s.rankBadge}>
-                  <Text style={s.rankNum}>#{lead.rank}</Text>
+                  <Text style={s.rankNum}>#{idx + 1}</Text>
                 </View>
 
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Text style={s.leaderName}>{lead.name}</Text>
-                    <View style={[s.statusPill, { backgroundColor: '#FEF9C3' }]}>
-                      <Text style={[s.statusPillText, { color: '#A16207' }]}>{lead.badge}</Text>
-                    </View>
                   </View>
                   <Text style={s.leaderEmail}>{lead.email}</Text>
                 </View>
 
                 <View style={s.leaderStatsBox}>
                   <Text style={s.leaderStatNum}>{lead.successfulJoins}</Text>
-                  <Text style={s.leaderStatLabel}>Joins ({lead.conversionRate})</Text>
+                  <Text style={s.leaderStatLabel}>Joins ({lead.invitesSent ? ((lead.successfulJoins / lead.invitesSent) * 100).toFixed(1) : '0.0'}%)</Text>
                 </View>
               </View>
-            ))}
+              ));
+            })()}
           </View>
         )}
       </View>

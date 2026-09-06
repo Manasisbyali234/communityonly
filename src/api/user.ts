@@ -30,7 +30,7 @@ export function useSuggestedUsersQuery(limit: number = 20) {
       const res = await apiClient.get<ApiResponse<User[]>>(`/explore/suggested-users?limit=${limit}`);
       const raw = res.data.data ?? res.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
-      return list.map((u: any) => ({
+      return list.filter((u: any) => u.role?.toUpperCase() !== 'ADMIN').map((u: any) => ({
         ...u,
         avatarUrl: toAbs(u.avatarUrl) ?? u.avatarUrl,
         bannerUrl: toAbs(u.bannerUrl) ?? u.bannerUrl,
@@ -53,7 +53,7 @@ export function useSearchUsersQuery(query: string) {
       const res = await apiClient.get<ApiResponse<User[]>>(`/search/users?q=${encodeURIComponent(query)}`);
       const raw = res.data.data ?? res.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
-      return list.map((u: any) => ({
+      return list.filter((u: any) => u.role?.toUpperCase() !== 'ADMIN').map((u: any) => ({
         ...u,
         avatarUrl: toAbs(u.avatarUrl) ?? u.avatarUrl,
         followersCount: u.followersCount ?? u._count?.followers ?? 0,

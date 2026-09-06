@@ -76,16 +76,9 @@ export default function AdminDashboard() {
   });
 
   const [stats, setStats] = useState<Record<string, number>>({
-    totalUsers: 1420,
-    activeToday: 384,
-    totalCommunities: 28,
-    totalCommunityPosts: 1250,
-    totalFeeds: 840,
-    totalStories: 45,
-    totalComments: 3120,
-    totalLikes: 8940,
-    totalEvents: 16,
-    totalReports: 2,
+    totalUsers: 0, activeToday: 0, totalCommunities: 0,
+    totalCommunityPosts: 0, totalFeeds: 0, totalStories: 0,
+    totalComments: 0, totalLikes: 0, totalEvents: 0, totalReports: 0,
   });
 
   const [activity, setActivity] = useState<any[]>([]);
@@ -130,41 +123,7 @@ export default function AdminDashboard() {
       }
       if (activityRes?.data?.data && Array.isArray(activityRes.data.data)) {
         setActivity(activityRes.data.data);
-      } else {
-        // Mock fallback activity if server returns empty
-        setActivity([
-          {
-            user: { displayName: 'Ramesh Veerappa Gowda', email: 'ramesh.gowda@gmail.com' },
-            action: 'Submitted new Business Listing for "AgroNext Solutions"',
-            date: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
-            type: 'CONTENT',
-          },
-          {
-            user: { displayName: 'Sunitha Ramesh Gowda', email: 'sunitha.r@yahoo.com' },
-            action: 'Posted Urgent Help Request: "Medical guidance needed in Mysuru"',
-            date: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-            type: 'CONTENT',
-          },
-          {
-            user: { displayName: 'Praveen Kumar Gowda', email: 'praveen.k@gmail.com' },
-            action: 'Offered help for Blood Donation request',
-            date: new Date(Date.now() - 1000 * 60 * 110).toISOString(),
-            type: 'MEMBERS',
-          },
-          {
-            user: { displayName: 'Ananya S. Gowda', email: 'ananya.ias@gmail.com' },
-            action: 'New Community Member registered & verified',
-            date: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-            type: 'MEMBERS',
-          },
-          {
-            user: { displayName: 'Moderation Bot', email: 'system@gowdacommunity.com' },
-            action: 'Flagged 1 suspicious post for admin review',
-            date: new Date(Date.now() - 1000 * 60 * 300).toISOString(),
-            type: 'REPORTS',
-          },
-        ]);
-      }
+      } else setActivity([]);
     } catch (e: any) {
       setError(e.response?.data?.message ?? e.message ?? 'Failed to load live data.');
     } finally {

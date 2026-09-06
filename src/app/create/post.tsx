@@ -176,16 +176,16 @@ export default function CreatePost() {
       const mimeMap: Record<string, string> = { mp4: 'video/mp4', mov: 'video/quicktime', avi: 'video/x-msvideo', webm: 'video/webm' };
       const mimeType = mimeMap[ext] ?? 'video/mp4';
 
-      const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+      const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
       if (asset.fileSize && asset.fileSize > MAX_VIDEO_BYTES) {
-        showToast('Maximum video size allowed is 50 MB.', 'error');
+        showToast('Maximum video size allowed is 200 MB.', 'error');
         return;
       }
 
       setVideoUploading(true);
       setUploadProgress(0);
       setUploadError(null);
-      const url = await uploadPostVideo({ localUri: asset.uri, filename, mimeType }, (pct) => setUploadProgress(pct));
+      const url = await uploadPostVideo({ localUri: asset.uri, filename, mimeType, size: asset.fileSize }, (pct) => setUploadProgress(pct));
       if (url) { setMediaUrl(url); setMediaKind('video'); }
       else { setUploadError('Failed to upload video.'); }
     } catch (e: any) {

@@ -50,7 +50,15 @@ const registerSchema = z
     dob: z
       .string()
       .min(4, 'Date of Birth is required')
-      .regex(/^(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})$/, 'Format: YYYY-MM-DD or DD/MM/YYYY'),
+      .regex(/^(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})$/, 'Format: YYYY-MM-DD or DD/MM/YYYY')
+      .refine((val) => {
+        const date = new Date(val.includes('/') ? val.split('/').reverse().join('-') : val);
+        if (isNaN(date.getTime())) return false;
+        const today = new Date();
+        const age = today.getFullYear() - date.getFullYear() -
+          (today < new Date(today.getFullYear(), date.getMonth(), date.getDate()) ? 1 : 0);
+        return age >= 18;
+      }, 'You must be at least 18 years old to register'),
     gender: z.enum(['Male', 'Female', 'Other']),
     phone: z
       .string()
@@ -168,7 +176,6 @@ export default function RegisterScreen() {
 
     setSubmitting(true);
     try {
-      // 1. Format phone with standard format
       const rawPhone = data.phone.trim();
       const formattedPhone = rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`;
       const username = data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -182,30 +189,39 @@ export default function RegisterScreen() {
         gender: data.gender,
       };
 
-      const registerPayload = {
+      // 1. Register
+      const res = await apiClient.post('/auth/register', {
         ...profileData,
         password: data.password,
         ...(ref ? { referredById: ref } : {}),
-      };
-
-      const res = await apiClient.post('/auth/register', registerPayload);
+      });
       const { user: serverUser, accessToken, refreshToken } = res.data.data;
       await login(serverUser, accessToken, refreshToken);
-      const pendingUser = registerPendingUser({
+
+      // 2. Upload profile photo
+      let uploadedAvatarUrl: string | null = null;
+      try {
+        const ext = profilePhoto.split('.').pop()?.split('?')[0] || 'jpg';
+        const formData = new FormData();
+        formData.append('file', { uri: profilePhoto, name: `avatar.${ext}`, type: `image/${ext}` } as any);
+        const uploadRes = await apiClient.post('/media/upload-profile-photo', formData, {
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${accessToken}` },
+        });
+        uploadedAvatarUrl = uploadRes.data?.data?.url ?? uploadRes.data?.data?.avatarUrl ?? null;
+      } catch {
+        // non-blocking — profile still created
+      }
+
+      registerPendingUser({
         ...profileData,
-        avatarUrl: profilePhoto,
+        avatarUrl: uploadedAvatarUrl || profilePhoto,
         approvalStatus: 'PENDING',
         phoneVerified: false,
       });
 
-      // 3. Move directly to Mobile OTP verification
       router.push({
         pathname: '/(auth)/otp',
-        params: {
-          phone: formattedPhone,
-          email: data.email,
-          userId: serverUser.id || pendingUser.id,
-        },
+        params: { phone: formattedPhone, email: data.email, userId: serverUser.id },
       });
     } catch (e: any) {
       showToast(e.response?.data?.message || e.message || 'Registration failed. Please try again.', 'error');
@@ -438,7 +454,7 @@ export default function RegisterScreen() {
                             value={parsedDate}
                             mode="date"
                             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                            maximumDate={new Date()}
+                            maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
                             minimumDate={new Date(1920, 0, 1)}
                             onChange={(event, selectedDate) => {
                               if (Platform.OS !== 'ios') {

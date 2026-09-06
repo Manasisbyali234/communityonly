@@ -309,6 +309,41 @@ export function useDeletePostMutation() {
   });
 }
 
+// Edit a post
+export function useEditPostMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<Post, Error, { postId: string; content: string }>({
+    mutationFn: async ({ postId, content }) => {
+      const res = await apiClient.put<ApiResponse<Post>>(`/posts/${postId}`, { content });
+      return normalizePost(res.data.data);
+    },
+    onSuccess: (data, { postId }) => {
+      queryClient.setQueryData<Post[]>(feedKeys.posts(), (old) =>
+        old?.map((p) => p.id === postId ? { ...p, content: data.content } : p)
+      );
+      queryClient.invalidateQueries({ queryKey: feedKeys.post(postId) });
+    },
+  });
+}
+
+// Archive a post by using the backend's soft-delete path.
+export function useArchivePostMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (postId) => {
+      await apiClient.delete(`/posts/${postId}`);
+    },
+    onSuccess: (_data, postId) => {
+      queryClient.getQueriesData<Post[]>({ queryKey: feedKeys.posts() }).forEach(([key, data]) => {
+        if (Array.isArray(data)) {
+          queryClient.setQueryData<Post[]>(key, data.filter((p) => p.id !== postId));
+        }
+      });
+      queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
+    },
+  });
+}
+
 // Delete a comment
 export function useDeleteCommentMutation() {
   const queryClient = useQueryClient();

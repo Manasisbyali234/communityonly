@@ -11,8 +11,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
+import { confirmAction } from '../../store/confirmStore';
 import {
-  useBusinessQuery, useBusinessReviewsQuery, useSubmitReviewMutation, BusinessReview,
+  useArchiveBusinessMutation, useBusinessQuery, useBusinessReviewsQuery, useSubmitReviewMutation, BusinessReview,
 } from '../../api/business';
 import { useStartConversationMutation } from '../../api/chat';
 import { shareUrl } from '../../utils/shareUtils';
@@ -94,6 +95,7 @@ export default function BusinessDetailScreen() {
   const { data: business, isLoading } = useBusinessQuery(id);
   const { data: reviews = [] } = useBusinessReviewsQuery(id);
   const submitReview = useSubmitReviewMutation(id);
+  const archiveBusiness = useArchiveBusinessMutation();
   const startConversation = useStartConversationMutation();
 
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -168,6 +170,25 @@ export default function BusinessDetailScreen() {
     }
   };
 
+  const handleArchiveBusiness = async () => {
+    if (!business) return;
+    const confirmed = await confirmAction({
+      title: 'Archive Business?',
+      message: `"${business.businessName}" will be hidden from the public directory. You can edit and resubmit it later.`,
+      confirmText: 'Archive',
+      isDestructive: false,
+      icon: 'archive-outline',
+    });
+    if (!confirmed) return;
+    try {
+      await archiveBusiness.mutateAsync(business.id);
+      showToast('Business archived.', 'success');
+      router.replace('/business/my-businesses' as any);
+    } catch {
+      showToast('Failed to archive business.', 'error');
+    }
+  };
+
   const handleBack = () => {
     if (from === 'discover' || from === 'explore') {
       router.replace('/(tabs)/explore?tab=business' as any);
@@ -220,6 +241,7 @@ export default function BusinessDetailScreen() {
   }
 
   const photos = business.photos ?? [];
+  const isOwner = user?.id === business.userId;
 
   return (
     <View style={[styles.root, { backgroundColor: BG }]}>
@@ -322,6 +344,30 @@ export default function BusinessDetailScreen() {
                 <Text style={[styles.reviewTotal, { color: TEXT3 }]}>
                   ({business.reviewCount} {business.reviewCount === 1 ? 'review' : 'reviews'})
                 </Text>
+              </View>
+            ) : null}
+
+            {isOwner ? (
+              <View style={styles.ownerActionRow}>
+                <TouchableOpacity
+                  style={[styles.ownerActionBtn, { backgroundColor: isDark ? 'rgba(79,70,229,0.12)' : '#EEF2FF' }]}
+                  onPress={() => router.push(`/business/submit?id=${business.id}&from=detail` as any)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="create-outline" size={15} color="#4F46E5" />
+                  <Text style={[styles.ownerActionText, { color: '#4F46E5' }]}>Edit</Text>
+                </TouchableOpacity>
+                {business.status !== 'WITHDRAWN' ? (
+                  <TouchableOpacity
+                    style={[styles.ownerActionBtn, { backgroundColor: isDark ? 'rgba(217,119,6,0.12)' : '#FFFBEB' }]}
+                    onPress={handleArchiveBusiness}
+                    disabled={archiveBusiness.isPending}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons name="archive-outline" size={15} color="#D97706" />
+                    <Text style={[styles.ownerActionText, { color: '#D97706' }]}>Archive</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -735,6 +781,9 @@ const styles = StyleSheet.create({
   ratingBar: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   ratingScore: { fontSize: 14, fontWeight: '800' },
   reviewTotal: { fontSize: 12.5 },
+  ownerActionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  ownerActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 12 },
+  ownerActionText: { fontSize: 13, fontWeight: '800' },
 
   // Sections
   sectionPad: { marginHorizontal: 16, marginBottom: 12 },

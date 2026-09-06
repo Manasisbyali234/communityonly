@@ -23,6 +23,8 @@ import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import {
   useEventDetailQuery,
+  useArchiveEventMutation,
+  useUpdateEventMutation,
   useToggleInterestMutation,
   useToggleLikeMutation,
   useShareEventMutation,
@@ -58,6 +60,7 @@ export default function EventDetailScreen() {
   const toggleInterest = useToggleInterestMutation();
   const toggleLike = useToggleLikeMutation();
   const shareEvent = useShareEventMutation();
+  const archiveEvent = useArchiveEventMutation();
 
   const [commentSheetVisible, setCommentSheetVisible] = useState(false);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
@@ -135,6 +138,31 @@ export default function EventDetailScreen() {
     const ok = await shareUrl(`Check out ${event.title} on GowdaCommunity! ${link}`, link);
     showToast(ok ? 'Event link copied to clipboard!' : 'Could not share event', ok ? 'success' : 'error');
   }, [event, shareEvent, showToast]);
+
+  const handleEdit = () => {
+    if (!event) return;
+    router.push(`/create/event?id=${event.id}&from=events` as any);
+  };
+
+  const handleArchive = async () => {
+    if (!event) return;
+    const ok = await confirm({
+      title: 'Archive this event?',
+      message: 'The event will be hidden from the public feed but kept in your organizer history.',
+      confirmText: 'Archive',
+      cancelText: 'Cancel',
+      isDestructive: false,
+      icon: 'archive-outline',
+    });
+    if (!ok) return;
+    try {
+      await archiveEvent.mutateAsync(event.id);
+      showToast('Event archived.', 'success');
+      router.replace('/(tabs)/explore?tab=events' as any);
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || 'Failed to archive event', 'error');
+    }
+  };
 
   const openLocationInMaps = () => {
     if (!event?.location) return;
@@ -422,13 +450,22 @@ export default function EventDetailScreen() {
           {/* Primary CTA */}
           <View style={{ flex: 1 }}>
             {isOwn ? (
-              <Button
-                title="Organizer View"
-                icon="calendar"
-                variant="secondary"
-                size="lg"
-                onPress={() => setParticipantsSheetVisible(true)}
-              />
+              <View style={styles.ownerActions}>
+                <Button
+                  title="Edit Event"
+                  icon="create-outline"
+                  variant="secondary"
+                  size="lg"
+                  onPress={handleEdit}
+                />
+                <Button
+                  title="Archive"
+                  icon="archive-outline"
+                  variant="secondary"
+                  size="lg"
+                  onPress={handleArchive}
+                />
+              </View>
             ) : (
               <Button
                 title={isPast ? 'Event Finished' : isInterested ? 'Joined Event ✓' : 'Join Event Now'}
@@ -714,6 +751,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ownerActions: { gap: 10 },
 
   // Not Found
   notFoundTitle: { fontSize: 20, fontWeight: '800', marginTop: 14 },

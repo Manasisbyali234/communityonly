@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, Modal, Platform, Pressable, KeyboardAvoidingView,
@@ -16,10 +16,12 @@ import {
   HelpUrgency,
   ContactPreference,
   useCreateHelpRequestMutation,
+  useHelpRequestQuery,
+  useUpdateHelpRequestMutation,
 } from '../../api/communityHelp';
 
 export default function CreateHelpRequestScreen() {
-  const { from } = useLocalSearchParams<{ from?: string }>();
+  const { id: editId, from } = useLocalSearchParams<{ id?: string; from?: string }>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -27,7 +29,9 @@ export default function CreateHelpRequestScreen() {
   const showToast = useToastStore((s) => s.showToast);
 
   const handleBack = () => {
-    if (from === 'discover' || from === 'explore') {
+    if (from === 'my-requests') {
+      router.replace('/community-help/my-requests' as any);
+    } else if (from === 'discover' || from === 'explore') {
       router.replace('/(tabs)/explore?tab=help' as any);
     } else {
       router.replace('/(tabs)/community-help' as any);
@@ -44,7 +48,20 @@ export default function CreateHelpRequestScreen() {
   // Category Picker Modal
   const [showCatPicker, setShowCatPicker] = useState(false);
 
+  const isEdit = !!editId;
+  const { data: existingRequest, isLoading: isLoadingExisting } = useHelpRequestQuery(editId ?? '');
   const createMutation = useCreateHelpRequestMutation();
+  const updateMutation = useUpdateHelpRequestMutation();
+
+  useEffect(() => {
+    if (!existingRequest || !isEdit) return;
+    setCategory(existingRequest.category);
+    setTitle(existingRequest.title);
+    setDescription(existingRequest.description);
+    setLocation(existingRequest.location);
+    setUrgency(existingRequest.urgency);
+    setContactPreference(existingRequest.contactPreference);
+  }, [existingRequest, isEdit]);
 
   const validate = () => {
     if (!category) {
@@ -70,11 +87,11 @@ export default function CreateHelpRequestScreen() {
     if (!validate()) return;
 
     const confirmed = await confirmAction({
-      title: 'Submit Help Request?',
+      title: isEdit ? 'Update Help Request?' : 'Submit Help Request?',
       message: urgency === 'URGENT'
         ? 'Urgent requests are published immediately so the community can respond without delay.'
-        : 'Your request will be submitted for Admin review. It will become visible in Community Help once approved.',
-      confirmText: 'Submit Request',
+        : 'Your request will be submitted for admin review. It will become visible in Community Help once approved.',
+      confirmText: isEdit ? 'Update Request' : 'Submit Request',
       cancelText: 'Cancel',
       isDestructive: false,
       icon: 'heart-outline',
@@ -83,7 +100,7 @@ export default function CreateHelpRequestScreen() {
     if (!confirmed) return;
 
     try {
-      await createMutation.mutateAsync({
+      const payload = {
         category: category as HelpCategory,
         title: title.trim(),
         description: description.trim(),
@@ -93,18 +110,24 @@ export default function CreateHelpRequestScreen() {
         userName: user?.displayName || 'Community Member',
         userLocation: location.trim(),
         userPhone: user?.phoneNumber,
-      });
+      };
+      if (isEdit && editId) await updateMutation.mutateAsync({ id: editId, data: payload });
+      else await createMutation.mutateAsync(payload);
       showToast(
-        urgency === 'URGENT'
+        isEdit
+          ? 'Help request updated.'
+          : urgency === 'URGENT'
           ? 'Urgent help request published to the community.'
           : 'Help request submitted for admin review.',
         'success'
       );
       handleBack();
     } catch {
-      showToast('Failed to submit help request.', 'error');
+      showToast(isEdit ? 'Failed to update help request.' : 'Failed to submit help request.', 'error');
     }
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   const selectedCatConfig = HELP_CATEGORIES.find((c) => c.id === category);
 
@@ -115,6 +138,27 @@ export default function CreateHelpRequestScreen() {
   const TEXT = colors.text;
   const TEXT2 = colors.textSecondary;
   const TEXT3 = colors.textMuted;
+
+  if (isEdit && isLoadingExisting) {
+    return (
+      <View style={[styles.root, { backgroundColor: BG, paddingTop: insets.top }]}>
+        <View style={[styles.header, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
+          <TouchableOpacity
+            style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primaryContainer }]}
+            onPress={handleBack}
+            accessibilityLabel="Go back to community help"
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={19} color={G} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: TEXT }]}>Edit Request</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={G} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: BG, paddingTop: insets.top }]}>
@@ -130,9 +174,9 @@ export default function CreateHelpRequestScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerTitle, { color: TEXT }]}>Request Help</Text>
+          <Text style={[styles.headerTitle, { color: TEXT }]}>{isEdit ? 'Edit Help Request' : 'Request Help'}</Text>
           <Text style={[styles.headerSub, { color: TEXT3 }]}>
-            Submit your request for community support
+            {isEdit ? 'Update and resubmit your request' : 'Submit your request for community support'}
           </Text>
         </View>
       </View>
@@ -413,19 +457,19 @@ export default function CreateHelpRequestScreen() {
             style={[
               styles.submitBtn,
               {
-                backgroundColor: createMutation.isPending ? TEXT3 : G,
+                backgroundColor: isPending ? TEXT3 : G,
               },
             ]}
             onPress={handleSubmit}
-            disabled={createMutation.isPending}
+            disabled={isPending}
             activeOpacity={0.85}
           >
-            {createMutation.isPending ? (
+            {isPending ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
               <>
                 <Ionicons name="send" size={18} color="#FFF" />
-                <Text style={styles.submitBtnText}>Submit Request</Text>
+                <Text style={styles.submitBtnText}>{isEdit ? 'Update Request' : 'Submit Request'}</Text>
               </>
             )}
           </TouchableOpacity>

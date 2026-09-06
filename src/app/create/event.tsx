@@ -12,17 +12,18 @@ import {
   Image,
   Modal,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useAuthStore } from '../../store/authStore';
-import { useCreateEventMutation } from '../../api/event';
+import { useCreateEventMutation, useEventDetailQuery, useUpdateEventMutation } from '../../api/event';
 import { apiClient } from '../../api/client';
 import Button from '../../components/common/Button';
 
@@ -264,6 +265,8 @@ export default function CreateEvent() {
   const { colors, spacing, typography, roundness } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { id: editId } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = !!editId;
   const showToast = useToastStore((state) => state.showToast);
   const { user } = useAuthStore();
 
@@ -279,6 +282,19 @@ export default function CreateEvent() {
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const createEvent = useCreateEventMutation();
+  const updateEvent = useUpdateEventMutation();
+  const { data: existingEvent, isLoading: loadingExisting } = useEventDetailQuery(editId);
+
+  useEffect(() => {
+    if (!isEdit || !existingEvent) return;
+    setTitle(existingEvent.title ?? '');
+    setDescription(existingEvent.description ?? '');
+    setCategory('');
+    setDate(existingEvent.startsAt ? new Date(existingEvent.startsAt).toISOString().split('T')[0] : '');
+    setTime(existingEvent.startsAt ? new Date(existingEvent.startsAt).toTimeString().slice(0, 5) : '');
+    setVenue(existingEvent.location ?? '');
+    setBannerUri(existingEvent.coverUrl ?? null);
+  }, [existingEvent, isEdit]);
 
   const pickBanner = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -327,9 +343,9 @@ export default function CreateEvent() {
     if (!isFormValid) return;
 
     const ok = await useConfirmStore.getState().confirm({
-      title: 'Create event?',
-      message: 'Your event will be created and published.',
-      confirmText: 'Create',
+      title: isEdit ? 'Update event?' : 'Create event?',
+      message: isEdit ? 'Your event changes will be saved.' : 'Your event will be created and published.',
+      confirmText: isEdit ? 'Update' : 'Create',
       cancelText: 'Cancel',
       isDestructive: false,
       icon: 'calendar-outline',
@@ -371,6 +387,12 @@ export default function CreateEvent() {
       ...(coverUrl ? { coverUrl } : {}),
     };
     try {
+      if (isEdit && editId) {
+        await updateEvent.mutateAsync({ id: editId, payload });
+        showToast('Event updated.', 'success');
+        router.replace(`/events/${editId}` as any);
+        return;
+      }
       await createEvent.mutateAsync(payload);
       setSubmitted(true);
     } catch (err: any) {
@@ -382,7 +404,7 @@ export default function CreateEvent() {
   };
 
   // ── Pending Approval Screen ──────────────────────────────────────────────
-  if (submitted) {
+  if (!isEdit && submitted) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 32, paddingTop: insets.top }]}>
         <View style={[styles.pendingIconWrap, { backgroundColor: '#FFF8E1' }]}>
@@ -416,7 +438,8 @@ export default function CreateEvent() {
           <TouchableOpacity onPress={goBack} style={styles.iconBtn}>
             <Ionicons name="close" size={28} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Create Event</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{isEdit ? 'Edit Event' : 'Create Event'}</Text>
+          {loadingExisting && isEdit ? <ActivityIndicator size="small" color={colors.primary} /> : null}
         </View>
       </View>
 
@@ -490,12 +513,12 @@ export default function CreateEvent() {
       {/* ── BOTTOM ACTION BAR ──────────────────────────────────── */}
       <View style={[styles.bottomBar, { borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.background }]}>
         <Button
-          title="Publish Event"
+          title={isEdit ? 'Save Event' : 'Publish Event'}
           variant="primary"
           size="lg"
           fullWidth
-          disabled={!isFormValid || createEvent.isPending || uploading}
-          loading={uploading || createEvent.isPending}
+          disabled={!isFormValid || createEvent.isPending || updateEvent.isPending || uploading}
+          loading={uploading || createEvent.isPending || updateEvent.isPending}
           onPress={handleSubmit}
         />
       </View>
