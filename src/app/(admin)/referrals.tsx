@@ -441,7 +441,7 @@ export default function AdminReferrals() {
                 bySharer.set(id, current);
               });
               return [...bySharer.values()].sort((a, b) => b.successfulJoins - a.successfulJoins).map((lead, idx) => (
-              <View key={lead.rank} style={s.leaderCard}>
+              <View key={`${lead.email}-${idx}`} style={s.leaderCard}>
                 <View style={s.rankBadge}>
                   <Text style={s.rankNum}>#{idx + 1}</Text>
                 </View>
