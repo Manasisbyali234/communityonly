@@ -592,6 +592,17 @@ export default function AdminCommunityStories() {
                   />
                 </View>
 
+                <View style={s.formGroup}>
+                  <Text style={s.formLabel}>Additional Image URLs (comma-separated)</Text>
+                  <TextInput
+                    style={s.formInput}
+                    placeholder="https://img1.jpg, https://img2.jpg"
+                    placeholderTextColor={C.textMuted}
+                    value={form.additionalImages}
+                    onChangeText={(t) => setForm((p) => ({ ...p, additionalImages: t }))}
+                  />
+                </View>
+
                 {/* Feature switch */}
                 <View style={s.switchRow}>
                   <View style={{ flex: 1 }}>

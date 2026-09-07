@@ -125,6 +125,118 @@ function UpdatesTab() {
   );
 }
 
+function FamilyTab({ familyName, userId }: { familyName?: string; userId?: string }) {
+  const { colors: C, isDark } = useTheme();
+  const router = useRouter();
+  const showToast = useToastStore((s) => s.showToast);
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!familyName) return;
+    setLoading(true);
+    apiClient
+      .get('/users', { params: { familyName, limit: 50 } })
+      .then((res) => {
+        const data = res.data?.data ?? res.data ?? [];
+        setMembers(Array.isArray(data) ? data.filter((m: any) => m.id !== userId) : []);
+      })
+      .catch(() => setMembers([]))
+      .finally(() => setLoading(false));
+  }, [familyName, userId]);
+
+  const handleInvite = async () => {
+    const { shareAppLink } = await import('../../utils/shareUtils');
+    const ok = await shareAppLink('a family member', userId);
+    showToast(ok ? 'Invite link shared!' : 'Could not send invite', ok ? 'success' : 'error');
+  };
+
+  const G = C.primary;
+  const SURF = C.surface;
+  const BORDER = C.border;
+  const TEXT = C.text;
+  const TEXT2 = C.textSecondary;
+  const TEXT3 = C.textMuted;
+
+  return (
+    <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+      <View style={styles.cardHeaderWithAction}>
+        <View style={styles.cardHeaderTitleRow}>
+          <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
+            <Ionicons name="people" size={16} color={G} />
+          </View>
+          <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>
+            {familyName ? `${familyName} Family` : 'Family Directory'}
+          </Text>
+          {members.length > 0 && (
+            <View style={[styles.badgeCountPill, { backgroundColor: G + '18' }]}>
+              <Text style={[styles.badgeCountText, { color: G }]}>{members.length}</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity style={[styles.smallEditChip, { backgroundColor: G + '10' }]} onPress={handleInvite}>
+          <Ionicons name="person-add-outline" size={13} color={G} />
+          <Text style={[styles.headerActionLink, { color: G }]}>Invite</Text>
+        </TouchableOpacity>
+      </View>
+
+      {!familyName && (
+        <View style={styles.emptyStateContainer}>
+          <View style={[styles.emptyIconCircle, { backgroundColor: G + '10' }]}>
+            <Ionicons name="people-outline" size={28} color={G} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: TEXT, fontSize: 15, marginTop: 8 }]}>No Family Name Set</Text>
+          <Text style={[styles.emptySubtitle, { color: TEXT3, textAlign: 'center', marginTop: 4 }]}>
+            Add your Family / Okka name in your profile to see family members.
+          </Text>
+          <Button title="Edit Profile" icon="create-outline" variant="primary" size="sm"
+            onPress={() => router.push('/(tabs)/edit-profile' as any)} style={{ marginTop: 12 }} />
+        </View>
+      )}
+
+      {familyName && loading && (
+        <Text style={{ color: TEXT3, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Loading family members...</Text>
+      )}
+
+      {familyName && !loading && members.length === 0 && (
+        <View style={styles.emptyStateContainer}>
+          <View style={[styles.emptyIconCircle, { backgroundColor: G + '10' }]}>
+            <Ionicons name="people-outline" size={28} color={G} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: TEXT, fontSize: 15, marginTop: 8 }]}>No Members Found</Text>
+          <Text style={[styles.emptySubtitle, { color: TEXT3, textAlign: 'center', marginTop: 4 }]}>
+            No other community members with the {familyName} family name yet.
+          </Text>
+          <TouchableOpacity style={[styles.smallEditChip, { backgroundColor: G, marginTop: 12, paddingHorizontal: 16, paddingVertical: 8 }]} onPress={handleInvite}>
+            <Ionicons name="person-add-outline" size={14} color="#FFF" />
+            <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>Invite Family Members</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {familyName && !loading && members.map((member: any, i: number) => (
+        <TouchableOpacity
+          key={member.id}
+          style={[styles.communityRow, { borderBottomColor: BORDER, borderBottomWidth: i < members.length - 1 ? StyleSheet.hairlineWidth : 0 }]}
+          onPress={() => router.push(`/user/${member.id}` as any)}
+          activeOpacity={0.7}
+        >
+          <Avatar url={member.avatarUrl} name={member.displayName} size={44} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.communityRowName, { color: TEXT }]} numberOfLines={1}>{member.displayName}</Text>
+            <Text style={[styles.communityRowMeta, { color: TEXT3 }]} numberOfLines={1}>
+              {[member.occupation, member.city || member.district].filter(Boolean).join(' · ') || 'Community Member'}
+            </Text>
+          </View>
+          <View style={[styles.communityRowArrow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)' }]}>
+            <Ionicons name="chevron-forward" size={14} color={TEXT3} />
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -1176,23 +1288,7 @@ export default function ProfileScreen() {
 
           {/* 4. FAMILY TAB */}
           {activeTab === 'family' && (
-            <View style={[styles.modernCard, styles.emptyCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-              <View style={[styles.emptyIconCircle, { backgroundColor: G + '14', width: 68, height: 68, borderRadius: 34 }]}>
-                <Ionicons name="people" size={32} color={G} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: TEXT, marginTop: 4 }]}>Family Directory</Text>
-              <Text style={[styles.emptySubtitle, { color: TEXT2, paddingHorizontal: 16 }]}>
-                Connect and sync with your extended family members across the community network.
-              </Text>
-              <Button
-                title="Invite Family Member"
-                icon="person-add-outline"
-                variant="primary"
-                size="md"
-                onPress={handleInviteFamily}
-                style={{ marginTop: 12 }}
-              />
-            </View>
+            <FamilyTab familyName={user?.familyName} userId={user?.id} />
           )}
 
           {/* 5. UPDATES / ACTIVITY TAB */}

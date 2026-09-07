@@ -1067,7 +1067,8 @@ const s = StyleSheet.create({
 
   // Tool panels
   toolPanel: {
-    position: 'absolute', top: Platform.OS === 'ios' ? 120 : 90,
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 140 : 120,
     left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.78)',
     paddingVertical: 10, zIndex: 25,
   },
