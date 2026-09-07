@@ -451,6 +451,68 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
           </View>
         </Modal>
 
+        {/* ── Edit Post Modal ── */}
+        <Modal visible={editModalVisible} transparent animationType="fade" onRequestClose={() => setEditModalVisible(false)}>
+          <Pressable style={styles.reportModalBackdrop} onPress={() => setEditModalVisible(false)}>
+            <Pressable
+              style={[styles.reportModalCard, { backgroundColor: colors.surface, borderColor: cardBorderColor }]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.reportHeader}>
+                <View style={[styles.dropdownIconBox, { backgroundColor: '#E8F5E9', width: 38, height: 38, borderRadius: 19 }]}>
+                  <Ionicons name="create-outline" size={18} color="#2E7D32" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.reportTitle, { color: colors.text }]}>Edit Post</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setEditModalVisible(false)}
+                  style={[styles.reportCloseBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}
+                >
+                  <Ionicons name="close" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={[styles.reportTextInput, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC', borderColor: cardBorderColor, color: colors.text, minHeight: 100 }]}
+                value={editContent}
+                onChangeText={setEditContent}
+                multiline
+                placeholder="Edit your post..."
+                placeholderTextColor={colors.textMuted}
+                textAlignVertical="top"
+                autoFocus
+              />
+              <View style={styles.reportActionsRow}>
+                <TouchableOpacity
+                  style={[styles.reportCancelBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9' }]}
+                  onPress={() => setEditModalVisible(false)}
+                >
+                  <Text style={[styles.reportCancelText, { color: colors.text }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.reportSubmitBtn, { backgroundColor: '#2E7D32' }, editMutation.isPending && { opacity: 0.6 }]}
+                  disabled={editMutation.isPending}
+                  onPress={() => {
+                    editMutation.mutate(
+                      { postId: post.id, content: editContent },
+                      {
+                        onSuccess: () => { setEditModalVisible(false); showToast('Post updated.', 'success'); },
+                        onError: () => showToast('Failed to update post.', 'error'),
+                      }
+                    );
+                  }}
+                >
+                  {editMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.reportSubmitText}>Save Changes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
         {/* ── Report Post Modal ── */}
         <Modal
           visible={reportModalVisible}

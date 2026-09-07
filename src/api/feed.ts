@@ -8,19 +8,15 @@ const getBase = () => getApiBaseUrl().replace('/api/v1', '');
 
 const toAbs = (url?: string): string | undefined => {
   if (!url) return undefined;
-  // Relative path → prepend backend base
   if (url.startsWith('/')) return `${getBase()}${url}`;
-  // Proxy URL with a stale host → rewrite to current server
   if (url.includes('/api/v1/media/proxy/')) {
     try {
       const parsed = new URL(url);
       return `${getBase()}${parsed.pathname}${parsed.search}`;
     } catch (_) { return url; }
   }
-  // S3 direct URL → rewrite through backend media proxy
   const s3Match = url.match(/https?:\/\/[^/]+\.s3\.[^/]+\.amazonaws\.com\/(.+)/);
   if (s3Match) return `${getBase()}/api/v1/media/proxy/${encodeURIComponent(s3Match[1])}`;
-  // localhost URL → rewrite to current dynamic host
   if (url.includes('localhost')) return url.replace(/http:\/\/localhost(:\d+)?/, getBase());
   return url;
 };
@@ -31,6 +27,7 @@ export const feedKeys = {
   communityPosts: (communityId: string) => [...feedKeys.posts(), { communityId }] as const,
   userPosts: (userId: string) => [...feedKeys.posts(), { userId }] as const,
   savedPosts: () => [...feedKeys.posts(), 'saved'] as const,
+  archivedPosts: () => [...feedKeys.all, 'archived'] as const,
   post: (id: string) => [...feedKeys.all, 'post', id] as const,
   comments: (postId: string) => [...feedKeys.all, 'comments', postId] as const,
 };
@@ -51,7 +48,6 @@ export function useUserQuery(userId: string) {
     enabled: !!userId && isAuthenticated,
   });
 }
-
 
 function normalizePost(p: any): Post {
   const rawUrls: string[] = p.mediaUrls ?? [];
@@ -91,7 +87,6 @@ function normalizePost(p: any): Post {
   };
 }
 
-// Fetch all feed posts — falls back to trending if personal feed is empty
 export function usePostsQuery() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Post[]>({
@@ -110,7 +105,6 @@ export function usePostsQuery() {
   });
 }
 
-// Fetch a single post
 export function usePostQuery(postId: string) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Post | null, { status?: number; message?: string }>({
@@ -131,7 +125,6 @@ export function usePostQuery(postId: string) {
   });
 }
 
-// Fetch posts within a specific community
 export function useCommunityPostsQuery(communityId: string) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Post[]>({
@@ -145,7 +138,6 @@ export function useCommunityPostsQuery(communityId: string) {
   });
 }
 
-// Fetch posts by a user
 export function useUserPostsQuery(userId: string) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Post[]>({
@@ -158,7 +150,6 @@ export function useUserPostsQuery(userId: string) {
   });
 }
 
-// Fetch saved posts
 export function useSavedPostsQuery() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Post[]>({
@@ -171,7 +162,19 @@ export function useSavedPostsQuery() {
   });
 }
 
-// Create a post
+// Fetch archived posts — only visible to the owner
+export function useArchivedPostsQuery() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery<Post[]>({
+    queryKey: feedKeys.archivedPosts(),
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const res = await apiClient.get<ApiResponse<Post[]>>('/posts/archived');
+      return (res.data.data ?? []).map(normalizePost);
+    },
+  });
+}
+
 export function useCreatePostMutation() {
   const queryClient = useQueryClient();
   return useMutation<Post, Error, { content: string; communityId?: string; mediaType?: string; mediaUrl?: string; videoUrl?: string; videoFileName?: string; mimeType?: string; fileSize?: number; tags?: string[] }>({
@@ -189,18 +192,16 @@ export function useCreatePostMutation() {
       });
       return res.data.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
     },
   });
 }
 
-// Like post mutation
 export function useLikePostMutation() {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (postId) => {
-      // Determine current like state from cache to call the right endpoint
       const allPosts = queryClient.getQueryData<Post[]>(feedKeys.posts());
       const cached = allPosts?.find((p) => p.id === postId)
         ?? queryClient.getQueryData<Post | null>(feedKeys.post(postId));
@@ -248,7 +249,6 @@ export function useLikePostMutation() {
   });
 }
 
-// Bookmark/Save post mutation
 export function useSavePostMutation() {
   const queryClient = useQueryClient();
   return useMutation<Post | null, Error, string>({
@@ -273,7 +273,6 @@ export function useSavePostMutation() {
   });
 }
 
-// Fetch comments for a post
 export function usePostCommentsQuery(postId: string) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Comment[]>({
@@ -281,14 +280,12 @@ export function usePostCommentsQuery(postId: string) {
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<Comment[] | PaginatedResponse<Comment>>>(`/posts/${postId}/comments`);
       const payload = res.data.data;
-      // Handle both paginated { data: [...] } and direct array responses
       return Array.isArray(payload) ? payload : (payload as PaginatedResponse<Comment>).data ?? [];
     },
     enabled: !!postId && isAuthenticated,
   });
 }
 
-// Delete a post
 export function useDeletePostMutation() {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
@@ -296,8 +293,6 @@ export function useDeletePostMutation() {
       await apiClient.delete(`/posts/${postId}`);
     },
     onSuccess: (_data, postId) => {
-      // A post can be visible in the main feed, a profile, a community, or saved posts.
-      // Remove it from every cached post list immediately rather than waiting for a refetch.
       queryClient.getQueriesData<Post[]>({ queryKey: feedKeys.posts() }).forEach(([key, data]) => {
         if (Array.isArray(data)) {
           queryClient.setQueryData<Post[]>(key, data.filter((p) => p.id !== postId));
@@ -309,7 +304,6 @@ export function useDeletePostMutation() {
   });
 }
 
-// Edit a post
 export function useEditPostMutation() {
   const queryClient = useQueryClient();
   return useMutation<Post, Error, { postId: string; content: string }>({
@@ -326,12 +320,12 @@ export function useEditPostMutation() {
   });
 }
 
-// Archive a post by using the backend's soft-delete path.
+// Archive a post — hides from feed, visible only to owner on archived screen
 export function useArchivePostMutation() {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (postId) => {
-      await apiClient.delete(`/posts/${postId}`);
+      await apiClient.post(`/posts/${postId}/archive`);
     },
     onSuccess: (_data, postId) => {
       queryClient.getQueriesData<Post[]>({ queryKey: feedKeys.posts() }).forEach(([key, data]) => {
@@ -340,11 +334,25 @@ export function useArchivePostMutation() {
         }
       });
       queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
+      queryClient.invalidateQueries({ queryKey: feedKeys.archivedPosts() });
     },
   });
 }
 
-// Delete a comment
+// Unarchive a post — restores it back to the feed
+export function useUnarchivePostMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (postId) => {
+      await apiClient.delete(`/posts/${postId}/archive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: feedKeys.archivedPosts() });
+      queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
+    },
+  });
+}
+
 export function useDeleteCommentMutation() {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
@@ -352,7 +360,6 @@ export function useDeleteCommentMutation() {
       await apiClient.delete(`/posts/comments/${commentId}`);
     },
     onSuccess: (_data, commentId) => {
-      // Remove the comment from all cached comment lists
       queryClient.getQueriesData<Comment[]>({ queryKey: [...feedKeys.all, 'comments'] }).forEach(([key, data]) => {
         if (Array.isArray(data)) {
           queryClient.setQueryData<Comment[]>(key, data.filter((c) => c.id !== commentId));
@@ -363,7 +370,6 @@ export function useDeleteCommentMutation() {
   });
 }
 
-// Toggle a comment like
 export function useLikeCommentMutation() {
   const queryClient = useQueryClient();
   return useMutation<
@@ -397,7 +403,6 @@ export function useLikeCommentMutation() {
   });
 }
 
-// Add comment to a post
 export function useAddCommentMutation() {
   const queryClient = useQueryClient();
   return useMutation<Comment, Error, { postId: string; content: string }>({
@@ -422,7 +427,6 @@ export function useAddCommentMutation() {
           updatedAt: new Date().toISOString(),
         };
         queryClient.setQueryData<Comment[]>(feedKeys.comments(postId), (old = []) => [optimistic, ...old]);
-        // Optimistically bump commentsCount on the post
         queryClient.setQueryData<Post[]>(feedKeys.posts(), (old) =>
           old?.map((p) => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p)
         );
@@ -433,7 +437,6 @@ export function useAddCommentMutation() {
       if (ctx?.prevComments) queryClient.setQueryData(feedKeys.comments(postId), ctx.prevComments);
     },
     onSuccess: (data, { postId }) => {
-      // Replace optimistic entry with real server data
       queryClient.setQueryData<Comment[]>(feedKeys.comments(postId), (old = []) =>
         old.map((c) => c.id.startsWith('temp-') ? data : c)
       );

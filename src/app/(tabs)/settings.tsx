@@ -138,6 +138,21 @@ export default function SettingsScreen() {
         ...(isApproved
           ? [
               {
+                id: 'archived-posts',
+                icon: 'archive-outline' as const,
+                iconBgLight: '#FFF8E1',
+                iconBgDark: 'rgba(245, 158, 11, 0.22)',
+                iconColorLight: '#F57F17',
+                iconColorDark: '#FCD34D',
+                label: 'Archived Posts',
+                sub: 'Posts hidden from your feed',
+                route: '/archived-posts',
+              },
+            ]
+          : []),
+        ...(isApproved
+          ? [
+              {
                 id: 'privacy',
                 icon: 'lock-closed-outline' as const,
                 iconBgLight: '#ECFDF5',
