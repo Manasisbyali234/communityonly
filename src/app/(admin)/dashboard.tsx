@@ -103,24 +103,28 @@ export default function AdminDashboard() {
         setLoading(false);
         return;
       }
-      const [statsRes, activityRes, approvalsRes] = await Promise.all([
+      const [statsRes, activityRes, pendingCountsRes, allRes, approvedRes, rejectedRes, suspendedRes] = await Promise.all([
         adminApiClient.get('/admin-panel/dashboard').catch(() => null),
         adminApiClient.get('/admin-panel/recent-activity').catch(() => null),
-        adminApiClient.get('/admin-panel/profile-approvals', { params: { status: 'ALL', take: 100 } }).catch(() => null),
+        adminApiClient.get('/admin-panel/pending-counts').catch(() => null),
+        adminApiClient.get('/admin-panel/profile-approvals', { params: { status: 'ALL',       take: 1 } }).catch(() => null),
+        adminApiClient.get('/admin-panel/profile-approvals', { params: { status: 'APPROVED',  take: 1 } }).catch(() => null),
+        adminApiClient.get('/admin-panel/profile-approvals', { params: { status: 'REJECTED',  take: 1 } }).catch(() => null),
+        adminApiClient.get('/admin-panel/profile-approvals', { params: { status: 'SUSPENDED', take: 1 } }).catch(() => null),
       ]);
+
       if (statsRes?.data?.data) {
         setStats((prev) => ({ ...prev, ...statsRes.data.data }));
       }
-      const approvals = approvalsRes?.data?.data?.users;
-      if (Array.isArray(approvals)) {
-        setApprovalStats({
-          total: approvalsRes?.data?.data?.total ?? approvals.length,
-          pending: approvals.filter((u: any) => u.approvalStatus === 'PENDING' || u.approvalStatus === 'RESUBMITTED').length,
-          approved: approvals.filter((u: any) => u.approvalStatus === 'APPROVED').length,
-          rejected: approvals.filter((u: any) => u.approvalStatus === 'REJECTED').length,
-          suspended: approvals.filter((u: any) => u.approvalStatus === 'SUSPENDED').length,
-        });
-      }
+
+      setApprovalStats({
+        total:     allRes?.data?.data?.total      ?? 0,
+        pending:   pendingCountsRes?.data?.data?.pendingProfiles ?? 0,
+        approved:  approvedRes?.data?.data?.total  ?? 0,
+        rejected:  rejectedRes?.data?.data?.total  ?? 0,
+        suspended: suspendedRes?.data?.data?.total ?? 0,
+      });
+
       if (activityRes?.data?.data && Array.isArray(activityRes.data.data)) {
         setActivity(activityRes.data.data);
       } else setActivity([]);
@@ -131,7 +135,6 @@ export default function AdminDashboard() {
       setRefreshing(false);
     }
   }, []);
-
   useEffect(() => { if (hydrated) load(); }, [hydrated, load]);
 
   const onRefresh = useCallback(() => {
