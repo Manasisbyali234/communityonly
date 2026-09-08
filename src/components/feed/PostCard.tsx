@@ -15,7 +15,7 @@ import { useTheme } from '../../theme';
 import { Post } from '../../types';
 import Avatar from '../common/Avatar';
 import VideoPostPlayer from '../common/VideoPostPlayer';
-import { useLikePostMutation, useSavePostMutation, useDeletePostMutation, useEditPostMutation, useArchivePostMutation } from '../../api/feed';
+import { useLikePostMutation, useSavePostMutation, useDeletePostMutation, useEditPostMutation, useArchivePostMutation, useUnarchivePostMutation } from '../../api/feed';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useAuthStore } from '../../store/authStore';
@@ -41,6 +41,8 @@ interface PostCardProps {
   onForwardPress?: (postId: string) => void;
   /** Set to 0 when the list itself already supplies the standard 16px gutter. */
   horizontalGutter?: number;
+  /** When true, shows Unarchive instead of Archive in the post menu. */
+  isArchived?: boolean;
 }
 
 const LIKE_RED = '#FF3B30';
@@ -100,6 +102,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   onCommentPress,
   onForwardPress,
   horizontalGutter = CARD_H_MARGIN,
+  isArchived = false,
 }) => {
   const { colors, isDark } = useTheme();
   const router = useRouter();
@@ -108,6 +111,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   const deleteMutation = useDeletePostMutation();
   const editMutation = useEditPostMutation();
   const archiveMutation = useArchivePostMutation();
+  const unarchiveMutation = useUnarchivePostMutation();
   const showToast = useToastStore((s) => s.showToast);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const isOwnPost = currentUserId === post.author.id;
@@ -401,25 +405,41 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                     style={styles.dropdownItem}
                     onPress={async () => {
                       setMenuVisible(false);
-                      const ok = await useConfirmStore.getState().confirm({
-                        title: 'Archive this post?',
-                        message: 'The post will be hidden from the feed but not deleted.',
-                        confirmText: 'Archive',
-                        cancelText: 'Cancel',
-                        isDestructive: false,
-                        icon: 'archive-outline',
-                      });
-                      if (!ok) return;
-                      archiveMutation.mutate(post.id, {
-                        onSuccess: () => showToast('Post archived.', 'success'),
-                        onError: () => showToast('Failed to archive post.', 'error'),
-                      });
+                      if (isArchived) {
+                        const ok = await useConfirmStore.getState().confirm({
+                          title: 'Unarchive this post?',
+                          message: 'The post will be visible on your profile and feed again.',
+                          confirmText: 'Unarchive',
+                          cancelText: 'Cancel',
+                          isDestructive: false,
+                          icon: 'archive-outline',
+                        });
+                        if (!ok) return;
+                        unarchiveMutation.mutate(post.id, {
+                          onSuccess: () => showToast('Post restored to feed.', 'success'),
+                          onError: () => showToast('Failed to unarchive post.', 'error'),
+                        });
+                      } else {
+                        const ok = await useConfirmStore.getState().confirm({
+                          title: 'Archive this post?',
+                          message: 'The post will be hidden from the feed but not deleted.',
+                          confirmText: 'Archive',
+                          cancelText: 'Cancel',
+                          isDestructive: false,
+                          icon: 'archive-outline',
+                        });
+                        if (!ok) return;
+                        archiveMutation.mutate(post.id, {
+                          onSuccess: () => showToast('Post archived.', 'success'),
+                          onError: () => showToast('Failed to archive post.', 'error'),
+                        });
+                      }
                     }}
                   >
                     <View style={[styles.dropdownIconBox, { backgroundColor: '#FFF8E1' }]}>
                       <Ionicons name="archive-outline" size={13} color="#F57F17" />
                     </View>
-                    <Text style={[styles.dropdownText, { color: '#F57F17' }]}>Archive Post</Text>
+                    <Text style={[styles.dropdownText, { color: '#F57F17' }]}>{isArchived ? 'Unarchive Post' : 'Archive Post'}</Text>
                   </Pressable>
                   <Pressable
                     disabled={deleteMutation.isPending}

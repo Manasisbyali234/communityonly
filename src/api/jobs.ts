@@ -64,12 +64,17 @@ export interface Employer {
   jobCount: number;
 }
 
+const JOBS_BASE = 'https://community-api.metromindz.com';
+const toAbsUrl = (url?: string) =>
+  url && url.startsWith('/') ? `${JOBS_BASE}${url}` : url;
+
 export function usePublicEmployersQuery() {
   return useQuery({
     queryKey: ['employers-public'],
     queryFn: async () => {
       const res = await apiClient.get('/jobs/employers/public');
-      return (res.data?.data ?? res.data) as Employer[];
+      const data = (res.data?.data ?? res.data) as Employer[];
+      return data.map((e) => ({ ...e, logoUrl: toAbsUrl(e.logoUrl) }));
     },
     staleTime: 5 * 60 * 1000,
   });

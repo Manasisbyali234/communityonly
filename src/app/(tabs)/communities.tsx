@@ -372,39 +372,6 @@ export default function CommunitiesDirectory() {
         </View>
       </View>
 
-      {/* Categories Filter Pills */}
-      <View style={styles.categoriesContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
-          {CATEGORIES.map((category) => {
-            const isSelected = selectedCategory === category;
-            return (
-              <TouchableOpacity
-                key={category}
-                onPress={() => setSelectedCategory(category)}
-                activeOpacity={0.8}
-                style={[
-                  styles.categoryPill,
-                  {
-                    backgroundColor: isSelected ? colors.primary : colors.inputBg,
-                    borderRadius: roundness.xl,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: isSelected ? '#FFFFFF' : colors.textSecondary,
-                    fontSize: typography.sizes.xs,
-                    fontWeight: isSelected ? '700' : '500',
-                  }}
-                >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
       {/* Communities list */}
       {isLoading ? (
         renderSkeletonList()

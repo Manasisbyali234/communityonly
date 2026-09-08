@@ -426,7 +426,7 @@ export default function CreateMatrimonyProfile() {
         <TextInput style={inputStyle} value={form.religion} onChangeText={set('religion')} placeholder="e.g. Hindu" placeholderTextColor={colors.textMuted} />
 
         <FieldLabel label="Caste" colors={colors} />
-        <TextInput style={inputStyle} value={form.caste} onChangeText={set('caste')} placeholder="e.g. Vokkaliga" placeholderTextColor={colors.textMuted} />
+        <TextInput style={inputStyle} value={form.caste} onChangeText={set('caste')} placeholder="e.g. Gowda" placeholderTextColor={colors.textMuted} />
 
         <FieldLabel label="Mother Tongue" colors={colors} />
         <TextInput style={inputStyle} value={form.motherTongue} onChangeText={set('motherTongue')} placeholder="e.g. Kannada" placeholderTextColor={colors.textMuted} />

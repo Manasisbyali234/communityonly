@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCommunitiesQuery, useJoinCommunityMutation } from '../../api/community';
 import { usePostsQuery } from '../../api/feed';
 import { useEventsQuery } from '../../api/event';
-import { useUnreadCountQuery, useUnreadChatCountQuery, useChatSocket, useNotificationSocket, useChatsQuery, useNotificationsQuery } from '../../api/chat';
+import { useUnreadCountQuery, useUnreadChatCountQuery, useChatSocket, useNotificationSocket, useChatsQuery, useNotificationsQuery, useMarkAllReadMutation } from '../../api/chat';
 import { useStoriesFeedQuery, StoryGroup } from '../../api/story';
 import { usePublicStoriesQuery } from '../../api/ourPeople';
 import CommentSheet from '../../components/feed/CommentSheet';
@@ -178,6 +178,7 @@ export default function HomeFeed() {
 
   const reanimatedScrollY = useSharedValue(0);
   const joinCommunityMutation = useJoinCommunityMutation();
+  const markAllRead = useMarkAllReadMutation();
 
   const quickActionBadges = useMemo(() => {
     const unread = notifications.filter((item) => !item.isRead && item.actorId !== user?.id);
@@ -698,7 +699,10 @@ export default function HomeFeed() {
             return (
               <TouchableOpacity
                 key={action.id}
-                onPress={() => router.push(action.route as any)}
+                onPress={() => {
+                  if (actionBadge[action.id] > 0) markAllRead.mutate();
+                  router.push(action.route as any);
+                }}
                 activeOpacity={0.75}
                 style={styles.quickActionItem}
               >

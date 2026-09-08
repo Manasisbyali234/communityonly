@@ -468,7 +468,7 @@ export default function CreateEvent() {
         </TouchableOpacity>
 
         <View style={styles.formContent}>
-          <InputField label="Event Title" value={title} onChangeText={setTitle} placeholder="e.g. Village Festival 2026" colors={colors} />
+          <InputField label="Event Title" value={title} onChangeText={setTitle} placeholder="e.g. Gowda Sangama 2026" colors={colors} />
           <InputField label="Description" value={description} onChangeText={setDescription} placeholder="Describe your event..." multiline colors={colors} />
 
           <View style={styles.row}>
@@ -490,7 +490,7 @@ export default function CreateEvent() {
             </View>
           </View>
 
-          <InputField label="Venue / Location" value={venue} onChangeText={setVenue} placeholder="e.g. Community Hall, Mandya" icon="location-outline" colors={colors} />
+          <InputField label="Venue / Location" value={venue} onChangeText={setVenue} placeholder="e.g. Kodagu Gowda Samaja" icon="location-outline" colors={colors} />
           <InputField label="Category" value={category} onChangeText={setCategory} placeholder="e.g. Cultural, Meeting, Sports" colors={colors} />
 
           {/* Switch row for Volunteers */}

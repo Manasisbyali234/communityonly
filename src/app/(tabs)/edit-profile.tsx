@@ -62,7 +62,7 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const LANGUAGE_SUGGESTIONS = ['Kannada', 'English', 'Kodava', 'Tulu', 'Hindi', 'Tamil'];
+const LANGUAGE_SUGGESTIONS = ['Kannada', 'English', 'Kodava', 'Tulu'];
 const INTEREST_SUGGESTIONS = ['Agriculture', 'Community Service', 'Culture & Arts', 'Sports', 'Business', 'Technology', 'Education'];
 
 export default function EditProfile() {

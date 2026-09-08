@@ -69,6 +69,7 @@ export default function ArchivedPostsScreen() {
               post={post as any}
               onCommentPress={(id) => setCommentPostId(id)}
               horizontalGutter={0}
+              isArchived
             />
             <TouchableOpacity
               style={[styles.unarchiveBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
