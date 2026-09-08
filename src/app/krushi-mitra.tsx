@@ -28,7 +28,6 @@ import Button from '../components/common/Button';
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const SERVICES = [
-  { id: 'tractor',    icon: 'construct-outline',     label: 'Tractor',         color: '#F57F17', bg: '#FFF3E0' },
   { id: 'pesticide',  icon: 'flask-outline',         label: 'Pesticide Calculator',   color: '#00695C', bg: '#E8F5E9' },
   { id: 'price',      icon: 'calculator-outline',    label: 'Price Calculator', color: '#6A1B9A', bg: '#EDE7F6' },
   { id: 'market',     icon: 'trending-up-outline',   label: 'Market Rates',     color: '#C62828', bg: '#FFEBEE' },
