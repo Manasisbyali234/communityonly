@@ -64,9 +64,8 @@ export interface Employer {
   jobCount: number;
 }
 
-const JOBS_BASE = 'https://community-api.metromindz.com';
-const toAbsUrl = (url?: string) =>
-  url && url.startsWith('/') ? `${JOBS_BASE}${url}` : url;
+import { toProxyUrl } from './media';
+const toAbsUrl = toProxyUrl;
 
 export function usePublicEmployersQuery() {
   return useQuery({

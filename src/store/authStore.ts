@@ -4,39 +4,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { User } from '../types';
-import { getApiBaseUrl } from '../api/config';
-
-// Normalise any image URL to use the current BASE host.
-// Handles three cases:
-//   1. Relative path  "/api/v1/..."  → prepend BASE
-//   2. Proxy URL with a different host (stale IP in AsyncStorage) → rewrite host to BASE
-//   3. External URL (https://...) → leave unchanged
-const toAbs = (url?: string | null): string | undefined => {
-  const BASE = getApiBaseUrl().replace('/api/v1', '');
-  if (!url) return undefined;
-  if (url.startsWith('/')) return `${BASE}${url}`;
-  // Rewrite proxy URLs that point to a different host so they always use the current server IP.
-  if (url.includes('/api/v1/media/proxy/')) {
-    try {
-      const parsed = new URL(url);
-      const current = new URL(BASE);
-      if (parsed.host !== current.host) {
-        parsed.host = current.host;
-        parsed.port = current.port;
-        parsed.protocol = current.protocol;
-        return parsed.toString();
-      }
-    } catch (_) {}
-  }
-  return url;
-};
+import { toProxyUrl } from '../api/media';
 
 function normalizeUser(user: User): User {
   return {
     ...user,
-    avatarUrl: toAbs(user.avatarUrl) ?? user.avatarUrl,
-    bannerUrl: toAbs(user.bannerUrl) ?? user.bannerUrl,
-    coverImage: toAbs(user.coverImage) ?? user.coverImage,
+    avatarUrl: toProxyUrl(user.avatarUrl) ?? user.avatarUrl,
+    bannerUrl: toProxyUrl(user.bannerUrl) ?? user.bannerUrl,
+    coverImage: toProxyUrl(user.coverImage) ?? user.coverImage,
   };
 }
 
