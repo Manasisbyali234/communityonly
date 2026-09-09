@@ -1,8 +1,9 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Modal, TextInput, Image, Switch, ActivityIndicator, Platform,
+  Modal, TextInput, Image, Switch, ActivityIndicator, Platform, Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import AdminShell from '../../components/admin/AdminShell';
@@ -49,10 +50,10 @@ export default function AdminCommunityStories() {
     shortDescription: '',
     fullStory: '',
     featuredImage: '',
-    additionalImages: '',
     isFeatured: false,
     status: 'PUBLISHED' as StoryStatus,
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const showToast = useToastStore.getState().showToast;
 
@@ -101,7 +102,6 @@ export default function AdminCommunityStories() {
       shortDescription: '',
       fullStory: '',
       featuredImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1000&q=80',
-      additionalImages: '',
       isFeatured: false,
       status: 'PUBLISHED',
     });
@@ -119,7 +119,6 @@ export default function AdminCommunityStories() {
       shortDescription: story.shortDescription,
       fullStory: story.fullStory,
       featuredImage: story.featuredImage,
-      additionalImages: (story.additionalImages || []).join(', '),
       isFeatured: story.isFeatured,
       status: story.status,
     });
@@ -128,29 +127,22 @@ export default function AdminCommunityStories() {
 
   const handleSaveStory = async () => {
     if (!form.title.trim()) { showToast('Please enter a story title.', 'error'); return; }
-    if (!form.personName.trim()) { showToast('Please enter the person’s name.', 'error'); return; }
+    if (!form.personName.trim()) { showToast('Please enter the person\'s name.', 'error'); return; }
     if (!form.shortDescription.trim()) { showToast('Please enter a short description.', 'error'); return; }
     if (!form.fullStory.trim()) { showToast('Please write the full story.', 'error'); return; }
-    if (!form.featuredImage.trim()) { showToast('Please provide a featured image URL.', 'error'); return; }
-
-    const additionalArr = form.additionalImages
-      ? form.additionalImages.split(',').map((u) => u.trim()).filter(Boolean)
-      : [];
+    if (!form.featuredImage.trim()) { showToast('Please provide a featured image.', 'error'); return; }
 
     try {
       if (editingStory) {
         await updateMutation.mutateAsync({
           id: editingStory.id,
-          data: {
-            ...form,
-            additionalImages: additionalArr,
-          },
+          data: { ...form, additionalImages: [] },
         });
         showToast('Story updated successfully.', 'success');
       } else {
         await createMutation.mutateAsync({
           ...form,
-          additionalImages: additionalArr,
+          additionalImages: [],
           publishedAt: new Date().toISOString(),
         });
         showToast('Story created successfully.', 'success');
@@ -160,6 +152,63 @@ export default function AdminCommunityStories() {
     } catch {
       showToast('Failed to save story.', 'error');
     }
+  };
+
+  const handlePickFeaturedImage = async () => {
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingImage(true);
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          const { adminApiClient } = await import('../../api/adminClient');
+          const res = await adminApiClient.post('/media/upload', formData);
+          const url = res.data?.data?.url ?? res.data?.url;
+          if (url) setForm((p) => ({ ...p, featuredImage: url }));
+        } catch { showToast('Image upload failed', 'error'); }
+        finally { setUploadingImage(false); }
+      };
+      input.click();
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow photo library access.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.85 });
+    if (result.canceled || !result.assets?.[0]) return;
+    setUploadingImage(true);
+    try {
+      const asset = result.assets[0];
+      const formData = new FormData();
+      formData.append('file', { uri: asset.uri, name: asset.fileName ?? 'image.jpg', type: asset.mimeType ?? 'image/jpeg' } as any);
+      const { adminApiClient } = await import('../../api/adminClient');
+      const res = await adminApiClient.post('/media/upload', formData);
+      const url = res.data?.data?.url ?? res.data?.url;
+      if (url) setForm((p) => ({ ...p, featuredImage: url }));
+    } catch { showToast('Image upload failed', 'error'); }
+    finally { setUploadingImage(false); }
+  };
+
+  const handleTakeFeaturedPhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow camera access.'); return; }
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [16, 9], quality: 0.85 });
+    if (result.canceled || !result.assets?.[0]) return;
+    setUploadingImage(true);
+    try {
+      const asset = result.assets[0];
+      const formData = new FormData();
+      formData.append('file', { uri: asset.uri, name: asset.fileName ?? 'photo.jpg', type: asset.mimeType ?? 'image/jpeg' } as any);
+      const { adminApiClient } = await import('../../api/adminClient');
+      const res = await adminApiClient.post('/media/upload', formData);
+      const url = res.data?.data?.url ?? res.data?.url;
+      if (url) setForm((p) => ({ ...p, featuredImage: url }));
+    } catch { showToast('Image upload failed', 'error'); }
+    finally { setUploadingImage(false); }
   };
 
   const handleTogglePublish = async (story: CommunityStory) => {
@@ -582,25 +631,23 @@ export default function AdminCommunityStories() {
                 </View>
 
                 <View style={s.formGroup}>
-                  <Text style={s.formLabel}>Featured Cover Image URL *</Text>
-                  <TextInput
-                    style={s.formInput}
-                    placeholder="https://..."
-                    placeholderTextColor={C.textMuted}
-                    value={form.featuredImage}
-                    onChangeText={(t) => setForm((p) => ({ ...p, featuredImage: t }))}
-                  />
-                </View>
-
-                <View style={s.formGroup}>
-                  <Text style={s.formLabel}>Additional Image URLs (comma-separated)</Text>
-                  <TextInput
-                    style={s.formInput}
-                    placeholder="https://img1.jpg, https://img2.jpg"
-                    placeholderTextColor={C.textMuted}
-                    value={form.additionalImages}
-                    onChangeText={(t) => setForm((p) => ({ ...p, additionalImages: t }))}
-                  />
+                  <Text style={s.formLabel}>Featured Cover Image *</Text>
+                  <View style={s.imageUploadRow}>
+                    <TouchableOpacity style={[s.imageUploadBtn, { backgroundColor: C.accentLight, borderColor: C.accentBorder }]} onPress={handlePickFeaturedImage} disabled={uploadingImage}>
+                      <Feather name="image" size={15} color={C.accent} />
+                      <Text style={[s.imageUploadBtnText, { color: C.accent }]}>Gallery</Text>
+                    </TouchableOpacity>
+                    {Platform.OS !== 'web' && (
+                      <TouchableOpacity style={[s.imageUploadBtn, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]} onPress={handleTakeFeaturedPhoto} disabled={uploadingImage}>
+                        <Feather name="camera" size={15} color="#2563EB" />
+                        <Text style={[s.imageUploadBtnText, { color: '#2563EB' }]}>Camera</Text>
+                      </TouchableOpacity>
+                    )}
+                    {uploadingImage && <ActivityIndicator size="small" color={C.accent} />}
+                  </View>
+                  {form.featuredImage ? (
+                    <Image source={{ uri: form.featuredImage }} style={s.featuredImagePreview} resizeMode="cover" />
+                  ) : null}
                 </View>
 
                 {/* Feature switch */}
@@ -785,4 +832,7 @@ const s = StyleSheet.create({
   modalActionsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   modalBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   modalBtnText: { fontSize: 13, fontWeight: '700' },
+  imageUploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  imageUploadBtnText: { fontSize: 12.5, fontWeight: '700' },
+  featuredImagePreview: { width: '100%', height: 120, borderRadius: 8, marginTop: 4 },
 });

@@ -99,10 +99,15 @@ export default function AdminDashboard() {
     setError('');
     try {
       const token = useAdminStore.getState().token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+        if (!token) {
+          setLoading(false);
+          setStats({
+            totalUsers: 0, activeToday: 0, totalCommunities: 0,
+            totalCommunityPosts: 0, totalFeeds: 0, totalStories: 0,
+            totalComments: 0, totalLikes: 0, totalEvents: 0, totalReports: 0,
+          });
+          return;
+        }
       const [statsRes, activityRes, pendingCountsRes, allRes, approvedRes, rejectedRes, suspendedRes] = await Promise.all([
         adminApiClient.get('/admin-panel/dashboard').catch(() => null),
         adminApiClient.get('/admin-panel/recent-activity').catch(() => null),

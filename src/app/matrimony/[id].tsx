@@ -62,7 +62,7 @@ export default function MatrimonyProfileDetail() {
   const heroRef = useRef<FlatList>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const heroHeight = Math.min(480, Math.round(windowWidth * 1.15));
+  const heroHeight = Math.min(360, Math.round(windowWidth * 0.9));
 
   const G = colors.primary;
   const BG = colors.background;
@@ -187,7 +187,7 @@ export default function MatrimonyProfileDetail() {
       <Animated.View style={[styles.navBar, { paddingTop: insets.top + 6, height: insets.top + 54 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: SURF, opacity: navBgOpacity, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER }]} />
         <TouchableOpacity
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/matrimony' as any)}
+          onPress={() => router.replace('/matrimony' as any)}
           style={styles.floatingNavBtn}
         >
           <Ionicons name="arrow-back" size={22} color={TEXT} />
@@ -840,6 +840,8 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '700',
     textAlign: 'right',
+    flex: 1,
+    flexShrink: 1,
   },
 
   // Hobbies

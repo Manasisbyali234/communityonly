@@ -22,6 +22,8 @@ import { useAdminStore } from '../../store/adminStore';
 import { adminApiClient } from '../../api/adminClient';
 import { getApiBaseUrl } from '../../api/config';
 
+type TabType = 'PENDING' | 'RESUBMITTED' | 'APPROVED' | 'REJECTED' | 'ALL';
+
 const toAbs = (url?: string | null): string | null => {
   if (!url) return null;
   if (url.startsWith('http')) return url;
@@ -742,7 +744,7 @@ const styles = StyleSheet.create({
   cardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
     gap: 8,
     paddingTop: 8,
     borderTopWidth: 1,
@@ -758,6 +760,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CBD5E1',
     backgroundColor: '#FFF',
+    flex: 1,
   },
   viewBtnText: {
     fontSize: 12,

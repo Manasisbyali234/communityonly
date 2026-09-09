@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -20,6 +21,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
 import { useToastStore } from '../../store/toastStore';
+import * as ImagePicker from 'expo-image-picker';
 import { pickImage, PickedImage } from '../../utils/imagePicker';
 import { useUserApprovalStore } from '../../store/userApprovalStore';
 import { useAuthStore } from '../../store/authStore';
@@ -149,14 +151,30 @@ export default function RegisterScreen() {
   const hasUpper = /[A-Z]/.test(passwordVal);
   const hasNumber = /[0-9]/.test(passwordVal);
 
-  const handlePickPhoto = async () => {
+  const [showPhotoSourceSheet, setShowPhotoSourceSheet] = useState(false);
+
+  const handlePickPhoto = () => setShowPhotoSourceSheet(true);
+
+  const handlePickFromGallery = async () => {
+    setShowPhotoSourceSheet(false);
     try {
       const img = await pickImage({ aspect: [1, 1] });
-      if (img) {
-        setProfilePhoto(img.localUri);
-      }
+      if (img) setProfilePhoto(img.localUri);
     } catch {
       showToast('Could not select photo', 'error');
+    }
+  };
+
+  const handlePickFromCamera = async () => {
+    setShowPhotoSourceSheet(false);
+    if (Platform.OS === 'web') { showToast('Camera not supported on web', 'error'); return; }
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') { showToast('Camera permission required', 'error'); return; }
+      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.85 });
+      if (!result.canceled && result.assets?.[0]) setProfilePhoto(result.assets[0].uri);
+    } catch {
+      showToast('Could not open camera', 'error');
     }
   };
 
@@ -666,6 +684,37 @@ export default function RegisterScreen() {
           </View>
         </View>
 
+        {/* Photo Source Sheet */}
+        <Modal visible={showPhotoSourceSheet} transparent animationType="slide" onRequestClose={() => setShowPhotoSourceSheet(false)}>
+          <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowPhotoSourceSheet(false)}>
+            <View style={[styles.sheetContainer, { backgroundColor: C.surface ?? '#FFF' }]}>
+              <View style={[styles.sheetHandle, { backgroundColor: C.border }]} />
+              <Text style={[styles.sheetTitle, { color: C.text }]}>Add Profile Photo</Text>
+              <TouchableOpacity style={[styles.sheetOption, { borderBottomColor: C.border }]} onPress={handlePickFromCamera}>
+                <View style={[styles.sheetIconWrap, { backgroundColor: C.primary + '14' }]}>
+                  <Ionicons name="camera" size={22} color={C.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sheetOptionTitle, { color: C.text }]}>Take Photo</Text>
+                  <Text style={[styles.sheetOptionSub, { color: C.textMuted }]}>Use your camera</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.sheetOption, { borderBottomColor: C.border }]} onPress={handlePickFromGallery}>
+                <View style={[styles.sheetIconWrap, { backgroundColor: '#3B82F614' }]}>
+                  <Ionicons name="images" size={22} color="#3B82F6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sheetOptionTitle, { color: C.text }]}>Choose from Gallery</Text>
+                  <Text style={[styles.sheetOptionSub, { color: C.textMuted }]}>Pick from your photos</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowPhotoSourceSheet(false)}>
+                <Text style={[styles.sheetCancelText, { color: C.textMuted }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
         {/* Login Link */}
         <View style={styles.loginLinkRow}>
           <Text style={[styles.loginText, { color: C.textMuted }]}>Already have an account? </Text>
@@ -978,4 +1027,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheetContainer: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingBottom: 36, paddingTop: 12 },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  sheetTitle: { fontSize: 16, fontWeight: '800', marginBottom: 16, textAlign: 'center' },
+  sheetOption: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, borderBottomWidth: 1 },
+  sheetIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  sheetOptionTitle: { fontSize: 15, fontWeight: '700' },
+  sheetOptionSub: { fontSize: 12, marginTop: 2 },
+  sheetCancel: { marginTop: 12, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  sheetCancelText: { fontSize: 15, fontWeight: '600' },
 });

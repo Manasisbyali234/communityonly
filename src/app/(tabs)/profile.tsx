@@ -22,7 +22,7 @@ import ForwardSheet from '../../components/feed/ForwardSheet';
 import { useTheme } from '../../theme';
 import { useToastStore } from '../../store/toastStore';
 import { useUserPostsQuery } from '../../api/feed';
-import { useNotificationsQuery, useUnreadCountQuery, useUnreadChatCountQuery, useChatSocket, useNotificationSocket, useChatsQuery } from '../../api/chat';
+import { useNotificationsQuery, useUnreadCountQuery, useChatSocket, useNotificationSocket, useChatsQuery } from '../../api/chat';
 import { useAuthStore } from '../../store/authStore';
 import { resolveUserApproval } from '../../store/userApprovalStore';
 import { useEventsQuery, useMyEventsQuery } from '../../api/event';
@@ -37,35 +37,73 @@ import EventParticipantsSheet from '../../components/feed/EventParticipantsSheet
 
 type ProfileTab = 'about' | 'posts' | 'communities' | 'events' | 'family' | 'updates';
 
-const COVER_HEIGHT = 200;
+const COVER_HEIGHT = 220;
 
 const TABS: { id: ProfileTab; label: string; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[] = [
-  { id: 'about', label: 'About', icon: 'person-outline', activeIcon: 'person' },
-  { id: 'posts', label: 'Posts', icon: 'grid-outline', activeIcon: 'grid' },
-  { id: 'communities', label: 'Communities', icon: 'globe-outline', activeIcon: 'globe' },
-  { id: 'events', label: 'Events', icon: 'calendar-outline', activeIcon: 'calendar' },
-  { id: 'family', label: 'Family', icon: 'people-outline', activeIcon: 'people' },
-  { id: 'updates', label: 'Activity', icon: 'sparkles-outline', activeIcon: 'sparkles' },
+  { id: 'about',       label: 'About',       icon: 'person-outline',    activeIcon: 'person' },
+  { id: 'posts',       label: 'Posts',        icon: 'grid-outline',      activeIcon: 'grid' },
+  { id: 'communities', label: 'Communities',  icon: 'globe-outline',     activeIcon: 'globe' },
+  { id: 'events',      label: 'Events',       icon: 'calendar-outline',  activeIcon: 'calendar' },
+  { id: 'family',      label: 'Family',       icon: 'people-outline',    activeIcon: 'people' },
+  { id: 'updates',     label: 'Activity',     icon: 'sparkles-outline',  activeIcon: 'sparkles' },
 ];
 
+// ── Info Row ──────────────────────────────────────────────────────────────────
+function InfoRow({ icon, label, value, color, isLast }: { icon: string; label: string; value?: string | null; color: string; isLast?: boolean }) {
+  const { colors, isDark } = useTheme();
+  if (!value) return null;
+  return (
+    <View style={[s.infoRow, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+      <View style={[s.infoRowIcon, { backgroundColor: color + '15' }]}>
+        <Ionicons name={icon as any} size={14} color={color} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[s.infoRowLabel, { color: colors.textMuted }]}>{label}</Text>
+        <Text style={[s.infoRowValue, { color: colors.text }]}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Section Card ─────────────────────────────────────────────────────────────
+function SectionCard({ title, icon, color, action, actionLabel, children }: {
+  title: string; icon: string; color: string;
+  action?: () => void; actionLabel?: string; children: React.ReactNode;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={[s.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={s.sectionCardHeader}>
+        <View style={[s.sectionCardIconWrap, { backgroundColor: color + '15' }]}>
+          <Ionicons name={icon as any} size={15} color={color} />
+        </View>
+        <Text style={[s.sectionCardTitle, { color: colors.text }]}>{title}</Text>
+        {action && actionLabel && (
+          <TouchableOpacity onPress={action} style={[s.sectionCardAction, { backgroundColor: color + '12' }]}>
+            <Text style={[s.sectionCardActionText, { color }]}>{actionLabel}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+// ── Updates Tab ───────────────────────────────────────────────────────────────
 function UpdatesTab() {
   const { colors, isDark } = useTheme();
   const { data: notifications = [], isLoading } = useNotificationsQuery();
-  const SURF = colors.surface;
-  const BORDER = colors.border;
-  const TEXT = colors.text;
-  const TEXT3 = colors.textMuted;
   const G = colors.primary;
 
   const getIcon = (type: string): { icon: keyof typeof Ionicons.glyphMap; color: string } => {
     switch (type) {
-      case 'LIKE': return { icon: 'heart', color: '#EF4444' };
-      case 'COMMENT': return { icon: 'chatbubble', color: '#3B82F6' };
-      case 'FOLLOW': return { icon: 'person-add', color: G };
-      case 'COMMUNITY_JOIN': return { icon: 'people', color: G };
-      case 'EVENT_REMINDER': return { icon: 'calendar', color: '#F59E0B' };
-      case 'MENTION': return { icon: 'at', color: '#8B5CF6' };
-      default: return { icon: 'notifications', color: G };
+      case 'LIKE':           return { icon: 'heart',         color: '#EF4444' };
+      case 'COMMENT':        return { icon: 'chatbubble',    color: '#3B82F6' };
+      case 'FOLLOW':         return { icon: 'person-add',    color: G };
+      case 'COMMUNITY_JOIN': return { icon: 'people',        color: G };
+      case 'EVENT_REMINDER': return { icon: 'calendar',      color: '#F59E0B' };
+      case 'MENTION':        return { icon: 'at',            color: '#8B5CF6' };
+      default:               return { icon: 'notifications', color: G };
     }
   };
 
@@ -79,64 +117,50 @@ function UpdatesTab() {
   };
 
   return (
-    <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-      <View style={styles.cardHeaderTitleRow}>
-        <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
-          <Ionicons name="sparkles" size={15} color={G} />
-        </View>
-        <Text style={[styles.cardSectionHeader, { color: TEXT }]}>Recent Activity</Text>
-      </View>
-
+    <SectionCard title="Recent Activity" icon="sparkles" color={G}>
       {isLoading && (
-        <Text style={{ color: TEXT3, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Loading activity...</Text>
+        <Text style={{ color: colors.textMuted, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Loading activity...</Text>
       )}
       {!isLoading && notifications.length === 0 && (
-        <View style={styles.emptyStateContainer}>
-          <View style={[styles.emptyIconCircle, { backgroundColor: G + '10' }]}>
-            <Ionicons name="notifications-off-outline" size={28} color={G} />
+        <View style={s.emptyState}>
+          <View style={[s.emptyIconCircle, { backgroundColor: G + '12' }]}>
+            <Ionicons name="notifications-off-outline" size={26} color={G} />
           </View>
-          <Text style={[styles.emptyTitle, { color: TEXT, fontSize: 15, marginTop: 8 }]}>No Activity Yet</Text>
-          <Text style={{ color: TEXT3, textAlign: 'center', fontSize: 12.5, marginTop: 4 }}>
-            Community interactions and notifications will appear here.
-          </Text>
+          <Text style={[s.emptyTitle, { color: colors.text }]}>No Activity Yet</Text>
+          <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>Community interactions will appear here.</Text>
         </View>
       )}
       {notifications.map((n, i) => {
         const { icon, color } = getIcon(n.type);
         return (
-          <View
-            key={n.id}
-            style={[
-              styles.modernUpdateRow,
-              { borderBottomColor: BORDER, borderBottomWidth: i < notifications.length - 1 ? StyleSheet.hairlineWidth : 0 },
-            ]}
-          >
-            <View style={[styles.updateIconRing, { backgroundColor: color + '14' }]}>
-              <Ionicons name={icon} size={16} color={color} />
+          <View key={n.id} style={[s.activityRow, i < notifications.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+            <View style={[s.activityIconRing, { backgroundColor: color + '15' }]}>
+              <Ionicons name={icon} size={15} color={color} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.updateText, { color: TEXT }]}>{n.body || n.type}</Text>
-              <Text style={[styles.updateTime, { color: TEXT3 }]}>{formatTime(n.createdAt)}</Text>
+              <Text style={[s.activityText, { color: colors.text }]}>{n.body || n.type}</Text>
+              <Text style={[s.activityTime, { color: colors.textMuted }]}>{formatTime(n.createdAt)}</Text>
             </View>
           </View>
         );
       })}
-    </View>
+    </SectionCard>
   );
 }
 
+// ── Family Tab ────────────────────────────────────────────────────────────────
 function FamilyTab({ familyName, userId }: { familyName?: string; userId?: string }) {
-  const { colors: C, isDark } = useTheme();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const showToast = useToastStore((s) => s.showToast);
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const G = colors.primary;
 
   useEffect(() => {
     if (!familyName) return;
     setLoading(true);
-    apiClient
-      .get('/users', { params: { familyName, limit: 50 } })
+    apiClient.get('/users', { params: { familyName, limit: 50 } })
       .then((res) => {
         const data = res.data?.data ?? res.data ?? [];
         setMembers(Array.isArray(data) ? data.filter((m: any) => m.id !== userId) : []);
@@ -151,103 +175,75 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
     showToast(ok ? 'Invite link shared!' : 'Could not send invite', ok ? 'success' : 'error');
   };
 
-  const G = C.primary;
-  const SURF = C.surface;
-  const BORDER = C.border;
-  const TEXT = C.text;
-  const TEXT2 = C.textSecondary;
-  const TEXT3 = C.textMuted;
-
   return (
-    <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-      <View style={styles.cardHeaderWithAction}>
-        <View style={styles.cardHeaderTitleRow}>
-          <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
-            <Ionicons name="people" size={16} color={G} />
-          </View>
-          <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>
-            {familyName ? `${familyName} Family` : 'Family Directory'}
-          </Text>
-          {members.length > 0 && (
-            <View style={[styles.badgeCountPill, { backgroundColor: G + '18' }]}>
-              <Text style={[styles.badgeCountText, { color: G }]}>{members.length}</Text>
-            </View>
-          )}
-        </View>
-        <TouchableOpacity style={[styles.smallEditChip, { backgroundColor: G + '10' }]} onPress={handleInvite}>
-          <Ionicons name="person-add-outline" size={13} color={G} />
-          <Text style={[styles.headerActionLink, { color: G }]}>Invite</Text>
-        </TouchableOpacity>
-      </View>
-
+    <SectionCard
+      title={familyName ? `${familyName} Family` : 'Family Directory'}
+      icon="people"
+      color={G}
+      action={handleInvite}
+      actionLabel="Invite"
+    >
       {!familyName && (
-        <View style={styles.emptyStateContainer}>
-          <View style={[styles.emptyIconCircle, { backgroundColor: G + '10' }]}>
-            <Ionicons name="people-outline" size={28} color={G} />
+        <View style={s.emptyState}>
+          <View style={[s.emptyIconCircle, { backgroundColor: G + '12' }]}>
+            <Ionicons name="people-outline" size={26} color={G} />
           </View>
-          <Text style={[styles.emptyTitle, { color: TEXT, fontSize: 15, marginTop: 8 }]}>No Family Name Set</Text>
-          <Text style={[styles.emptySubtitle, { color: TEXT3, textAlign: 'center', marginTop: 4 }]}>
-            Add your Family / Okka name in your profile to see family members.
-          </Text>
+          <Text style={[s.emptyTitle, { color: colors.text }]}>No Family Name Set</Text>
+          <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>Add your Family / Okka name to see family members.</Text>
           <Button title="Edit Profile" icon="create-outline" variant="primary" size="sm"
             onPress={() => router.push('/(tabs)/edit-profile' as any)} style={{ marginTop: 12 }} />
         </View>
       )}
-
       {familyName && loading && (
-        <Text style={{ color: TEXT3, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Loading family members...</Text>
+        <Text style={{ color: colors.textMuted, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Loading family members...</Text>
       )}
-
       {familyName && !loading && members.length === 0 && (
-        <View style={styles.emptyStateContainer}>
-          <View style={[styles.emptyIconCircle, { backgroundColor: G + '10' }]}>
-            <Ionicons name="people-outline" size={28} color={G} />
+        <View style={s.emptyState}>
+          <View style={[s.emptyIconCircle, { backgroundColor: G + '12' }]}>
+            <Ionicons name="people-outline" size={26} color={G} />
           </View>
-          <Text style={[styles.emptyTitle, { color: TEXT, fontSize: 15, marginTop: 8 }]}>No Members Found</Text>
-          <Text style={[styles.emptySubtitle, { color: TEXT3, textAlign: 'center', marginTop: 4 }]}>
-            No other community members with the {familyName} family name yet.
-          </Text>
-          <TouchableOpacity style={[styles.smallEditChip, { backgroundColor: G, marginTop: 12, paddingHorizontal: 16, paddingVertical: 8 }]} onPress={handleInvite}>
+          <Text style={[s.emptyTitle, { color: colors.text }]}>No Members Found</Text>
+          <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>No other members with the {familyName} family name yet.</Text>
+          <TouchableOpacity style={[s.inviteBtn, { backgroundColor: G }]} onPress={handleInvite}>
             <Ionicons name="person-add-outline" size={14} color="#FFF" />
-            <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>Invite Family Members</Text>
+            <Text style={s.inviteBtnText}>Invite Family Members</Text>
           </TouchableOpacity>
         </View>
       )}
-
       {familyName && !loading && members.map((member: any, i: number) => (
         <TouchableOpacity
           key={member.id}
-          style={[styles.communityRow, { borderBottomColor: BORDER, borderBottomWidth: i < members.length - 1 ? StyleSheet.hairlineWidth : 0 }]}
+          style={[s.memberRow, i < members.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
           onPress={() => router.push(`/user/${member.id}` as any)}
           activeOpacity={0.7}
         >
-          <Avatar url={member.avatarUrl} name={member.displayName} size={44} />
+          <Avatar url={member.avatarUrl} name={member.displayName} size={42} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.communityRowName, { color: TEXT }]} numberOfLines={1}>{member.displayName}</Text>
-            <Text style={[styles.communityRowMeta, { color: TEXT3 }]} numberOfLines={1}>
+            <Text style={[s.memberName, { color: colors.text }]} numberOfLines={1}>{member.displayName}</Text>
+            <Text style={[s.memberMeta, { color: colors.textMuted }]} numberOfLines={1}>
               {[member.occupation, member.city || member.district].filter(Boolean).join(' · ') || 'Community Member'}
             </Text>
           </View>
-          <View style={[styles.communityRowArrow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)' }]}>
-            <Ionicons name="chevron-forward" size={14} color={TEXT3} />
-          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
       ))}
-    </View>
+    </SectionCard>
   );
 }
 
+// ── Main Profile Screen ───────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width: SW } = useWindowDimensions();
   const { user, updateProfile } = useAuthStore();
-  const { isApproved, status: currentStatus } = resolveUserApproval(user);
+  const { isApproved } = resolveUserApproval(user);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('about');
   const [bioExpanded, setBioExpanded] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
+
   const { data: posts = [], isLoading: postsLoading } = useUserPostsQuery(user?.id || '');
   const { data: unreadCount = 0 } = useUnreadCountQuery();
   const { data: conversations = [] } = useChatsQuery();
@@ -276,13 +272,11 @@ export default function ProfileScreen() {
     : allEvents.filter((e: any) => e.creatorId === user?.id);
 
   const { data: allCommunities = [], isLoading: commsLoading } = useCommunitiesQuery();
-  const myCommunities = useMemo(() => {
-    return allCommunities.filter((c: any) =>
-      c.isJoined ||
-      (user?.id && (c.creatorId === user.id || c.ownerId === user.id)) ||
-      (c.role && c.role !== 'NONE')
-    );
-  }, [allCommunities, user]);
+  const myCommunities = useMemo(() => allCommunities.filter((c: any) =>
+    c.isJoined ||
+    (user?.id && (c.creatorId === user.id || c.ownerId === user.id)) ||
+    (c.role && c.role !== 'NONE')
+  ), [allCommunities, user]);
 
   const [forwardSheetVisible, setForwardSheetVisible] = useState(false);
   const [selectedForwardPostId, setSelectedForwardPostId] = useState<string | null>(null);
@@ -292,30 +286,9 @@ export default function ProfileScreen() {
   const [selectedParticipantEvent, setSelectedParticipantEvent] = useState<{ id: string; title: string; count: number } | null>(null);
   const showToast = useToastStore((state) => state.showToast);
 
-  const handleCommentPress = (postId: string) => {
-    setSelectedPostId(postId);
-    setCommentSheetVisible(true);
-  };
-
-  const handleForwardPress = (postId: string) => {
-    setSelectedForwardPostId(postId);
-    setForwardSheetVisible(true);
-  };
-
   const handleShare = useCallback(async () => {
     const ok = await shareAppLink(user?.displayName || 'A friend', user?.id);
-    showToast(
-      ok ? 'App link copied! Share it to invite friends.' : 'Could not share',
-      ok ? 'success' : 'error'
-    );
-  }, [user, showToast]);
-
-  const handleInviteFamily = useCallback(async () => {
-    const ok = await shareAppLink(user?.displayName || 'A friend', user?.id);
-    showToast(
-      ok ? 'Invite link shared!' : 'Could not send invite',
-      ok ? 'success' : 'error'
-    );
+    showToast(ok ? 'App link copied!' : 'Could not share', ok ? 'success' : 'error');
   }, [user, showToast]);
 
   const G = colors.primary;
@@ -326,141 +299,74 @@ export default function ProfileScreen() {
   const TEXT2 = colors.textSecondary;
   const TEXT3 = colors.textMuted;
 
-  const navBgOpacity = scrollY.interpolate({
-    inputRange: [90, 160],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
+  const coverHeight = SW >= 768 ? 280 : COVER_HEIGHT;
 
-  const navTitleOpacity = scrollY.interpolate({
-    inputRange: [120, 170],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
+  const navBgOpacity = scrollY.interpolate({ inputRange: [coverHeight - 80, coverHeight], outputRange: [0, 1], extrapolate: 'clamp' });
+  const navTitleOpacity = scrollY.interpolate({ inputRange: [coverHeight, coverHeight + 40], outputRange: [0, 1], extrapolate: 'clamp' });
 
   const memberYear = (user?.joinedAt || user?.createdAt)
     ? new Date(user.joinedAt || user.createdAt!).getFullYear().toString()
     : '2026';
   const primaryNativePlace = user?.nativePlace || user?.village;
   const primaryProfession = user?.profession || user?.occupation;
-  const registrationDetails = [
-    { label: 'Family / Okka', value: user?.familyName, icon: 'people-outline', color: G },
-    { label: 'Date of Birth', value: user?.dob, icon: 'calendar-outline', color: '#3B82F6' },
-    { label: 'Gender', value: user?.gender, icon: 'person-outline', color: '#8B5CF6' },
-    { label: 'Phone', value: user?.phone || user?.phoneNumber, icon: 'call-outline', color: '#0EA5E9' },
-    { label: 'Country', value: user?.country, icon: 'flag-outline', color: '#F59E0B' },
-    { label: 'State', value: user?.state, icon: 'map-outline', color: '#16A34A' },
-    { label: 'District', value: user?.district, icon: 'navigate-outline', color: '#EF4444' },
-    { label: 'City', value: user?.city, icon: 'business-outline', color: '#6366F1' },
-    { label: 'Current Location', value: user?.currentLocation, icon: 'location-outline', color: '#0891B2' },
-    { label: 'Company', value: user?.company, icon: 'briefcase-outline', color: '#A855F7' },
-    { label: 'Education', value: user?.education, icon: 'school-outline', color: '#2563EB' },
-  ] as const;
-  const skillTags = user?.skills
-    ? user.skills.split(',').map((skill) => skill.trim()).filter(Boolean)
-    : [];
+  const skillTags = user?.skills ? user.skills.split(',').map((s) => s.trim()).filter(Boolean) : [];
+
+  const connCount = typeof connectionCount === 'number' ? connectionCount : (connectionCount as any)?.count ?? user?.followersCount ?? 0;
 
   return (
-    <View style={[styles.root, { backgroundColor: BG }]}>
-      {/* ── Top Bar Overlay ────────────────────────────────────────────── */}
-      <Animated.View
-        style={[
-          styles.navbar,
-          {
-            paddingTop: insets.top,
-            height: insets.top + 54,
-          },
-        ]}
-      >
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: SURF,
-              opacity: navBgOpacity,
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: BORDER,
-            },
-          ]}
-        />
+    <View style={[s.root, { backgroundColor: BG }]}>
+      {/* ── Floating Nav Bar ─────────────────────────────────────────── */}
+      <Animated.View style={[s.navbar, { paddingTop: insets.top, height: insets.top + 52 }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: SURF, opacity: navBgOpacity, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER }]} />
         <TouchableOpacity
-          onPress={() => {
-            if (!isApproved) {
-              router.replace('/(auth)/approval-status');
-            } else {
-              router.canGoBack() ? router.back() : router.replace('/(tabs)');
-            }
-          }}
-          style={[
-            styles.floatingActionBtn,
-            { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
-          ]}
-          activeOpacity={0.7}
+          onPress={() => isApproved ? (router.canGoBack() ? router.back() : router.replace('/(tabs)')) : router.replace('/(auth)/approval-status')}
+          style={[s.navBtn, { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.92)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)' }]}
         >
           <Ionicons name="arrow-back" size={20} color={TEXT} />
         </TouchableOpacity>
 
-        <Animated.Text style={[styles.navTitle, { color: TEXT, opacity: navTitleOpacity }]} numberOfLines={1}>
+        <Animated.Text style={[s.navTitle, { color: TEXT, opacity: navTitleOpacity }]} numberOfLines={1}>
           {user?.displayName || 'Profile'}
         </Animated.Text>
 
-        <View style={styles.navRight}>
+        <View style={s.navRight}>
           {isApproved && (
             <>
               <TouchableOpacity
-                style={[
-                  styles.floatingActionBtn,
-                  { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
-                ]}
+                style={[s.navBtn, { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.92)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)' }]}
                 onPress={() => router.push('/notifications' as any)}
-                activeOpacity={0.7}
               >
                 <Ionicons name="notifications-outline" size={19} color={TEXT} />
                 {unreadCount > 0 && (
-                  <View style={[styles.bellBadge, { backgroundColor: colors.secondary || '#EF4444' }]}>
-                    <Text style={styles.bellBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                  <View style={[s.navBadge, { backgroundColor: '#EF4444' }]}>
+                    <Text style={s.navBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
                   </View>
                 )}
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[
-                  styles.floatingActionBtn,
-                  { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
-                ]}
+                style={[s.navBtn, { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.92)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)' }]}
                 onPress={() => router.push('/(tabs)/chat' as any)}
-                activeOpacity={0.7}
               >
                 <Ionicons name="chatbubble-ellipses-outline" size={19} color={TEXT} />
                 {unreadChatCount > 0 && (
-                  <View style={[styles.bellBadge, { backgroundColor: '#EF4444' }]}>
-                    <Text style={styles.bellBadgeText}>{unreadChatCount > 99 ? '99+' : unreadChatCount}</Text>
+                  <View style={[s.navBadge, { backgroundColor: '#EF4444' }]}>
+                    <Text style={s.navBadgeText}>{unreadChatCount > 99 ? '99+' : unreadChatCount}</Text>
                   </View>
                 )}
               </TouchableOpacity>
             </>
           )}
-
           {!isApproved && (
             <TouchableOpacity
-              style={[
-                styles.floatingActionBtn,
-                { backgroundColor: isDark ? 'rgba(217, 119, 6, 0.25)' : '#FEF3C7', borderColor: '#F59E0B' },
-              ]}
+              style={[s.navBtn, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}
               onPress={() => router.push('/(auth)/approval-status?from=settings' as any)}
-              activeOpacity={0.7}
             >
               <Ionicons name="shield-checkmark-outline" size={19} color="#D97706" />
             </TouchableOpacity>
           )}
-
           <TouchableOpacity
-            style={[
-              styles.floatingActionBtn,
-              { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
-            ]}
+            style={[s.navBtn, { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.92)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)' }]}
             onPress={() => router.push({ pathname: '/(tabs)/settings', params: { from: 'profile' } } as any)}
-            activeOpacity={0.7}
           >
             <Ionicons name="settings-outline" size={19} color={TEXT} />
           </TouchableOpacity>
@@ -469,246 +375,172 @@ export default function ProfileScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: Math.max(96, insets.bottom + 82) }}
+        contentContainerStyle={{ paddingBottom: Math.max(96, insets.bottom + 80) }}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
       >
-        {/* ── Cover Hero ─────────────────────────────────────────────── */}
-        <View style={[styles.coverContainer, { height: SW >= 768 ? 280 : COVER_HEIGHT }]}>
+        {/* ── Cover ──────────────────────────────────────────────────── */}
+        <View style={{ height: coverHeight, position: 'relative' }}>
           {user?.coverImage || user?.bannerUrl ? (
-            <Image
-              source={{ uri: user.coverImage || user.bannerUrl }}
-              style={styles.coverImage}
-              contentFit="cover"
-              contentPosition="center"
-              transition={200}
-            />
+            <Image source={{ uri: user.coverImage || user.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
           ) : (
             <LinearGradient
-              colors={[colors.primaryLight || '#4A8505', colors.primary, colors.primaryDark || '#1E4A02']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.coverImage}
+              colors={isDark ? ['#0F2D1A', '#1A4A2A', '#0D3320'] : ['#1B5E20', '#2E7D32', '#388E3C']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
             />
           )}
           <LinearGradient
-            colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.45)']}
+            colors={['rgba(0,0,0,0.18)', 'transparent', 'rgba(0,0,0,0.55)']}
             style={StyleSheet.absoluteFill}
           />
+          {/* Cover edit hint */}
+          <TouchableOpacity
+            style={s.coverEditBtn}
+            onPress={() => router.push('/edit-profile' as any)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="camera-outline" size={14} color="#FFF" />
+            <Text style={s.coverEditText}>Edit Cover</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* ── Profile Masthead ─────────────────────────────────────── */}
-        <View style={styles.profileMasthead}>
-          <View style={styles.mastheadTopRow}>
-            {/* Overlapping Avatar */}
-            <View style={[styles.avatarBorderWrapper, { borderColor: BG, backgroundColor: BG }]}>
-              <Avatar url={user?.avatarUrl} name={user?.displayName} size={92} />
+        {/* ── Masthead ───────────────────────────────────────────────── */}
+        <View style={[s.masthead, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
+          {/* Avatar row */}
+          <View style={s.mastheadAvatarRow}>
+            <View style={[s.avatarRing, { borderColor: SURF, backgroundColor: SURF }]}>
+              <Avatar url={user?.avatarUrl} name={user?.displayName} size={96} />
               {user?.isVerified && (
-                <View style={[styles.avatarVerifiedBadge, { backgroundColor: G }]}>
-                  <Ionicons name="checkmark-sharp" size={11} color="#FFF" />
+                <View style={[s.verifiedBadge, { backgroundColor: G }]}>
+                  <Ionicons name="checkmark-sharp" size={10} color="#FFF" />
                 </View>
               )}
             </View>
-
-            {/* Top Action Group */}
-            <View style={styles.topActionGroup}>
-              <Pressable
-                accessibilityLabel="Edit profile"
-                style={({ pressed }) => [
-                  styles.iconUtilityButton,
-                  {
-                    backgroundColor: G,
-                    borderColor: G,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                onPress={() => router.push('/edit-profile' as any)}
-              >
-                <Ionicons name="create-outline" size={17} color="#FFF" />
-              </Pressable>
-
-              <Pressable
-                accessibilityLabel="Share profile"
-                style={({ pressed }) => [
-                  styles.iconUtilityButton,
-                  { borderColor: BORDER, backgroundColor: pressed ? (isDark ? '#27272A' : '#F4F4F5') : SURF },
-                ]}
-                onPress={handleShare}
-              >
-                <Ionicons name="share-social-outline" size={17} color={TEXT} />
-              </Pressable>
-
+            <View style={s.mastheadActions}>
+              <TouchableOpacity style={[s.editBtn, { backgroundColor: G }]} onPress={() => router.push('/edit-profile' as any)} activeOpacity={0.85}>
+                <Ionicons name="create-outline" size={15} color="#FFF" />
+                <Text style={s.editBtnText}>Edit Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.iconBtn, { backgroundColor: SURF, borderColor: BORDER }]} onPress={handleShare} activeOpacity={0.8}>
+                <Ionicons name="share-social-outline" size={17} color={TEXT2} />
+              </TouchableOpacity>
               {isApproved && (
-                <Pressable
-                  accessibilityLabel="Open media gallery"
-                  style={({ pressed }) => [
-                    styles.iconUtilityButton,
-                    { borderColor: BORDER, backgroundColor: pressed ? (isDark ? '#27272A' : '#F4F4F5') : SURF },
-                  ]}
-                  onPress={() => router.push('/(tabs)/media-gallery' as any)}
-                >
-                  <Ionicons name="images-outline" size={17} color={TEXT} />
-                </Pressable>
+                <TouchableOpacity style={[s.iconBtn, { backgroundColor: SURF, borderColor: BORDER }]} onPress={() => router.push('/(tabs)/media-gallery' as any)} activeOpacity={0.8}>
+                  <Ionicons name="images-outline" size={17} color={TEXT2} />
+                </TouchableOpacity>
               )}
             </View>
           </View>
 
-          {/* Identity Info */}
-          <View style={styles.identityBlock}>
-            <View style={styles.nameBadgeRow}>
-              <Text style={[styles.profileName, { color: TEXT }]}>{user?.displayName || 'User'}</Text>
-              {user?.username ? (
-                <Text style={[styles.profileUsername, { color: TEXT3 }]}>@{user.username}</Text>
-              ) : null}
+          {/* Name & identity */}
+          <View style={s.identityBlock}>
+            <View style={s.nameRow}>
+              <Text style={[s.profileName, { color: TEXT }]} numberOfLines={1}>{user?.displayName || 'User'}</Text>
+              {user?.isVerified && (
+                <View style={[s.verifiedChip, { backgroundColor: '#10B98115', borderColor: '#10B98130' }]}>
+                  <Ionicons name="shield-checkmark" size={11} color="#10B981" />
+                  <Text style={[s.verifiedChipText, { color: '#10B981' }]}>Verified</Text>
+                </View>
+              )}
+            </View>
+            {user?.username && (
+              <Text style={[s.username, { color: TEXT3 }]}>@{user.username}</Text>
+            )}
+
+            {/* Profession + location pills */}
+            <View style={s.pillsRow}>
+              {primaryProfession && (
+                <View style={[s.infoPill, { backgroundColor: G + '12', borderColor: G + '22' }]}>
+                  <Ionicons name="briefcase" size={11} color={G} />
+                  <Text style={[s.infoPillText, { color: G }]} numberOfLines={1}>{primaryProfession}</Text>
+                </View>
+              )}
+              {(user?.city || user?.district) && (
+                <View style={[s.infoPill, { backgroundColor: isDark ? '#27272A' : '#F1F5F9', borderColor: BORDER }]}>
+                  <Ionicons name="location-sharp" size={11} color={TEXT3} />
+                  <Text style={[s.infoPillText, { color: TEXT2 }]} numberOfLines={1}>{user?.city || user?.district}</Text>
+                </View>
+              )}
+              {user?.familyName && (
+                <View style={[s.infoPill, { backgroundColor: '#8B5CF612', borderColor: '#8B5CF622' }]}>
+                  <Ionicons name="people" size={11} color="#8B5CF6" />
+                  <Text style={[s.infoPillText, { color: '#8B5CF6' }]} numberOfLines={1}>{user.familyName}</Text>
+                </View>
+              )}
             </View>
 
-            {/* Meta Tags Row */}
-            <View style={styles.metaPillsRow}>
-              {user?.occupation ? (
-                <View style={[styles.badgePill, { backgroundColor: G + '14', borderColor: G + '25' }]}>
-                  <Ionicons name="briefcase" size={12} color={G} />
-                  <Text style={[styles.badgePillText, { color: G }]}>{user.occupation}</Text>
-                </View>
-              ) : null}
-              {user?.village ? (
-                <View style={[styles.badgePill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5', borderColor: BORDER }]}>
-                  <Ionicons name="location-sharp" size={12} color={TEXT2} />
-                  <Text style={[styles.badgePillText, { color: TEXT2 }]}>{user.village}</Text>
-                </View>
-              ) : null}
-              {user?.isVerified ? (
-                <View style={[styles.badgePill, { backgroundColor: '#10B98114', borderColor: '#10B98130' }]}>
-                  <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-                  <Text style={[styles.badgePillText, { color: '#10B981' }]}>Verified</Text>
-                </View>
-              ) : null}
-            </View>
+            {/* Bio */}
+            {(user?.bio) && (
+              <View style={s.bioBlock}>
+                <Text style={[s.bioText, { color: TEXT2 }]} numberOfLines={bioExpanded ? undefined : 2}>
+                  {user.bio}
+                </Text>
+                {user.bio.length > 90 && (
+                  <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
+                    <Text style={[s.bioToggle, { color: G }]}>{bioExpanded ? 'See less' : 'See more'}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
 
-            {/* Approval Status Banner for Pending Users */}
+            {/* Pending banner */}
             {!isApproved && (
               <TouchableOpacity
-                style={[
-                  styles.pendingApprovalBanner,
-                  {
-                    backgroundColor: isDark ? 'rgba(217, 119, 6, 0.18)' : '#FEF3C7',
-                    borderColor: '#F59E0B',
-                  },
-                ]}
+                style={[s.pendingBanner, { backgroundColor: isDark ? 'rgba(217,119,6,0.15)' : '#FFFBEB', borderColor: '#F59E0B' }]}
                 onPress={() => router.push('/(auth)/approval-status?from=settings' as any)}
                 activeOpacity={0.8}
               >
-                <View style={[styles.pendingBannerIcon, { backgroundColor: '#F59E0B' }]}>
-                  <Ionicons name="time" size={16} color="#FFF" />
+                <View style={[s.pendingIcon, { backgroundColor: '#F59E0B' }]}>
+                  <Ionicons name="time" size={14} color="#FFF" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.pendingBannerTitle, { color: isDark ? '#FBBF24' : '#92400E' }]}>
-                    Profile Pending Admin Approval
-                  </Text>
-                  <Text style={[styles.pendingBannerSub, { color: isDark ? '#FDE68A' : '#B45309' }]}>
-                    Community directory, events & connections are restricted. Tap to view status.
-                  </Text>
+                  <Text style={[s.pendingTitle, { color: isDark ? '#FBBF24' : '#92400E' }]}>Pending Admin Approval</Text>
+                  <Text style={[s.pendingSub, { color: isDark ? '#FDE68A' : '#B45309' }]}>Some features are restricted. Tap to view status.</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={isDark ? '#FBBF24' : '#92400E'} />
-              </TouchableOpacity>
-            )}
-
-            {/* Bio Text */}
-            <Text style={[styles.bioText, { color: TEXT2 }]} numberOfLines={bioExpanded ? undefined : 2}>
-              {user?.bio || 'Passionate community member connecting traditions and future growth.'}
-            </Text>
-            {(user?.bio?.length ?? 0) > 85 && (
-              <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
-                <Text style={[styles.expandBioText, { color: G }]}>
-                  {bioExpanded ? 'See less' : 'See more'}
-                </Text>
+                <Ionicons name="chevron-forward" size={14} color={isDark ? '#FBBF24' : '#92400E'} />
               </TouchableOpacity>
             )}
           </View>
 
-          {/* ── Sleek Stats Metrics Bar ───────────────────────────────── */}
-          <View style={[styles.statsCardWrapper, { backgroundColor: SURF, borderColor: BORDER }]}>
+          {/* ── Stats Bar ──────────────────────────────────────────── */}
+          <View style={[s.statsBar, { borderTopColor: BORDER, borderBottomColor: BORDER }]}>
             {[
-              {
-                label: 'Connections',
-                value: (connectionCount ?? user?.followersCount ?? 0).toString(),
-                icon: 'people',
-                color: G,
-                bg: G + '14',
-                onPress: isApproved ? () => router.push('/(tabs)/chat' as any) : undefined,
-              },
-              {
-                label: 'Following',
-                value: (user?.followingCount || 0).toString(),
-                icon: 'person-add',
-                color: '#3B82F6',
-                bg: '#3B82F614',
-                onPress: isApproved ? () => router.push('/(tabs)/explore?tab=members' as any) : undefined,
-              },
-              {
-                label: 'Events',
-                value: myEvents.length.toString(),
-                icon: 'calendar',
-                color: '#0891B2',
-                bg: '#0891B214',
-                onPress: isApproved ? () => setActiveTab('events') : undefined,
-              },
-              {
-                label: 'Member Since',
-                value: memberYear,
-                icon: 'ribbon',
-                color: '#F59E0B',
-                bg: '#F59E0B14',
-                onPress: () => router.push('/edit-profile' as any),
-              },
-            ].map((stat, index, arr) => (
+              { label: 'Connections', value: connCount.toString(),                    icon: 'people',    color: G,         onPress: isApproved ? () => router.push('/(tabs)/chat' as any) : undefined },
+              { label: 'Following',   value: (user?.followingCount || 0).toString(),  icon: 'person-add', color: '#3B82F6', onPress: isApproved ? () => router.push('/(tabs)/explore?tab=members' as any) : undefined },
+              { label: 'Events',      value: myEvents.length.toString(),              icon: 'calendar',  color: '#0891B2', onPress: isApproved ? () => setActiveTab('events') : undefined },
+              { label: 'Since',       value: memberYear,                              icon: 'ribbon',    color: '#F59E0B', onPress: undefined },
+            ].map((stat, i, arr) => (
               <TouchableOpacity
                 key={stat.label}
-                style={[
-                  styles.statBlock,
-                  index < arr.length - 1 && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: BORDER },
-                ]}
+                style={[s.statCell, i < arr.length - 1 && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: BORDER }]}
                 onPress={stat.onPress}
                 disabled={!stat.onPress}
                 activeOpacity={0.7}
               >
-                <View style={styles.statValueRow}>
-                  <View style={[styles.statIconBadge, { backgroundColor: stat.bg }]}>
-                    <Ionicons name={stat.icon as any} size={13} color={stat.color} />
-                  </View>
-                  <Text style={[styles.statValue, { color: TEXT }]}>{stat.value}</Text>
+                <Text style={[s.statValue, { color: TEXT }]}>{stat.value}</Text>
+                <View style={s.statLabelRow}>
+                  <Ionicons name={stat.icon as any} size={10} color={stat.color} />
+                  <Text style={[s.statLabel, { color: TEXT3 }]}>{stat.label}</Text>
                 </View>
-                <Text style={[styles.statLabel, { color: TEXT3 }]}>{stat.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* ── Segmented Pill Tab Bar ────────────────────────────────────────── */}
-        <View style={styles.tabBarSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScroll}>
+        {/* ── Tab Bar ────────────────────────────────────────────────── */}
+        <View style={[s.tabBarWrap, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabBarScroll}>
             {(isApproved ? TABS : TABS.filter((t) => t.id === 'about')).map((tab) => {
               const active = activeTab === tab.id;
               return (
                 <Pressable
                   key={tab.id}
                   onPress={() => setActiveTab(tab.id)}
-                  style={[
-                    styles.tabPill,
-                    active
-                      ? { backgroundColor: 'rgb(45, 106, 45)', borderColor: 'transparent' }
-                      : { backgroundColor: SURF, borderColor: BORDER },
-                  ]}
+                  style={[s.tabItem, active && { borderBottomColor: G, borderBottomWidth: 2.5 }]}
                 >
-                  {active && (
-                    <LinearGradient
-                      colors={['rgb(76, 175, 80)', 'rgb(45, 106, 45)']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={StyleSheet.absoluteFill}
-                    />
-                  )}
-                  <Ionicons name={active ? tab.activeIcon : tab.icon} size={16} color={active ? '#FFF' : TEXT3} />
-                  <Text style={[styles.tabLabel, { color: active ? '#FFF' : TEXT2, fontWeight: active ? '700' : '600' }]}>
+                  <Ionicons name={active ? tab.activeIcon : tab.icon} size={15} color={active ? G : TEXT3} />
+                  <Text style={[s.tabLabel, { color: active ? G : TEXT3, fontWeight: active ? '700' : '500' }]}>
                     {tab.label}
                   </Text>
                 </Pressable>
@@ -717,581 +549,260 @@ export default function ProfileScreen() {
           </ScrollView>
         </View>
 
-        {/* ── Tab Content ─────────────────────────────────────────── */}
-        <View style={styles.contentArea}>
-          {/* 1. ABOUT TAB */}
+        {/* ── Tab Content ────────────────────────────────────────────── */}
+        <View style={s.contentArea}>
+
+          {/* ABOUT TAB */}
           {activeTab === 'about' && (
-            <View style={{ gap: 14 }}>
-              {/* Profile Completeness Nudge (if village or occupation missing) */}
-              {(!user?.village || !user?.occupation) && (
-                <View style={[styles.completionBanner, { backgroundColor: G + '10', borderColor: G + '25' }]}>
-                  <View style={[styles.completionIconCircle, { backgroundColor: G }]}>
-                    <Ionicons name="sparkles" size={16} color="#FFF" />
+            <View style={{ gap: 12 }}>
+              {/* Completion nudge */}
+              {(!primaryNativePlace || !primaryProfession) && (
+                <View style={[s.completionCard, { backgroundColor: G + '0D', borderColor: G + '28' }]}>
+                  <View style={[s.completionIcon, { backgroundColor: G }]}>
+                    <Ionicons name="sparkles" size={14} color="#FFF" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.completionTitle, { color: TEXT }]}>Complete Your Profile</Text>
-                    <Text style={[styles.completionSubtitle, { color: TEXT2 }]}>
-                      Add your native place and profession to connect better with community members.
-                    </Text>
+                    <Text style={[s.completionTitle, { color: TEXT }]}>Complete Your Profile</Text>
+                    <Text style={[s.completionSub, { color: TEXT2 }]}>Add your native place and profession to connect better.</Text>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.completionBtn, { backgroundColor: G }]}
-                    onPress={() => router.push('/(tabs)/edit-profile' as any)}
-                  >
-                    <Text style={styles.completionBtnText}>Add</Text>
+                  <TouchableOpacity style={[s.completionBtn, { backgroundColor: G }]} onPress={() => router.push('/(tabs)/edit-profile' as any)}>
+                    <Text style={s.completionBtnText}>Add</Text>
                   </TouchableOpacity>
                 </View>
               )}
 
-              {/* Card 1: Personal & Roots Bento */}
-              <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-                <View style={styles.cardHeaderWithAction}>
-                  <View style={styles.cardHeaderTitleRow}>
-                    <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
-                      <Ionicons name="person-circle-outline" size={16} color={G} />
-                    </View>
-                    <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>Personal Details</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => router.push('/(tabs)/edit-profile' as any)}
-                    style={[styles.smallEditChip, { backgroundColor: G + '10' }]}
-                  >
-                    <Ionicons name="create-outline" size={13} color={G} />
-                    <Text style={[styles.headerActionLink, { color: G }]}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.twoColumnGrid}>
-                  {/* Native Place */}
-                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
-                    <View style={styles.detailTileHeader}>
-                      <View style={[styles.detailTileIcon, { backgroundColor: G + '14' }]}>
-                        <Ionicons name="location" size={13} color={G} />
-                      </View>
-                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Native Place</Text>
-                    </View>
-                    {primaryNativePlace ? (
-                      <Text style={[styles.detailTileValue, { color: TEXT }]} numberOfLines={1}>{primaryNativePlace}</Text>
-                    ) : (
-                      <TouchableOpacity onPress={() => router.push('/(tabs)/edit-profile' as any)}>
-                        <Text style={[styles.detailActionLink, { color: G, fontSize: 12 }]}>+ Add village</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {/* Profession / Occupation */}
-                  <View style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
-                    <View style={styles.detailTileHeader}>
-                      <View style={[styles.detailTileIcon, { backgroundColor: '#3B82F614' }]}>
-                        <Ionicons name="briefcase" size={13} color="#3B82F6" />
-                      </View>
-                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Profession</Text>
-                    </View>
-                    {primaryProfession ? (
-                      <Text style={[styles.detailTileValue, { color: TEXT }]} numberOfLines={1}>{primaryProfession}</Text>
-                    ) : (
-                      <TouchableOpacity onPress={() => router.push('/(tabs)/edit-profile' as any)}>
-                        <Text style={[styles.detailActionLink, { color: G, fontSize: 12 }]}>+ Add profession</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {/* Languages */}
-                  <View style={[styles.detailTileFull, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
-                    <View style={styles.detailTileHeader}>
-                      <View style={[styles.detailTileIcon, { backgroundColor: '#8B5CF614' }]}>
-                        <Ionicons name="language" size={13} color="#8B5CF6" />
-                      </View>
-                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Languages</Text>
-                    </View>
-                    {user?.languages ? (
-                      <View style={styles.tilePillsWrap}>
-                        {user.languages.split(',').map((lang, idx) => (
-                          <View key={idx} style={[styles.aboutPill, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}>
-                            <Text style={[styles.aboutPillText, { color: TEXT2 }]}>{lang.trim()}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <TouchableOpacity onPress={() => router.push('/(tabs)/edit-profile' as any)}>
-                        <Text style={[styles.detailActionLink, { color: G, fontSize: 12 }]}>+ Add languages</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {/* Interests */}
-                  <View style={[styles.detailTileFull, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
-                    <View style={styles.detailTileHeader}>
-                      <View style={[styles.detailTileIcon, { backgroundColor: '#F59E0B14' }]}>
-                        <Ionicons name="sparkles" size={13} color="#F59E0B" />
-                      </View>
-                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Interests</Text>
-                    </View>
-                    {user?.interests ? (
-                      <View style={styles.tilePillsWrap}>
-                        {user.interests.split(',').map((interest, idx) => (
-                          <View key={idx} style={[styles.aboutPill, { backgroundColor: G + '12' }]}>
-                            <Text style={[styles.aboutPillText, { color: G }]}>{interest.trim()}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <TouchableOpacity onPress={() => router.push('/(tabs)/edit-profile' as any)}>
-                        <Text style={[styles.detailActionLink, { color: G, fontSize: 12 }]}>+ Add interests</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              </View>
-
-              {/* Card 2: Registration Details */}
-              <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-                <View style={styles.cardHeaderWithAction}>
-                  <View style={styles.cardHeaderTitleRow}>
-                    <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
-                      <Ionicons name="clipboard-outline" size={16} color={G} />
-                    </View>
-                    <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>Registration Details</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => router.push('/(tabs)/edit-profile' as any)}
-                    style={[styles.smallEditChip, { backgroundColor: G + '10' }]}
-                  >
-                    <Ionicons name="create-outline" size={13} color={G} />
-                    <Text style={[styles.headerActionLink, { color: G }]}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.twoColumnGrid}>
-                  {registrationDetails.map((detail) => (
-                    <View
-                      key={detail.label}
-                      style={[styles.detailTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}
-                    >
-                      <View style={styles.detailTileHeader}>
-                        <View style={[styles.detailTileIcon, { backgroundColor: detail.color + '14' }]}>
-                          <Ionicons name={detail.icon} size={13} color={detail.color} />
+              {/* Personal Details */}
+              <SectionCard title="Personal Details" icon="person-circle-outline" color={G} action={() => router.push('/(tabs)/edit-profile' as any)} actionLabel="Edit">
+                <InfoRow icon="location" label="Native Place" value={primaryNativePlace} color={G} />
+                <InfoRow icon="briefcase" label="Profession" value={primaryProfession} color="#3B82F6" />
+                <InfoRow icon="business-outline" label="Company" value={user?.company} color="#8B5CF6" />
+                <InfoRow icon="school-outline" label="Education" value={user?.education} color="#0891B2" />
+                <InfoRow icon="calendar-outline" label="Date of Birth" value={user?.dob} color="#F59E0B" />
+                <InfoRow icon="person-outline" label="Gender" value={user?.gender} color="#EC4899" />
+                <InfoRow icon="call-outline" label="Phone" value={user?.phone || user?.phoneNumber} color="#10B981" isLast />
+                {/* Languages */}
+                {user?.languages && (
+                  <View style={[s.pillSection, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER }]}>
+                    <Text style={[s.pillSectionLabel, { color: TEXT3 }]}>Languages</Text>
+                    <View style={s.pillsWrap}>
+                      {user.languages.split(',').map((l, i) => (
+                        <View key={i} style={[s.tag, { backgroundColor: isDark ? '#27272A' : '#F1F5F9' }]}>
+                          <Text style={[s.tagText, { color: TEXT2 }]}>{l.trim()}</Text>
                         </View>
-                        <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>{detail.label}</Text>
-                      </View>
-                      <Text style={[styles.detailTileValue, { color: detail.value ? TEXT : TEXT3 }]} numberOfLines={2}>
-                        {detail.value || 'Not specified'}
-                      </Text>
+                      ))}
                     </View>
+                  </View>
+                )}
+                {/* Interests */}
+                {user?.interests && (
+                  <View style={[s.pillSection, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER }]}>
+                    <Text style={[s.pillSectionLabel, { color: TEXT3 }]}>Interests</Text>
+                    <View style={s.pillsWrap}>
+                      {user.interests.split(',').map((interest, i) => (
+                        <View key={i} style={[s.tag, { backgroundColor: G + '12' }]}>
+                          <Text style={[s.tagText, { color: G }]}>{interest.trim()}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+                {/* Skills */}
+                {skillTags.length > 0 && (
+                  <View style={[s.pillSection, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER }]}>
+                    <Text style={[s.pillSectionLabel, { color: TEXT3 }]}>Skills</Text>
+                    <View style={s.pillsWrap}>
+                      {skillTags.map((skill, i) => (
+                        <View key={i} style={[s.tag, { backgroundColor: '#3B82F612' }]}>
+                          <Text style={[s.tagText, { color: '#3B82F6' }]}>{skill}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </SectionCard>
+
+              {/* Location Details */}
+              <SectionCard title="Location & Roots" icon="map-outline" color="#0891B2" action={() => router.push('/(tabs)/edit-profile' as any)} actionLabel="Edit">
+                <InfoRow icon="flag-outline" label="Country" value={user?.country} color="#F59E0B" />
+                <InfoRow icon="map-outline" label="State" value={user?.state} color="#16A34A" />
+                <InfoRow icon="navigate-outline" label="District" value={user?.district} color="#EF4444" />
+                <InfoRow icon="business-outline" label="City" value={user?.city} color="#6366F1" />
+                <InfoRow icon="home-outline" label="Native Place" value={primaryNativePlace} color="#0891B2" />
+                <InfoRow icon="location-outline" label="Current Location" value={user?.currentLocation} color="#8B5CF6" isLast />
+              </SectionCard>
+
+              {/* Engagement Stats */}
+              <SectionCard title="Community Engagement" icon="stats-chart-outline" color={G}>
+                <View style={s.engagementGrid}>
+                  {[
+                    { label: 'Communities', value: myCommunities.length || user?.communitiesCount || 0, icon: 'globe', color: G, onPress: () => setActiveTab('communities') },
+                    { label: 'Events',       value: myEvents.length,                                     icon: 'calendar', color: '#3B82F6', onPress: () => setActiveTab('events') },
+                    { label: 'Connections',  value: connCount,                                           icon: 'people',   color: '#8B5CF6', onPress: () => router.push('/(tabs)/chat' as any) },
+                    { label: 'Posts',        value: posts.length,                                        icon: 'grid',     color: '#F59E0B', onPress: () => setActiveTab('posts') },
+                  ].map((item) => (
+                    <TouchableOpacity
+                      key={item.label}
+                      style={[s.engagementCard, { backgroundColor: isDark ? '#27272A40' : '#F8FAFC', borderColor: BORDER }]}
+                      onPress={item.onPress}
+                      activeOpacity={0.75}
+                    >
+                      <View style={[s.engagementIconWrap, { backgroundColor: item.color + '15' }]}>
+                        <Ionicons name={item.icon as any} size={18} color={item.color} />
+                      </View>
+                      <Text style={[s.engagementValue, { color: TEXT }]}>{item.value}</Text>
+                      <Text style={[s.engagementLabel, { color: TEXT3 }]}>{item.label}</Text>
+                    </TouchableOpacity>
                   ))}
-
-                  <View style={[styles.detailTileFull, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: BORDER }]}>
-                    <View style={styles.detailTileHeader}>
-                      <View style={[styles.detailTileIcon, { backgroundColor: '#22C55E14' }]}>
-                        <Ionicons name="construct-outline" size={13} color="#16A34A" />
-                      </View>
-                      <Text style={[styles.detailTileLabel, { color: TEXT3 }]} numberOfLines={1}>Skills</Text>
-                    </View>
-                    {skillTags.length > 0 ? (
-                      <View style={styles.tilePillsWrap}>
-                        {skillTags.map((skill, idx) => (
-                          <View key={`${skill}-${idx}`} style={[styles.aboutPill, { backgroundColor: G + '12' }]}>
-                            <Text style={[styles.aboutPillText, { color: G }]}>{skill}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <Text style={[styles.detailTileValue, { color: TEXT3 }]}>Not specified</Text>
-                    )}
-                  </View>
                 </View>
-              </View>
+              </SectionCard>
 
-              {/* Card 3: Community Engagement Matrix */}
-              <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-                <View style={[styles.cardHeaderTitleRow, { marginBottom: 14 }]}>
-                  <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
-                    <Ionicons name="stats-chart-outline" size={16} color={G} />
-                  </View>
-                  <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>Community Engagement</Text>
-                </View>
-
-                <View style={styles.metricsGrid}>
-                  <TouchableOpacity
-                    style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}
-                    onPress={() => setActiveTab('communities')}
-                    activeOpacity={0.7}
-                    accessibilityLabel="View communities"
-                  >
-                    <View style={styles.metricTopRow}>
-                      <View style={[styles.metricIconBg, { backgroundColor: G + '14' }]}>
-                        <Ionicons name="globe" size={13} color={G} />
-                      </View>
-                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{myCommunities.length || user?.communitiesCount || 0}</Text>
-                    </View>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Communities</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}
-                    onPress={() => router.push('/(tabs)/explore?tab=events' as any)}
-                    activeOpacity={0.7}
-                    accessibilityLabel="View events"
-                  >
-                    <View style={styles.metricTopRow}>
-                      <View style={[styles.metricIconBg, { backgroundColor: '#3B82F614' }]}>
-                        <Ionicons name="calendar" size={13} color="#3B82F6" />
-                      </View>
-                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{myEvents.length}</Text>
-                    </View>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Events</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}
-                    onPress={() => router.push('/(tabs)/chat' as any)}
-                    activeOpacity={0.7}
-                    accessibilityLabel="View connections"
-                  >
-                    <View style={styles.metricTopRow}>
-                      <View style={[styles.metricIconBg, { backgroundColor: '#8B5CF614' }]}>
-                        <Ionicons name="people" size={13} color="#8B5CF6" />
-                      </View>
-                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{typeof connectionCount === 'number' ? connectionCount : (connectionCount as any)?.count ?? 0}</Text>
-                    </View>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Connections</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.metricCard, { backgroundColor: isDark ? '#27272A50' : '#F9FAF8', borderColor: BORDER }]}
-                    onPress={() => router.push('/edit-profile' as any)}
-                    activeOpacity={0.7}
-                    accessibilityLabel="Edit profile"
-                  >
-                    <View style={styles.metricTopRow}>
-                      <View style={[styles.metricIconBg, { backgroundColor: '#F59E0B14' }]}>
-                        <Ionicons name="ribbon" size={13} color="#F59E0B" />
-                      </View>
-                      <Text style={[styles.metricValue, { color: TEXT }]} numberOfLines={1}>{memberYear}</Text>
-                    </View>
-                    <Text style={[styles.metricLabel, { color: TEXT3 }]} numberOfLines={1}>Member</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Card 3: Membership & Security */}
-              <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-                <View style={[styles.cardHeaderTitleRow, { marginBottom: 12 }]}>
-                  <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color={G} />
-                  </View>
-                  <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>Membership & Security</Text>
-                </View>
-
-                <View style={[styles.detailItemRow, { borderBottomColor: BORDER, borderBottomWidth: StyleSheet.hairlineWidth }]}>
-                  <View style={[styles.detailIconContainer, { backgroundColor: G + '14' }]}>
-                    <Ionicons name="shield-checkmark" size={16} color={G} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.detailLabel, { color: TEXT3 }]}>Verification Status</Text>
-                    <Text style={[styles.detailValue, { color: G, fontSize: 12.5, fontWeight: '600' }]}>
-                      {user?.isVerified ? '✓ Verified Community Member' : 'Active Community Member'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailItemRow}>
-                  <View style={[styles.detailIconContainer, { backgroundColor: '#6B728014' }]}>
-                    <Ionicons name="at" size={16} color={TEXT3} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.detailLabel, { color: TEXT3 }]}>Account Handle</Text>
-                    <Text style={[styles.detailValue, { color: TEXT }]}>@{user?.username || 'user'}</Text>
-                    <Text style={[styles.detailHint, { color: TEXT3 }]}>Your unique public handle for community mentions and interactions.</Text>
-                  </View>
-                </View>
-              </View>
+              {/* Membership */}
+              <SectionCard title="Membership & Security" icon="shield-checkmark-outline" color={G}>
+                <InfoRow icon="shield-checkmark" label="Verification Status" value={user?.isVerified ? '✓ Verified Community Member' : 'Active Community Member'} color={G} />
+                <InfoRow icon="at" label="Account Handle" value={`@${user?.username || 'user'}`} color={TEXT3} isLast />
+              </SectionCard>
             </View>
           )}
 
-          {/* 2. POSTS TAB */}
+          {/* POSTS TAB */}
           {activeTab === 'posts' && (
             <View style={{ gap: 12 }}>
               {posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post as any}
-                  onCommentPress={handleCommentPress}
-                  onForwardPress={handleForwardPress}
+                <PostCard key={post.id} post={post as any}
+                  onCommentPress={(id) => { setSelectedPostId(id); setCommentSheetVisible(true); }}
+                  onForwardPress={(id) => { setSelectedForwardPostId(id); setForwardSheetVisible(true); }}
                   horizontalGutter={0}
                 />
               ))}
               {postsLoading && (
-                <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER, paddingVertical: 28, alignItems: 'center' }]}>
+                <View style={[s.sectionCard, { backgroundColor: SURF, borderColor: BORDER, paddingVertical: 32, alignItems: 'center' }]}>
                   <Text style={{ color: TEXT3, fontSize: 13 }}>Loading posts...</Text>
                 </View>
               )}
               {posts.length === 0 && !postsLoading && (
-                <View style={[styles.modernCard, styles.emptyCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-                  <View style={[styles.emptyIconCircle, { backgroundColor: G + '12' }]}>
-                    <Ionicons name="document-text-outline" size={30} color={G} />
+                <View style={[s.sectionCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+                  <View style={s.emptyState}>
+                    <View style={[s.emptyIconCircle, { backgroundColor: G + '12' }]}>
+                      <Ionicons name="document-text-outline" size={28} color={G} />
+                    </View>
+                    <Text style={[s.emptyTitle, { color: TEXT }]}>No Posts Yet</Text>
+                    <Text style={[s.emptySubtitle, { color: TEXT3 }]}>Share updates with your community network.</Text>
+                    <Button title="Create Post" icon="add" variant="primary" size="md"
+                      onPress={() => router.push('/create/post' as any)} style={{ marginTop: 12 }} />
                   </View>
-                  <Text style={[styles.emptyTitle, { color: TEXT }]}>No Posts Yet</Text>
-                  <Text style={[styles.emptySubtitle, { color: TEXT3 }]}>
-                    You haven't shared any updates with your community network yet.
-                  </Text>
-                  <Button
-                    title="Create Post"
-                    icon="add"
-                    variant="primary"
-                    size="md"
-                    onPress={() => router.push('/create/post' as any)}
-                    style={{ marginTop: 8 }}
-                  />
                 </View>
               )}
             </View>
           )}
 
-          {/* 3. COMMUNITIES TAB */}
+          {/* COMMUNITIES TAB */}
           {activeTab === 'communities' && (
-            <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-              <View style={styles.cardHeaderWithAction}>
-                <View style={styles.cardHeaderTitleRow}>
-                  <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
-                    <Ionicons name="globe" size={16} color={G} />
-                  </View>
-                  <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>My Communities</Text>
-                  {myCommunities.length > 0 && (
-                    <View style={[styles.badgeCountPill, { backgroundColor: G + '18' }]}>
-                      <Text style={[styles.badgeCountText, { color: G }]}>{myCommunities.length}</Text>
-                    </View>
-                  )}
-                </View>
-                <TouchableOpacity
-                  onPress={() => router.push('/(tabs)/explore?tab=communities' as any)}
-                  style={[styles.smallEditChip, { backgroundColor: G + '10' }]}
-                >
-                  <Ionicons name="compass-outline" size={13} color={G} />
-                  <Text style={[styles.headerActionLink, { color: G }]}>Explore</Text>
-                </TouchableOpacity>
-              </View>
-
-              {commsLoading && (
-                <Text style={{ color: TEXT3, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Loading communities...</Text>
-              )}
-
+            <SectionCard title="My Communities" icon="globe" color={G} action={() => router.push('/(tabs)/explore?tab=communities' as any)} actionLabel="Explore">
+              {commsLoading && <Text style={{ color: TEXT3, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Loading...</Text>}
               {!commsLoading && myCommunities.length === 0 && (
-                <View style={styles.emptyStateContainer}>
-                  <View style={[styles.emptyIconCircle, { backgroundColor: G + '10' }]}>
-                    <Ionicons name="globe-outline" size={28} color={G} />
+                <View style={s.emptyState}>
+                  <View style={[s.emptyIconCircle, { backgroundColor: G + '12' }]}>
+                    <Ionicons name="globe-outline" size={26} color={G} />
                   </View>
-                  <Text style={[styles.emptyTitle, { color: TEXT, fontSize: 15, marginTop: 8 }]}>No Communities Joined Yet</Text>
-                  <Text style={[styles.emptySubtitle, { color: TEXT3, marginTop: 4, textAlign: 'center', paddingHorizontal: 16 }]}>
-                    Join interest groups, professional hubs, or local communities to connect with members.
-                  </Text>
-                  <Button
-                    title="Explore Communities"
-                    icon="compass-outline"
-                    variant="primary"
-                    size="sm"
-                    onPress={() => router.push('/(tabs)/explore?tab=communities' as any)}
-                    style={{ marginTop: 12 }}
-                  />
+                  <Text style={[s.emptyTitle, { color: TEXT }]}>No Communities Joined</Text>
+                  <Text style={[s.emptySubtitle, { color: TEXT3 }]}>Discover and join communities that interest you.</Text>
+                  <Button title="Explore" icon="compass-outline" variant="primary" size="sm"
+                    onPress={() => router.push('/(tabs)/explore?tab=communities' as any)} style={{ marginTop: 12 }} />
                 </View>
               )}
-
               {!commsLoading && myCommunities.map((item: any, i: number) => {
                 const isAdmin = user?.id && (item.creatorId === user.id || item.ownerId === user.id || item.role === 'ADMIN');
                 const isMod = item.role === 'MODERATOR';
+                const roleLabel = isAdmin ? 'Admin' : isMod ? 'Mod' : 'Member';
+                const roleColor = isAdmin ? '#1565C0' : G;
+                const roleBg = isAdmin ? 'rgba(21,101,192,0.1)' : G + '12';
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    style={[
-                      styles.communityRow,
-                      { borderBottomColor: BORDER, borderBottomWidth: i < myCommunities.length - 1 ? StyleSheet.hairlineWidth : 0 },
-                    ]}
+                    style={[s.communityRow, i < myCommunities.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER }]}
                     onPress={() => router.push(`/community/${item.id}` as any)}
                     activeOpacity={0.7}
                   >
                     <Image
-                      source={item.avatarUrl
-                        ? { uri: item.avatarUrl }
-                        : { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || 'C')}&background=e8f5e9&color=16a34a` }
-                      }
-                      style={styles.communityRowAvatar}
+                      source={{ uri: item.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || 'C')}&background=e8f5e9&color=16a34a` }}
+                      style={[s.communityAvatar, { borderColor: BORDER }]}
                       contentFit="cover"
                     />
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={[styles.communityRowName, { color: TEXT }]} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                        {isAdmin ? (
-                          <View style={[styles.roleBadge, { backgroundColor: 'rgba(21, 101, 192, 0.12)', borderColor: 'rgba(21, 101, 192, 0.25)' }]}>
-                            <Text style={[styles.roleBadgeText, { color: '#1565C0' }]}>Admin</Text>
-                          </View>
-                        ) : isMod ? (
-                          <View style={[styles.roleBadge, { backgroundColor: G + '15', borderColor: G + '30' }]}>
-                            <Text style={[styles.roleBadgeText, { color: G }]}>Mod</Text>
-                          </View>
-                        ) : (
-                          <View style={[styles.roleBadge, { backgroundColor: G + '10', borderColor: G + '20' }]}>
-                            <Text style={[styles.roleBadgeText, { color: G }]}>Member</Text>
-                          </View>
-                        )}
+                        <Text style={[s.communityName, { color: TEXT }]} numberOfLines={1}>{item.name}</Text>
+                        <View style={[s.rolePill, { backgroundColor: roleBg }]}>
+                          <Text style={[s.rolePillText, { color: roleColor }]}>{roleLabel}</Text>
+                        </View>
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                        {item.category ? (
-                          <Text style={[styles.communityRowMeta, { color: TEXT3 }]} numberOfLines={1}>
-                            {item.category}
-                          </Text>
-                        ) : null}
-                        <Text style={[styles.communityRowMeta, { color: TEXT3 }]}>
-                          • {((item.membersCount ?? 0) >= 1000 ? ((item.membersCount ?? 0) / 1000).toFixed(1) + 'k' : (item.membersCount ?? 0))} members
-                        </Text>
-                      </View>
+                      <Text style={[s.communityMeta, { color: TEXT3 }]} numberOfLines={1}>
+                        {item.category ? `${item.category} · ` : ''}{(item.membersCount ?? 0).toLocaleString()} members
+                      </Text>
                     </View>
-                    <View style={[styles.communityRowArrow, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)' }]}>
-                      <Ionicons name="chevron-forward" size={14} color={TEXT3} />
-                    </View>
+                    <Ionicons name="chevron-forward" size={15} color={TEXT3} />
                   </TouchableOpacity>
                 );
               })}
-            </View>
+            </SectionCard>
           )}
 
-          {/* 4. EVENTS TAB */}
+          {/* EVENTS TAB */}
           {activeTab === 'events' && (
-            <View style={[styles.modernCard, { backgroundColor: SURF, borderColor: BORDER }]}>
-              <View style={styles.cardHeaderWithAction}>
-                <View style={styles.cardHeaderTitleRow}>
-                  <View style={[styles.sectionHeaderIconBox, { backgroundColor: G + '14' }]}>
-                    <Ionicons name="calendar" size={16} color={G} />
-                  </View>
-                  <Text style={[styles.cardSectionHeader, { color: TEXT, marginBottom: 0 }]}>Events</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => router.push('/create/event' as any)}
-                  style={[styles.smallEditChip, { backgroundColor: G + '10' }]}
-                >
-                  <Ionicons name="add" size={14} color={G} />
-                  <Text style={[styles.headerActionLink, { color: G }]}>New</Text>
-                </TouchableOpacity>
-              </View>
-
+            <SectionCard title="Events" icon="calendar" color={G} action={() => router.push('/create/event' as any)} actionLabel="+ New">
               {myEvents.length === 0 && (
-                <View style={styles.emptyStateContainer}>
-                  <View style={[styles.emptyIconCircle, { backgroundColor: G + '10' }]}>
-                    <Ionicons name="calendar-clear-outline" size={28} color={G} />
+                <View style={s.emptyState}>
+                  <View style={[s.emptyIconCircle, { backgroundColor: G + '12' }]}>
+                    <Ionicons name="calendar-clear-outline" size={26} color={G} />
                   </View>
-                  <Text style={[styles.emptyTitle, { color: TEXT, fontSize: 15, marginTop: 8 }]}>No Events Yet</Text>
-                  <Text style={[styles.emptySubtitle, { color: TEXT3, marginTop: 4 }]}>
-                    Events you host or participate in will be listed here.
-                  </Text>
+                  <Text style={[s.emptyTitle, { color: TEXT }]}>No Events Yet</Text>
+                  <Text style={[s.emptySubtitle, { color: TEXT3 }]}>Events you host or attend will appear here.</Text>
                 </View>
               )}
-
               {myEvents.map((event: any, i: number) => {
                 const isPast = new Date(event.startsAt) < new Date();
                 const dateStr = new Date(event.startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 const timeStr = new Date(event.startsAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 const joinedCount = event.interestedCount ?? event.rsvpCount ?? 0;
-
                 return (
-                  <View
-                    key={event.id}
-                    style={[
-                      styles.eventCardRow,
-                      { borderBottomColor: BORDER, borderBottomWidth: i < myEvents.length - 1 ? StyleSheet.hairlineWidth : 0 },
-                    ]}
-                  >
-                    {/* Date Box */}
-                    <View style={[styles.eventCalendarBox, { backgroundColor: isPast ? (isDark ? '#27272A' : '#F1F5F9') : G + '15' }]}>
-                      <Text style={[styles.eventBoxMonth, { color: isPast ? TEXT3 : G }]}>
+                  <View key={event.id} style={[s.eventRow, i < myEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER }]}>
+                    <View style={[s.eventDateBox, { backgroundColor: isPast ? (isDark ? '#27272A' : '#F1F5F9') : G + '15' }]}>
+                      <Text style={[s.eventMonth, { color: isPast ? TEXT3 : G }]}>
                         {new Date(event.startsAt).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                       </Text>
-                      <Text style={[styles.eventBoxDay, { color: isPast ? TEXT3 : G }]}>
-                        {new Date(event.startsAt).getDate()}
-                      </Text>
+                      <Text style={[s.eventDay, { color: isPast ? TEXT3 : G }]}>{new Date(event.startsAt).getDate()}</Text>
                     </View>
-
-                    {/* Content Area */}
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <Text style={[styles.eventRowTitle, { color: TEXT, flex: 1 }]} numberOfLines={1}>
-                          {event.title}
-                        </Text>
-                        <View
-                          style={[
-                            styles.eventBadge,
-                            { backgroundColor: isPast ? (isDark ? '#27272A' : '#F4F4F5') : (event.status === 'PENDING' ? '#FEF3C7' : G + '18') },
-                          ]}
-                        >
-                          <Text style={[styles.eventBadgeText, { color: isPast ? TEXT3 : (event.status === 'PENDING' ? '#D97706' : G) }]}>
-                            {isPast ? 'Past' : event.status === 'PENDING' ? 'Pending' : 'Upcoming'}
-                          </Text>
+                        <Text style={[s.eventTitle, { color: TEXT, flex: 1 }]} numberOfLines={1}>{event.title}</Text>
+                        <View style={[s.eventStatusPill, { backgroundColor: isPast ? (isDark ? '#27272A' : '#F4F4F5') : G + '18' }]}>
+                          <Text style={[s.eventStatusText, { color: isPast ? TEXT3 : G }]}>{isPast ? 'Past' : 'Upcoming'}</Text>
                         </View>
                       </View>
-
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                        <Ionicons name="time-outline" size={13} color={TEXT3} />
-                        <Text style={[styles.eventRowMeta, { color: TEXT3 }]}>
-                          {dateStr} • {timeStr}
-                        </Text>
-                      </View>
-
-                      {event.location ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
-                          <Ionicons name="location-outline" size={13} color={TEXT3} />
-                          <Text style={[styles.eventRowMeta, { color: TEXT3 }]} numberOfLines={1}>
-                            {event.location}
-                          </Text>
-                        </View>
-                      ) : null}
-
-                      {/* Footer Actions */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 6, flexWrap: 'wrap' }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <TouchableOpacity
-                            style={[styles.joinedCountBadge, { backgroundColor: G + '12', borderColor: G + '25' }]}
-                            activeOpacity={0.7}
-                            onPress={() => {
-                              setSelectedParticipantEvent({ id: event.id, title: event.title, count: joinedCount });
-                              setParticipantsSheetVisible(true);
-                            }}
-                          >
-                            <Ionicons name="people" size={13} color={G} />
-                            <Text style={[styles.joinedCountText, { color: G }]}>
-                              <Text style={{ fontWeight: '800' }}>{joinedCount}</Text> joined
-                            </Text>
-                            <Ionicons name="chevron-forward" size={11} color={G} style={{ opacity: 0.8 }} />
-                          </TouchableOpacity>
-
-                          <View style={[styles.interestCountBadge, { backgroundColor: '#F59E0B12', borderColor: '#F59E0B25' }]}>
-                            <Ionicons name="star" size={12} color="#D97706" />
-                            <Text style={[styles.interestCountText, { color: '#D97706' }]}>
-                              <Text style={{ fontWeight: '800' }}>{event.interestedCount ?? 0}</Text> interested
-                            </Text>
-                          </View>
-                        </View>
-
+                      <Text style={[s.eventMeta, { color: TEXT3 }]}>{dateStr} · {timeStr}</Text>
+                      {event.location && <Text style={[s.eventMeta, { color: TEXT3 }]} numberOfLines={1}>{event.location}</Text>}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                         <TouchableOpacity
-                          onPress={() => router.push(`/events/${event.id}` as any)}
-                          style={styles.viewEventLink}
-                          activeOpacity={0.7}
+                          style={[s.joinedBadge, { backgroundColor: G + '12', borderColor: G + '25' }]}
+                          onPress={() => { setSelectedParticipantEvent({ id: event.id, title: event.title, count: joinedCount }); setParticipantsSheetVisible(true); }}
                         >
-                          <Text style={[styles.viewEventLinkText, { color: G }]}>View →</Text>
+                          <Ionicons name="people" size={12} color={G} />
+                          <Text style={[s.joinedText, { color: G }]}>{joinedCount} joined</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push(`/events/${event.id}` as any)}>
+                          <Text style={[s.viewLink, { color: G }]}>View →</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   </View>
                 );
               })}
-            </View>
+            </SectionCard>
           )}
 
-          {/* 4. FAMILY TAB */}
-          {activeTab === 'family' && (
-            <FamilyTab familyName={user?.familyName} userId={user?.id} />
-          )}
+          {/* FAMILY TAB */}
+          {activeTab === 'family' && <FamilyTab familyName={user?.familyName} userId={user?.id} />}
 
-          {/* 5. UPDATES / ACTIVITY TAB */}
+          {/* UPDATES TAB */}
           {activeTab === 'updates' && <UpdatesTab />}
         </View>
       </ScrollView>
@@ -1301,11 +812,7 @@ export default function ProfileScreen() {
         postId={selectedForwardPostId}
         visible={forwardSheetVisible}
         onClose={() => setForwardSheetVisible(false)}
-        onNativeShare={async () => {
-          try {
-            await Share.share({ message: `Check out this profile update!` });
-          } catch (_) {}
-        }}
+        onNativeShare={async () => { try { await Share.share({ message: 'Check out this profile!' }); } catch (_) {} }}
       />
       <EventParticipantsSheet
         eventId={selectedParticipantEvent?.id || null}
@@ -1318,484 +825,262 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   root: { flex: 1 },
 
-  // Top Nav
+  // Nav
   navbar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    zIndex: 100,
-    justifyContent: 'space-between',
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14,
   },
-  navTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '800',
-    marginHorizontal: 12,
-    letterSpacing: -0.3,
-  },
-  navRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  floatingActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  navBtn: {
+    width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
       android: { elevation: 3 },
     }),
   },
-  bellBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: '#FFF',
+  navTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', marginHorizontal: 10, letterSpacing: -0.2 },
+  navRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  navBadge: {
+    position: 'absolute', top: -2, right: -2,
+    minWidth: 15, height: 15, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3, borderWidth: 1.5, borderColor: '#FFF',
   },
-  bellBadgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
+  navBadgeText: { color: '#FFF', fontSize: 8, fontWeight: '800' },
 
   // Cover
-  coverContainer: { position: 'relative', width: '100%', overflow: 'hidden' },
-  coverImage: { width: '100%', height: '100%' },
+  coverEditBtn: {
+    position: 'absolute', bottom: 12, right: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+  },
+  coverEditText: { color: '#FFF', fontSize: 11.5, fontWeight: '600' },
 
   // Masthead
-  profileMasthead: { paddingHorizontal: 16, marginBottom: 14 },
-  mastheadTopRow: {
+  masthead: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingBottom: 0,
+  },
+  mastheadAvatarRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginTop: -48,
+    justifyContent: 'space-between',
+    marginTop: -50,
     marginBottom: 12,
   },
-  avatarBorderWrapper: {
-    position: 'relative',
-    width: 98,
-    height: 98,
-    borderRadius: 49,
-    borderWidth: 3.5,
-    overflow: 'visible',
+  avatarRing: {
+    width: 104, height: 104, borderRadius: 52,
+    borderWidth: 4, position: 'relative',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 8 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
       android: { elevation: 6 },
     }),
   },
-  avatarVerifiedBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#FFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+  verifiedBadge: {
+    position: 'absolute', bottom: 4, right: 4,
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 2.5, borderColor: '#FFF',
+    alignItems: 'center', justifyContent: 'center',
   },
-  topActionGroup: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  primaryEditBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 36,
-    paddingHorizontal: 16,
-    borderRadius: 18,
+  mastheadActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 4 },
+  editBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 4 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
       android: { elevation: 2 },
     }),
   },
-  primaryEditBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
-  iconUtilityButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
-      android: { elevation: 1 },
-    }),
+  editBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+  iconBtn: {
+    width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
   },
 
   // Identity
-  identityBlock: { marginBottom: 14 },
-  nameBadgeRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 4 },
-  profileName: { fontSize: 22, fontWeight: '800', letterSpacing: -0.4 },
-  profileUsername: { fontSize: 13.5, fontWeight: '500' },
-  metaPillsRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
-  badgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4.5,
-    paddingHorizontal: 9,
-    paddingVertical: 3.5,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
+  identityBlock: { paddingBottom: 16 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  profileName: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5, flexShrink: 1 },
+  verifiedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, borderWidth: 1,
   },
-  badgePillText: { fontSize: 11.5, fontWeight: '600' },
-  bioText: { fontSize: 13.5, lineHeight: 19.5, fontWeight: '400' },
-  expandBioText: { fontSize: 12, fontWeight: '700', marginTop: 3 },
+  verifiedChipText: { fontSize: 10.5, fontWeight: '700' },
+  username: { fontSize: 13.5, fontWeight: '500', marginBottom: 8 },
+  pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  infoPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20, borderWidth: 1,
+  },
+  infoPillText: { fontSize: 11.5, fontWeight: '600', maxWidth: 120 },
+  bioBlock: { marginBottom: 4 },
+  bioText: { fontSize: 13.5, lineHeight: 20, fontWeight: '400' },
+  bioToggle: { fontSize: 12, fontWeight: '700', marginTop: 3 },
+  pendingBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderRadius: 12, padding: 11, marginTop: 10,
+  },
+  pendingIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  pendingTitle: { fontSize: 13, fontWeight: '700' },
+  pendingSub: { fontSize: 11.5, marginTop: 1 },
 
-  // Stats Card
-  statsCardWrapper: {
+  // Stats Bar
+  statsBar: {
     flexDirection: 'row',
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginHorizontal: -16,
     paddingVertical: 12,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
   },
-  statBlock: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 2,
-    paddingHorizontal: 2,
+  statCell: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 2,
   },
-  statValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    marginBottom: 3,
-  },
-  statIconBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  statLabel: {
-    fontSize: 10.5,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
+  statValue: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  statLabel: { fontSize: 10.5, fontWeight: '500' },
 
-  // Segmented Tabs
-  tabBarSection: { marginTop: 6, marginBottom: 16 },
-  tabScroll: { paddingHorizontal: 16, gap: 10 },
-  tabPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 18,
-    paddingVertical: 9.5,
-    borderRadius: 24,
-    borderWidth: 1,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  tabLabel: { fontSize: 13.5 },
-
-  // Cards & Rows
-  contentArea: { paddingHorizontal: 16 },
-  modernCard: {
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 16,
+  // Tab Bar
+  tabBarWrap: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 4 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2 },
       android: { elevation: 1 },
     }),
   },
-  cardHeaderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  sectionHeaderIconBox: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  cardSectionHeader: { fontSize: 14.5, fontWeight: '700', letterSpacing: -0.2 },
-  cardHeaderWithAction: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  smallEditChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+  tabBarScroll: { paddingHorizontal: 4 },
+  tabItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 13,
+    borderBottomWidth: 2.5, borderBottomColor: 'transparent',
   },
-  headerActionLink: { fontSize: 12, fontWeight: '700' },
+  tabLabel: { fontSize: 13 },
 
-  // Details Tab (Two Column Grid)
-  twoColumnGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  detailTile: {
-    width: '48%',
-    flexGrow: 1,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    justifyContent: 'flex-start',
-  },
-  detailTileFull: {
-    width: '100%',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    justifyContent: 'flex-start',
-  },
-  detailTileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-  },
-  detailTileIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailTileLabel: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  detailTileValue: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  tilePillsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 3,
-  },
-  detailItemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
-  detailIconContainer: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  detailLabel: { fontSize: 11.5, fontWeight: '500' },
-  detailValue: { fontSize: 14, fontWeight: '600', marginTop: 1 },
-  detailHint: { fontSize: 11.5, lineHeight: 16, marginTop: 3 },
-  detailActionLink: { fontSize: 12.5, fontWeight: '600', marginTop: 2 },
+  // Content
+  contentArea: { padding: 14, gap: 12 },
 
-  // About Tab Enhancements
-  completionBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 10,
+  // Section Card
+  sectionCard: {
+    borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+      android: { elevation: 1 },
+    }),
   },
-  completionIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+  sectionCardHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.06)',
   },
+  sectionCardIconWrap: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  sectionCardTitle: { flex: 1, fontSize: 14.5, fontWeight: '700', letterSpacing: -0.2 },
+  sectionCardAction: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
+  },
+  sectionCardActionText: { fontSize: 12, fontWeight: '700' },
+
+  // Info Row
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 11,
+  },
+  infoRowIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  infoRowLabel: { fontSize: 11, fontWeight: '500', marginBottom: 1 },
+  infoRowValue: { fontSize: 13.5, fontWeight: '600' },
+
+  // Pill sections inside cards
+  pillSection: { paddingHorizontal: 16, paddingVertical: 12 },
+  pillSectionLabel: { fontSize: 11, fontWeight: '600', marginBottom: 7, textTransform: 'uppercase', letterSpacing: 0.4 },
+  pillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  tagText: { fontSize: 12, fontWeight: '600' },
+
+  // Completion nudge
+  completionCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    padding: 13, borderRadius: 14, borderWidth: 1,
+  },
+  completionIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   completionTitle: { fontSize: 13.5, fontWeight: '700' },
-  completionSubtitle: { fontSize: 11.5, lineHeight: 16, marginTop: 1 },
-  completionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
+  completionSub: { fontSize: 12, marginTop: 1 },
+  completionBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   completionBtnText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
-  aboutPill: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  aboutPillText: { fontSize: 11.5, fontWeight: '600' },
-  metricsGrid: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 6,
-  },
-  metricCard: {
-    flex: 1,
-    paddingVertical: 9,
-    paddingHorizontal: 3,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    marginBottom: 2,
-  },
-  metricIconBg: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricValue: { fontSize: 14.5, fontWeight: '800', letterSpacing: -0.2 },
-  metricLabel: { fontSize: 10, fontWeight: '600', marginTop: 1, textAlign: 'center', lineHeight: 13 },
 
-  // Events Tab
-  eventCardRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 14, gap: 12 },
-  eventCalendarBox: { width: 46, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  eventBoxMonth: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.5 },
-  eventBoxDay: { fontSize: 15, fontWeight: '800', marginTop: -1 },
-  eventRowTitle: { fontSize: 15, fontWeight: '700' },
-  eventRowMeta: { fontSize: 12, fontWeight: '500' },
-  eventBadge: { paddingHorizontal: 8, paddingVertical: 3.5, borderRadius: 6 },
-  eventBadgeText: { fontSize: 10.5, fontWeight: '700' },
-  joinedCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
+  // Engagement grid
+  engagementGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 14,
   },
-  joinedCountText: {
-    fontSize: 11.5,
-    fontWeight: '500',
+  engagementCard: {
+    width: '47%', flexGrow: 1,
+    alignItems: 'center', paddingVertical: 16, paddingHorizontal: 8,
+    borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, gap: 6,
   },
-  viewEventLink: {
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-  },
-  viewEventLinkText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  interestCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  interestCountText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  engagementIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  engagementValue: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
+  engagementLabel: { fontSize: 11.5, fontWeight: '500' },
 
-  // Communities Tab
-  badgeCountPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginLeft: 6,
-  },
-  badgeCountText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
+  // Communities
   communityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
   },
-  communityRowAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#E2E8F0',
-  },
-  communityRowName: {
-    fontSize: 14.5,
-    fontWeight: '700',
-    flexShrink: 1,
-  },
-  communityRowMeta: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  communityRowArrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  roleBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  roleBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  communityAvatar: { width: 44, height: 44, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth },
+  communityName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  communityMeta: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  rolePill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  rolePillText: { fontSize: 10.5, fontWeight: '700' },
 
-  // Updates Tab
-  modernUpdateRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 12, gap: 12 },
-  updateIconRing: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  updateText: { fontSize: 13.5, lineHeight: 18.5, fontWeight: '500' },
-  updateTime: { fontSize: 11.5, marginTop: 2 },
+  // Events
+  eventRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  eventDateBox: { width: 46, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  eventMonth: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  eventDay: { fontSize: 16, fontWeight: '800', marginTop: -1 },
+  eventTitle: { fontSize: 14.5, fontWeight: '700' },
+  eventMeta: { fontSize: 12, fontWeight: '500', marginTop: 3 },
+  eventStatusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  eventStatusText: { fontSize: 10.5, fontWeight: '700' },
+  joinedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth,
+  },
+  joinedText: { fontSize: 11.5, fontWeight: '600' },
+  viewLink: { fontSize: 12.5, fontWeight: '700' },
 
-  // Empty States
-  emptyCard: { alignItems: 'center', paddingVertical: 32, gap: 8 },
-  emptyStateContainer: { alignItems: 'center', paddingVertical: 24 },
-  emptyIconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 16, fontWeight: '700', marginTop: 4 },
+  // Family
+  memberRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  memberName: { fontSize: 14, fontWeight: '700' },
+  memberMeta: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  inviteBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, marginTop: 12,
+  },
+  inviteBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+
+  // Activity
+  activityRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  activityIconRing: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  activityText: { fontSize: 13.5, lineHeight: 18, fontWeight: '500' },
+  activityTime: { fontSize: 11.5, marginTop: 2 },
+
+  // Empty states
+  emptyState: { alignItems: 'center', paddingVertical: 28, paddingHorizontal: 24 },
+  emptyIconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  emptyTitle: { fontSize: 15.5, fontWeight: '700', marginBottom: 4 },
   emptySubtitle: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
-
-  // Pending Approval Banner
-  pendingApprovalBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 12,
-    marginTop: 14,
-    marginBottom: 4,
-  },
-  pendingBannerIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendingBannerTitle: {
-    fontSize: 13.5,
-    fontWeight: '700',
-  },
-  pendingBannerSub: {
-    fontSize: 11.5,
-    marginTop: 1,
-  },
 });
