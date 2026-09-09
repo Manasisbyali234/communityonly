@@ -458,13 +458,15 @@ export default function EventDetailScreen() {
                   size="lg"
                   onPress={handleEdit}
                 />
-                <Button
-                  title="Archive"
-                  icon="archive-outline"
-                  variant="secondary"
-                  size="lg"
-                  onPress={handleArchive}
-                />
+                {from !== 'discover' && (
+                  <Button
+                    title="Archive"
+                    icon="archive-outline"
+                    variant="secondary"
+                    size="lg"
+                    onPress={handleArchive}
+                  />
+                )}
               </View>
             ) : (
               <Button
