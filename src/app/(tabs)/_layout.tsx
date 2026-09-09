@@ -107,23 +107,21 @@ function TabItem({
         style={[
           styles.iconPill,
           focused && {
-            backgroundColor: isDark ? 'rgba(74, 133, 5, 0.22)' : 'rgba(74, 133, 5, 0.12)',
+            backgroundColor: isDark ? colors.primary + '28' : colors.primary + '18',
           },
         ]}
       >
         <Ionicons
           name={(focused ? activeIcon : inactiveIcon) as any}
-          size={20}
+          size={21}
           color={focused ? colors.primary : colors.textMuted}
         />
-
         {!!badgeCount && badgeCount > 0 && (
           <View style={[styles.badge, { backgroundColor: '#EF4444', borderColor: colors.surface }]}>
             <Text style={styles.badgeText}>{badgeCount > 99 ? '99+' : badgeCount}</Text>
           </View>
         )}
       </View>
-
       <Text
         style={[
           styles.tabLabel,
@@ -167,19 +165,19 @@ export default function TabsLayout() {
           tabBarInactiveTintColor: colors.textMuted,
           tabBarStyle: {
             backgroundColor: colors.surface,
-            borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            borderTopColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
             borderTopWidth: StyleSheet.hairlineWidth,
-            height: 58 + tabBarBottomPadding,
+            height: 62 + tabBarBottomPadding,
             paddingBottom: tabBarBottomPadding,
-            paddingTop: 4,
+            paddingTop: 6,
             ...Platform.select({
               ios: {
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: -3 },
-                shadowOpacity: isDark ? 0.25 : 0.05,
-                shadowRadius: 10,
+                shadowOffset: { width: 0, height: -2 },
+                shadowOpacity: isDark ? 0.2 : 0.04,
+                shadowRadius: 12,
               },
-              android: { elevation: 8 },
+              android: { elevation: 10 },
             }),
           },
           tabBarButton: (props) => (

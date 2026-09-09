@@ -279,7 +279,7 @@ export default function EditProfile() {
     if (!ok) return;
 
     try {
-      let avatarUrl: string | undefined = data.avatarUrl || undefined;
+      let avatarUrl: string | undefined = toAbsUrl(data.avatarUrl) || undefined;
       if (pickedImage) {
         const uploaded = await uploadProfilePhoto(pickedImage);
         if (uploaded) {
@@ -372,32 +372,45 @@ export default function EditProfile() {
 
   const currentCoverUri = localCoverUri || (!coverRemoved ? user.coverImage : null);
 
+  // Completion score
+  const fields = [user?.displayName, user?.bio, user?.village, user?.occupation, user?.country, user?.district, user?.city, user?.profession, user?.education, user?.skills];
+  const filled = fields.filter(Boolean).length;
+  const completionPct = Math.round((filled / fields.length) * 100);
+
+  const SECTION_COLORS = {
+    basic: '#2563EB',
+    roots: '#16A34A',
+    professional: '#9333EA',
+    interests: '#EA580C',
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.keyboardView, { backgroundColor: BG }]}
     >
-      {/* ── Top Navbar ──────────────────────────────────────────────── */}
-      <View style={[styles.navbar, { paddingTop: insets.top + 6, backgroundColor: SURF, borderBottomColor: BORDER }]}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.navBtn}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={TEXT} />
+      {/* ── Hero Header ── */}
+      <View style={[styles.navbar, { paddingTop: insets.top + 6, backgroundColor: G }]}>
+        <TouchableOpacity onPress={handleBack} style={styles.navBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <View style={styles.navIconBtn}>
+            <Ionicons name="arrow-back" size={20} color="#FFF" />
+          </View>
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: TEXT }]}>
-          {isRejectedOrPending ? 'Resubmit Profile' : 'Edit Profile'}
-        </Text>
-        <TouchableOpacity
-          onPress={handleSubmit(onSubmit)}
-          disabled={isSubmitting}
-          style={styles.saveHeaderBtn}
-        >
-          <Text style={[styles.saveHeaderBtnText, { color: G }]}>
-            {isRejectedOrPending ? 'Resubmit' : 'Save'}
-          </Text>
+        <View style={styles.navCenter}>
+          <Text style={styles.navTitle}>{isRejectedOrPending ? 'Resubmit Profile' : 'Edit Profile'}</Text>
+          <Text style={styles.navSub}>{completionPct}% complete</Text>
+        </View>
+        <TouchableOpacity onPress={handleSubmit(onSubmit)} disabled={isSubmitting} style={styles.saveHeaderBtn}>
+          <View style={[styles.saveChip, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            <Ionicons name="checkmark" size={15} color="#FFF" />
+            <Text style={styles.saveHeaderBtnText}>{isRejectedOrPending ? 'Resubmit' : 'Save'}</Text>
+          </View>
         </TouchableOpacity>
+      </View>
+
+      {/* Progress bar */}
+      <View style={[styles.progressBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#E8F5E9' }]}>
+        <View style={[styles.progressFill, { width: `${completionPct}%` as any, backgroundColor: G }]} />
       </View>
 
       <ScrollView
@@ -423,58 +436,53 @@ export default function EditProfile() {
 
         {/* ── Cover & Avatar Header Masthead ──────────────────────────── */}
         <View style={styles.mastheadSection}>
-          {/* Cover Container */}
-          <View style={styles.coverBox}>
+          <View style={[styles.coverBox, { backgroundColor: isDark ? "#1a2e1a" : "#E8F5E9" }]}>
             {currentCoverUri ? (
-              <ExpoImage
-                source={{ uri: currentCoverUri }}
-                style={styles.coverImg}
-                contentFit="cover"
-              />
+              <ExpoImage source={{ uri: currentCoverUri }} style={styles.coverImg} contentFit="cover" />
             ) : (
-              <TouchableOpacity onPress={handlePickCover} style={[styles.coverFallback, { backgroundColor: G + '15' }]}>
-                <Ionicons name="image-outline" size={32} color={G} />
-                <Text style={[styles.coverFallbackText, { color: G }]}>Add Cover Photo</Text>
+              <TouchableOpacity onPress={handlePickCover} style={styles.coverFallback}>
+                <View style={[styles.coverFallbackIcon, { backgroundColor: G + "20" }]}>
+                  <Ionicons name="image-outline" size={28} color={G} />
+                </View>
+                <Text style={[styles.coverFallbackText, { color: G }]}>Tap to add cover photo</Text>
               </TouchableOpacity>
             )}
-
-            {/* Action Icons Group (Icon-only) */}
             <View style={styles.coverActionIconsRow}>
-              {currentCoverUri ? (
-                <TouchableOpacity
-                  onPress={handleRemoveCover}
-                  activeOpacity={0.8}
-                  style={[styles.coverIconBtn, { backgroundColor: 'rgba(239, 68, 68, 0.85)' }]}
-                >
-                  <Ionicons name="trash-outline" size={16} color="#FFF" />
+              {currentCoverUri && (
+                <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: "rgba(239,68,68,0.85)" }]}>
+                  <Ionicons name="trash-outline" size={15} color="#FFF" />
                 </TouchableOpacity>
-              ) : null}
-
-              <TouchableOpacity
-                onPress={handlePickCover}
-                activeOpacity={0.8}
-                style={[styles.coverIconBtn, { backgroundColor: 'rgba(0, 0, 0, 0.65)' }]}
-              >
-                <Ionicons name="camera" size={16} color="#FFF" />
+              )}
+              <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: "rgba(0,0,0,0.6)" }]}>
+                <Ionicons name="camera" size={15} color="#FFF" />
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Overlapping Avatar Container */}
           <View style={styles.avatarOverlapContainer}>
-            <TouchableOpacity onPress={() => setShowPhotoOptions(true)} activeOpacity={0.85} style={styles.avatarWrap}>
-              <Avatar
-                url={localAvatarUri ?? user.avatarUrl}
-                name={user.displayName}
-                size={92}
-              />
-              <View style={[styles.avatarCameraBadge, { backgroundColor: G }]}>
-                <Ionicons name="camera" size={15} color="#FFF" />
+            <TouchableOpacity onPress={() => setShowPhotoOptions(true)} activeOpacity={0.85} style={[styles.avatarWrap, { borderColor: BG }]}>
+              <Avatar url={localAvatarUri ?? user.avatarUrl} name={user.displayName} size={96} />
+              <View style={[styles.avatarCameraBadge, { backgroundColor: G, borderColor: BG }]}>
+                <Ionicons name="camera" size={14} color="#FFF" />
               </View>
             </TouchableOpacity>
-            {photoError ? (
-              <Text style={styles.errorBannerText}>{photoError}</Text>
-            ) : null}
+            <Text style={[styles.avatarName, { color: TEXT }]}>{user.displayName}</Text>
+            <Text style={[styles.avatarHandle, { color: TEXT3 }]}>@{user.username || "username"}</Text>
+            {photoError ? <Text style={styles.errorBannerText}>{photoError}</Text> : null}
+          </View>
+          <View style={[styles.completionCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+            <View style={styles.completionRow}>
+              <View style={[styles.completionIconBox, { backgroundColor: G + "15" }]}>
+                <Ionicons name="stats-chart" size={14} color={G} />
+              </View>
+              <Text style={[styles.completionLabel, { color: TEXT }]}>Profile Completion</Text>
+              <Text style={[styles.completionPct, { color: G }]}>{completionPct}%</Text>
+            </View>
+            <View style={[styles.completionTrack, { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#E8F5E9" }]}>
+              <View style={[styles.completionFill, { width: `${completionPct}%` as any, backgroundColor: G }]} />
+            </View>
+            {completionPct < 100 && (
+              <Text style={[styles.completionHint, { color: TEXT3 }]}>Fill in all sections to unlock full community features</Text>
+            )}
           </View>
         </View>
 

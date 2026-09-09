@@ -98,25 +98,25 @@ export const Button: React.FC<ButtonProps> = ({
   switch (variant) {
     case 'primary':
     case 'gradient':
-      bgColor = 'rgb(45, 106, 45)';
+      bgColor = '#3D8B3D';
       textColor = '#FFFFFF';
       break;
 
     case 'secondary':
-      bgColor = isDark ? 'rgba(45, 106, 45, 0.22)' : '#EDF4EC';
-      textColor = isDark ? colors.primaryLight : colors.primary;
+      bgColor = isDark ? 'rgba(76,175,80,0.15)' : '#F0FAF0';
+      textColor = isDark ? '#81C784' : '#2D6A2D';
       break;
 
     case 'outline':
       bgColor = 'transparent';
-      textColor = isDark ? colors.primaryLight : colors.primary;
-      borderColor = isDark ? colors.primaryLight + '50' : colors.primary + '50';
+      textColor = isDark ? '#81C784' : '#3D8B3D';
+      borderColor = isDark ? 'rgba(129,199,132,0.4)' : 'rgba(61,139,61,0.35)';
       borderWidth = 1.2;
       break;
 
     case 'ghost':
       bgColor = 'transparent';
-      textColor = isDark ? colors.primaryLight : colors.primary;
+      textColor = isDark ? '#81C784' : '#3D8B3D';
       break;
 
     case 'destructive':
@@ -130,7 +130,7 @@ export const Button: React.FC<ButtonProps> = ({
       break;
 
     default:
-      bgColor = colors.primary;
+      bgColor = '#3D8B3D';
       textColor = '#FFFFFF';
       break;
   }
@@ -179,7 +179,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {isGradient && !disabled && (
         <LinearGradient
-          colors={['rgb(76, 175, 80)', 'rgb(45, 106, 45)']}
+          colors={['#5CB85C', '#3D8B3D']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[StyleSheet.absoluteFill, { borderRadius: sizeConfig.borderRadius }]}
@@ -232,13 +232,13 @@ const styles = StyleSheet.create({
   primaryShadow: {
     ...Platform.select({
       ios: {
-        shadowColor: '#2D6A2D',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.18,
-        shadowRadius: 5,
+        shadowColor: '#3D8B3D',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.22,
+        shadowRadius: 6,
       },
       android: {
-        elevation: 2,
+        elevation: 3,
       },
     }),
   },

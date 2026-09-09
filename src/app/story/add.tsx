@@ -357,9 +357,6 @@ function DraggableTextOverlay({
       style={[
         s.overlayItem,
         {
-          position: 'absolute',
-          top: 0,
-          left: 0,
           transform: [{ translateX: pan.x }, { translateY: pan.y }],
         },
         isSelected && s.overlayItemSelected,
@@ -472,9 +469,6 @@ function DraggableEmojiOverlay({
       style={[
         s.overlayItem,
         {
-          position: 'absolute',
-          top: 0,
-          left: 0,
           transform: [{ translateX: pan.x }, { translateY: pan.y }],
         },
       ]}
@@ -1040,7 +1034,7 @@ const s = StyleSheet.create({
   uploadProgressFill: { height: '100%', backgroundColor: '#FFF', borderRadius: 2 },
 
   // Overlays
-  overlayItem: { position: 'absolute', zIndex: 15, alignItems: 'center' },
+  overlayItem: { position: 'absolute', top: 0, left: 0, zIndex: 30, alignItems: 'center' },
   overlayItemSelected: {
     paddingHorizontal: 8,
     paddingVertical: 4,

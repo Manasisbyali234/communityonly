@@ -84,7 +84,7 @@ export function useCreateStoryMutation() {
   const queryClient = useQueryClient();
   return useMutation<Story, Error, { mediaUrl: string; mediaType: 'IMAGE' | 'VIDEO' }>({
     mutationFn: async ({ mediaUrl, mediaType }) => {
-      const res = await apiClient.post<ApiResponse<Story>>('/stories', { mediaUrl, mediaType });
+      const res = await apiClient.post<ApiResponse<Story>>('/stories', { mediaUrl: toAbsStory(mediaUrl) || mediaUrl, mediaType });
       return res.data.data;
     },
     onSuccess: () => {
@@ -97,7 +97,10 @@ export function useCreateStoryMutation() {
 export function useUpdateStoryMutation() {
   const queryClient = useQueryClient();
   return useMutation<Story, Error, { id: string; mediaUrl?: string; mediaType?: 'IMAGE' | 'VIDEO' }>({
-    mutationFn: async ({ id, ...payload }) => {
+    mutationFn: async ({ id, mediaUrl, mediaType }) => {
+      const payload: any = {};
+      if (mediaUrl) payload.mediaUrl = toAbsStory(mediaUrl) || mediaUrl;
+      if (mediaType) payload.mediaType = mediaType;
       const res = await apiClient.patch<ApiResponse<Story>>(`/stories/${id}`, payload);
       return res.data.data;
     },

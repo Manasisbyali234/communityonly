@@ -37,7 +37,7 @@ import EventParticipantsSheet from '../../components/feed/EventParticipantsSheet
 
 type ProfileTab = 'about' | 'posts' | 'communities' | 'events' | 'family' | 'updates';
 
-const COVER_HEIGHT = 220;
+const COVER_HEIGHT = 260;
 
 const TABS: { id: ProfileTab; label: string; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'about',       label: 'About',       icon: 'person-outline',    activeIcon: 'person' },
@@ -74,9 +74,9 @@ function SectionCard({ title, icon, color, action, actionLabel, children }: {
   return (
     <View style={[s.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={s.sectionCardHeader}>
-        <View style={[s.sectionCardIconWrap, { backgroundColor: color + '15' }]}>
-          <Ionicons name={icon as any} size={15} color={color} />
-        </View>
+        <LinearGradient colors={[color, color + 'AA']} style={s.sectionCardIconWrap}>
+          <Ionicons name={icon as any} size={15} color="#FFF" />
+        </LinearGradient>
         <Text style={[s.sectionCardTitle, { color: colors.text }]}>{title}</Text>
         {action && actionLabel && (
           <TouchableOpacity onPress={action} style={[s.sectionCardAction, { backgroundColor: color + '12' }]}>
@@ -97,12 +97,12 @@ function UpdatesTab() {
 
   const getIcon = (type: string): { icon: keyof typeof Ionicons.glyphMap; color: string } => {
     switch (type) {
-      case 'LIKE':           return { icon: 'heart',         color: '#EF4444' };
-      case 'COMMENT':        return { icon: 'chatbubble',    color: '#3B82F6' };
+      case 'LIKE':           return { icon: 'heart',         color: colors.error };
+      case 'COMMENT':        return { icon: 'chatbubble',    color: colors.info };
       case 'FOLLOW':         return { icon: 'person-add',    color: G };
       case 'COMMUNITY_JOIN': return { icon: 'people',        color: G };
-      case 'EVENT_REMINDER': return { icon: 'calendar',      color: '#F59E0B' };
-      case 'MENTION':        return { icon: 'at',            color: '#8B5CF6' };
+      case 'EVENT_REMINDER': return { icon: 'calendar',      color: colors.tertiary };
+      case 'MENTION':        return { icon: 'at',            color: colors.heritage };
       default:               return { icon: 'notifications', color: G };
     }
   };
@@ -292,6 +292,12 @@ export default function ProfileScreen() {
   }, [user, showToast]);
 
   const G = colors.primary;
+  const SEC = colors.secondary;
+  const TERT = colors.tertiary;
+  const INFO = colors.info;
+  const SUCCESS = colors.success;
+  const ERR = colors.error;
+  const HERITAGE = colors.heritage;
   const BG = colors.background;
   const SURF = colors.surface;
   const BORDER = colors.border;
@@ -338,7 +344,7 @@ export default function ProfileScreen() {
               >
                 <Ionicons name="notifications-outline" size={19} color={TEXT} />
                 {unreadCount > 0 && (
-                  <View style={[s.navBadge, { backgroundColor: '#EF4444' }]}>
+                  <View style={[s.navBadge, { backgroundColor: ERR }]}>
                     <Text style={s.navBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
                   </View>
                 )}
@@ -349,7 +355,7 @@ export default function ProfileScreen() {
               >
                 <Ionicons name="chatbubble-ellipses-outline" size={19} color={TEXT} />
                 {unreadChatCount > 0 && (
-                  <View style={[s.navBadge, { backgroundColor: '#EF4444' }]}>
+                  <View style={[s.navBadge, { backgroundColor: ERR }]}>
                     <Text style={s.navBadgeText}>{unreadChatCount > 99 ? '99+' : unreadChatCount}</Text>
                   </View>
                 )}
@@ -358,10 +364,10 @@ export default function ProfileScreen() {
           )}
           {!isApproved && (
             <TouchableOpacity
-              style={[s.navBtn, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}
+              style={[s.navBtn, { backgroundColor: colors.tertiaryContainer, borderColor: TERT }]}
               onPress={() => router.push('/(auth)/approval-status?from=settings' as any)}
             >
-              <Ionicons name="shield-checkmark-outline" size={19} color="#D97706" />
+              <Ionicons name="shield-checkmark-outline" size={19} color={colors.tertiaryDark} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -385,13 +391,15 @@ export default function ProfileScreen() {
             <Image source={{ uri: user.coverImage || user.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
           ) : (
             <LinearGradient
-              colors={isDark ? ['#0F2D1A', '#1A4A2A', '#0D3320'] : ['#1B5E20', '#2E7D32', '#388E3C']}
+              colors={isDark
+                ? [colors.primaryDark, colors.primary, colors.forestGreen]
+                : [colors.primaryDark, colors.primary, colors.primaryLight]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
           )}
           <LinearGradient
-            colors={['rgba(0,0,0,0.18)', 'transparent', 'rgba(0,0,0,0.55)']}
+            colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.68)']}
             style={StyleSheet.absoluteFill}
           />
           {/* Cover edit hint */}
@@ -409,16 +417,17 @@ export default function ProfileScreen() {
         <View style={[s.masthead, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
           {/* Avatar row */}
           <View style={s.mastheadAvatarRow}>
-            <View style={[s.avatarRing, { borderColor: SURF, backgroundColor: SURF }]}>
+            <View style={[s.avatarRing, { borderColor: G, backgroundColor: SURF }]}>
               <Avatar url={user?.avatarUrl} name={user?.displayName} size={96} />
               {user?.isVerified && (
-                <View style={[s.verifiedBadge, { backgroundColor: G }]}>
+                <LinearGradient colors={[G, G + 'CC']} style={s.verifiedBadge}>
                   <Ionicons name="checkmark-sharp" size={10} color="#FFF" />
-                </View>
+                </LinearGradient>
               )}
             </View>
             <View style={s.mastheadActions}>
-              <TouchableOpacity style={[s.editBtn, { backgroundColor: G }]} onPress={() => router.push('/edit-profile' as any)} activeOpacity={0.85}>
+              <TouchableOpacity style={[s.editBtn, { overflow: 'hidden' }]} onPress={() => router.push('/edit-profile' as any)} activeOpacity={0.85}>
+                <LinearGradient colors={[G, G + 'CC']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
                 <Ionicons name="create-outline" size={15} color="#FFF" />
                 <Text style={s.editBtnText}>Edit Profile</Text>
               </TouchableOpacity>
@@ -438,9 +447,9 @@ export default function ProfileScreen() {
             <View style={s.nameRow}>
               <Text style={[s.profileName, { color: TEXT }]} numberOfLines={1}>{user?.displayName || 'User'}</Text>
               {user?.isVerified && (
-                <View style={[s.verifiedChip, { backgroundColor: '#10B98115', borderColor: '#10B98130' }]}>
-                  <Ionicons name="shield-checkmark" size={11} color="#10B981" />
-                  <Text style={[s.verifiedChipText, { color: '#10B981' }]}>Verified</Text>
+                <View style={[s.verifiedChip, { backgroundColor: G + '15', borderColor: G + '30' }]}>
+                  <Ionicons name="shield-checkmark" size={11} color={G} />
+                  <Text style={[s.verifiedChipText, { color: G }]}>Verified</Text>
                 </View>
               )}
             </View>
@@ -457,15 +466,15 @@ export default function ProfileScreen() {
                 </View>
               )}
               {(user?.city || user?.district) && (
-                <View style={[s.infoPill, { backgroundColor: isDark ? '#27272A' : '#F1F5F9', borderColor: BORDER }]}>
+                <View style={[s.infoPill, { backgroundColor: BORDER, borderColor: BORDER }]}>
                   <Ionicons name="location-sharp" size={11} color={TEXT3} />
                   <Text style={[s.infoPillText, { color: TEXT2 }]} numberOfLines={1}>{user?.city || user?.district}</Text>
                 </View>
               )}
               {user?.familyName && (
-                <View style={[s.infoPill, { backgroundColor: '#8B5CF612', borderColor: '#8B5CF622' }]}>
-                  <Ionicons name="people" size={11} color="#8B5CF6" />
-                  <Text style={[s.infoPillText, { color: '#8B5CF6' }]} numberOfLines={1}>{user.familyName}</Text>
+                <View style={[s.infoPill, { backgroundColor: colors.primaryDark + '20', borderColor: colors.primaryDark + '40' }]}>
+                  <Ionicons name="people" size={11} color={colors.primaryDark} />
+                  <Text style={[s.infoPillText, { color: colors.primaryDark }]} numberOfLines={1}>{user.familyName}</Text>
                 </View>
               )}
             </View>
@@ -487,18 +496,18 @@ export default function ProfileScreen() {
             {/* Pending banner */}
             {!isApproved && (
               <TouchableOpacity
-                style={[s.pendingBanner, { backgroundColor: isDark ? 'rgba(217,119,6,0.15)' : '#FFFBEB', borderColor: '#F59E0B' }]}
+                style={[s.pendingBanner, { backgroundColor: isDark ? TERT + '25' : colors.tertiaryContainer, borderColor: TERT }]}
                 onPress={() => router.push('/(auth)/approval-status?from=settings' as any)}
                 activeOpacity={0.8}
               >
-                <View style={[s.pendingIcon, { backgroundColor: '#F59E0B' }]}>
-                  <Ionicons name="time" size={14} color="#FFF" />
+                <View style={[s.pendingIcon, { backgroundColor: TERT }]}>
+                  <Ionicons name="time" size={14} color={colors.onTertiary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.pendingTitle, { color: isDark ? '#FBBF24' : '#92400E' }]}>Pending Admin Approval</Text>
-                  <Text style={[s.pendingSub, { color: isDark ? '#FDE68A' : '#B45309' }]}>Some features are restricted. Tap to view status.</Text>
+                  <Text style={[s.pendingTitle, { color: isDark ? colors.tertiary : colors.tertiaryDark }]}>Pending Admin Approval</Text>
+                  <Text style={[s.pendingSub, { color: isDark ? TERT : colors.tertiaryDark }]}>Some features are restricted. Tap to view status.</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={14} color={isDark ? '#FBBF24' : '#92400E'} />
+                <Ionicons name="chevron-forward" size={14} color={isDark ? TERT : colors.tertiaryDark} />
               </TouchableOpacity>
             )}
           </View>
@@ -506,10 +515,10 @@ export default function ProfileScreen() {
           {/* ── Stats Bar ──────────────────────────────────────────── */}
           <View style={[s.statsBar, { borderTopColor: BORDER, borderBottomColor: BORDER }]}>
             {[
-              { label: 'Connections', value: connCount.toString(),                    icon: 'people',    color: G,         onPress: isApproved ? () => router.push('/(tabs)/chat' as any) : undefined },
-              { label: 'Following',   value: (user?.followingCount || 0).toString(),  icon: 'person-add', color: '#3B82F6', onPress: isApproved ? () => router.push('/(tabs)/explore?tab=members' as any) : undefined },
-              { label: 'Events',      value: myEvents.length.toString(),              icon: 'calendar',  color: '#0891B2', onPress: isApproved ? () => setActiveTab('events') : undefined },
-              { label: 'Since',       value: memberYear,                              icon: 'ribbon',    color: '#F59E0B', onPress: undefined },
+              { label: 'Connections', value: connCount.toString(),                    icon: 'people',    color: G,                      onPress: isApproved ? () => router.push('/(tabs)/chat' as any) : undefined },
+              { label: 'Following',   value: (user?.followingCount || 0).toString(),  icon: 'person-add', color: colors.primaryLight,    onPress: isApproved ? () => router.push('/(tabs)/explore?tab=members' as any) : undefined },
+              { label: 'Events',      value: myEvents.length.toString(),              icon: 'calendar',  color: colors.primaryDark,     onPress: isApproved ? () => setActiveTab('events') : undefined },
+              { label: 'Since',       value: memberYear,                              icon: 'ribbon',    color: colors.forestGreen,     onPress: undefined },
             ].map((stat, i, arr) => (
               <TouchableOpacity
                 key={stat.label}
@@ -518,7 +527,7 @@ export default function ProfileScreen() {
                 disabled={!stat.onPress}
                 activeOpacity={0.7}
               >
-                <Text style={[s.statValue, { color: TEXT }]}>{stat.value}</Text>
+                <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
                 <View style={s.statLabelRow}>
                   <Ionicons name={stat.icon as any} size={10} color={stat.color} />
                   <Text style={[s.statLabel, { color: TEXT3 }]}>{stat.label}</Text>
@@ -539,7 +548,9 @@ export default function ProfileScreen() {
                   onPress={() => setActiveTab(tab.id)}
                   style={[s.tabItem, active && { borderBottomColor: G, borderBottomWidth: 2.5 }]}
                 >
-                  <Ionicons name={active ? tab.activeIcon : tab.icon} size={15} color={active ? G : TEXT3} />
+                  <View style={active ? [s.tabIconPill, { backgroundColor: G + '15' }] : null}>
+                    <Ionicons name={active ? tab.activeIcon : tab.icon} size={15} color={active ? G : TEXT3} />
+                  </View>
                   <Text style={[s.tabLabel, { color: active ? G : TEXT3, fontWeight: active ? '700' : '500' }]}>
                     {tab.label}
                   </Text>
@@ -574,19 +585,19 @@ export default function ProfileScreen() {
               {/* Personal Details */}
               <SectionCard title="Personal Details" icon="person-circle-outline" color={G} action={() => router.push('/(tabs)/edit-profile' as any)} actionLabel="Edit">
                 <InfoRow icon="location" label="Native Place" value={primaryNativePlace} color={G} />
-                <InfoRow icon="briefcase" label="Profession" value={primaryProfession} color="#3B82F6" />
-                <InfoRow icon="business-outline" label="Company" value={user?.company} color="#8B5CF6" />
-                <InfoRow icon="school-outline" label="Education" value={user?.education} color="#0891B2" />
-                <InfoRow icon="calendar-outline" label="Date of Birth" value={user?.dob} color="#F59E0B" />
-                <InfoRow icon="person-outline" label="Gender" value={user?.gender} color="#EC4899" />
-                <InfoRow icon="call-outline" label="Phone" value={user?.phone || user?.phoneNumber} color="#10B981" isLast />
+                <InfoRow icon="briefcase" label="Profession" value={primaryProfession} color={colors.primaryDark} />
+                <InfoRow icon="business-outline" label="Company" value={user?.company} color={colors.forestGreen} />
+                <InfoRow icon="school-outline" label="Education" value={user?.education} color={colors.primaryLight} />
+                <InfoRow icon="calendar-outline" label="Date of Birth" value={user?.dob} color={TERT} />
+                <InfoRow icon="person-outline" label="Gender" value={user?.gender} color={G} />
+                <InfoRow icon="call-outline" label="Phone" value={user?.phone || user?.phoneNumber} color={colors.primaryDark} isLast />
                 {/* Languages */}
                 {user?.languages && (
                   <View style={[s.pillSection, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER }]}>
                     <Text style={[s.pillSectionLabel, { color: TEXT3 }]}>Languages</Text>
                     <View style={s.pillsWrap}>
                       {user.languages.split(',').map((l, i) => (
-                        <View key={i} style={[s.tag, { backgroundColor: isDark ? '#27272A' : '#F1F5F9' }]}>
+                        <View key={i} style={[s.tag, { backgroundColor: colors.surfaceVariant }]}>
                           <Text style={[s.tagText, { color: TEXT2 }]}>{l.trim()}</Text>
                         </View>
                       ))}
@@ -612,8 +623,8 @@ export default function ProfileScreen() {
                     <Text style={[s.pillSectionLabel, { color: TEXT3 }]}>Skills</Text>
                     <View style={s.pillsWrap}>
                       {skillTags.map((skill, i) => (
-                        <View key={i} style={[s.tag, { backgroundColor: '#3B82F612' }]}>
-                          <Text style={[s.tagText, { color: '#3B82F6' }]}>{skill}</Text>
+                        <View key={i} style={[s.tag, { backgroundColor: colors.primaryLight + '20' }]}>
+                          <Text style={[s.tagText, { color: colors.primaryDark }]}>{skill}</Text>
                         </View>
                       ))}
                     </View>
@@ -622,27 +633,27 @@ export default function ProfileScreen() {
               </SectionCard>
 
               {/* Location Details */}
-              <SectionCard title="Location & Roots" icon="map-outline" color="#0891B2" action={() => router.push('/(tabs)/edit-profile' as any)} actionLabel="Edit">
-                <InfoRow icon="flag-outline" label="Country" value={user?.country} color="#F59E0B" />
-                <InfoRow icon="map-outline" label="State" value={user?.state} color="#16A34A" />
-                <InfoRow icon="navigate-outline" label="District" value={user?.district} color="#EF4444" />
-                <InfoRow icon="business-outline" label="City" value={user?.city} color="#6366F1" />
-                <InfoRow icon="home-outline" label="Native Place" value={primaryNativePlace} color="#0891B2" />
-                <InfoRow icon="location-outline" label="Current Location" value={user?.currentLocation} color="#8B5CF6" isLast />
+              <SectionCard title="Location & Roots" icon="map-outline" color={colors.primaryDark} action={() => router.push('/(tabs)/edit-profile' as any)} actionLabel="Edit">
+                <InfoRow icon="flag-outline" label="Country" value={user?.country} color={TERT} />
+                <InfoRow icon="map-outline" label="State" value={user?.state} color={G} />
+                <InfoRow icon="navigate-outline" label="District" value={user?.district} color={colors.primaryDark} />
+                <InfoRow icon="business-outline" label="City" value={user?.city} color={colors.forestGreen} />
+                <InfoRow icon="home-outline" label="Native Place" value={primaryNativePlace} color={colors.primaryLight} />
+                <InfoRow icon="location-outline" label="Current Location" value={user?.currentLocation} color={G} isLast />
               </SectionCard>
 
               {/* Engagement Stats */}
               <SectionCard title="Community Engagement" icon="stats-chart-outline" color={G}>
                 <View style={s.engagementGrid}>
                   {[
-                    { label: 'Communities', value: myCommunities.length || user?.communitiesCount || 0, icon: 'globe', color: G, onPress: () => setActiveTab('communities') },
-                    { label: 'Events',       value: myEvents.length,                                     icon: 'calendar', color: '#3B82F6', onPress: () => setActiveTab('events') },
-                    { label: 'Connections',  value: connCount,                                           icon: 'people',   color: '#8B5CF6', onPress: () => router.push('/(tabs)/chat' as any) },
-                    { label: 'Posts',        value: posts.length,                                        icon: 'grid',     color: '#F59E0B', onPress: () => setActiveTab('posts') },
+                    { label: 'Communities', value: myCommunities.length || user?.communitiesCount || 0, icon: 'globe',    color: G,                   onPress: () => setActiveTab('communities') },
+                    { label: 'Events',      value: myEvents.length,                                     icon: 'calendar', color: colors.primaryDark,  onPress: () => setActiveTab('events') },
+                    { label: 'Connections', value: connCount,                                           icon: 'people',   color: colors.primaryLight, onPress: () => router.push('/(tabs)/chat' as any) },
+                    { label: 'Posts',       value: posts.length,                                        icon: 'grid',     color: colors.forestGreen,  onPress: () => setActiveTab('posts') },
                   ].map((item) => (
                     <TouchableOpacity
                       key={item.label}
-                      style={[s.engagementCard, { backgroundColor: isDark ? '#27272A40' : '#F8FAFC', borderColor: BORDER }]}
+                      style={[s.engagementCard, { backgroundColor: colors.surfaceVariant, borderColor: BORDER }]}
                       onPress={item.onPress}
                       activeOpacity={0.75}
                     >
@@ -714,8 +725,8 @@ export default function ProfileScreen() {
                 const isAdmin = user?.id && (item.creatorId === user.id || item.ownerId === user.id || item.role === 'ADMIN');
                 const isMod = item.role === 'MODERATOR';
                 const roleLabel = isAdmin ? 'Admin' : isMod ? 'Mod' : 'Member';
-                const roleColor = isAdmin ? '#1565C0' : G;
-                const roleBg = isAdmin ? 'rgba(21,101,192,0.1)' : G + '12';
+                const roleColor = isAdmin ? colors.primaryDark : G;
+                const roleBg = isAdmin ? colors.primaryDark + '15' : G + '12';
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -765,7 +776,7 @@ export default function ProfileScreen() {
                 const joinedCount = event.interestedCount ?? event.rsvpCount ?? 0;
                 return (
                   <View key={event.id} style={[s.eventRow, i < myEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER }]}>
-                    <View style={[s.eventDateBox, { backgroundColor: isPast ? (isDark ? '#27272A' : '#F1F5F9') : G + '15' }]}>
+                    <View style={[s.eventDateBox, { backgroundColor: isPast ? colors.surfaceVariant : G + '15' }]}>
                       <Text style={[s.eventMonth, { color: isPast ? TEXT3 : G }]}>
                         {new Date(event.startsAt).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                       </Text>
@@ -774,7 +785,7 @@ export default function ProfileScreen() {
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                         <Text style={[s.eventTitle, { color: TEXT, flex: 1 }]} numberOfLines={1}>{event.title}</Text>
-                        <View style={[s.eventStatusPill, { backgroundColor: isPast ? (isDark ? '#27272A' : '#F4F4F5') : G + '18' }]}>
+                        <View style={[s.eventStatusPill, { backgroundColor: isPast ? colors.surfaceVariant : G + '18' }]}>
                           <Text style={[s.eventStatusText, { color: isPast ? TEXT3 : G }]}>{isPast ? 'Past' : 'Upcoming'}</Text>
                         </View>
                       </View>
@@ -876,10 +887,10 @@ const s = StyleSheet.create({
   },
   avatarRing: {
     width: 104, height: 104, borderRadius: 52,
-    borderWidth: 4, position: 'relative',
+    borderWidth: 3, position: 'relative',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
-      android: { elevation: 6 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 10 },
+      android: { elevation: 8 },
     }),
   },
   verifiedBadge: {
@@ -936,14 +947,14 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
     marginHorizontal: -16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   statCell: {
     flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 2,
   },
-  statValue: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
-  statLabel: { fontSize: 10.5, fontWeight: '500' },
+  statValue: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  statLabel: { fontSize: 10.5, fontWeight: '600' },
 
   // Tab Bar
   tabBarWrap: {
@@ -953,11 +964,15 @@ const s = StyleSheet.create({
       android: { elevation: 1 },
     }),
   },
-  tabBarScroll: { paddingHorizontal: 4 },
+  tabBarScroll: { paddingHorizontal: 8, gap: 2 },
   tabItem: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 13,
+    paddingHorizontal: 12, paddingVertical: 12,
     borderBottomWidth: 2.5, borderBottomColor: 'transparent',
+  },
+  tabIconPill: {
+    width: 24, height: 24, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
   },
   tabLabel: { fontSize: 13 },
 
@@ -966,20 +981,20 @@ const s = StyleSheet.create({
 
   // Section Card
   sectionCard: {
-    borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 20, borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
-      android: { elevation: 1 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
     }),
   },
   sectionCardHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 13,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.06)',
   },
-  sectionCardIconWrap: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  sectionCardTitle: { flex: 1, fontSize: 14.5, fontWeight: '700', letterSpacing: -0.2 },
+  sectionCardIconWrap: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  sectionCardTitle: { flex: 1, fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
   sectionCardAction: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
   },

@@ -32,11 +32,14 @@ const INITIAL_FORM = {
   dateOfBirth: '', height: '', maritalStatus: '' as MaritalStatus | '',
   bloodGroup: '', eatingHabits: '', disability: '',
   religion: '', caste: '', motherTongue: '',
+  city: '', state: '',
+  aboutMe: '', hobbies: '', diet: '',
   // Astrology
   birthTime: '', placeOfBirth: '',
   raashi: '', nakshathra: '', gana: '', gotra: '', dosham: '', bali: '',
   // Career
   education: '' as EducationLevel | '', educationField: '',
+  educationDetails: '',
   workingWith: '', designation: '', workLocation: '', annualIncome: '',
   occupation: '',
   // Family
@@ -44,6 +47,9 @@ const INITIAL_FORM = {
   fatherName: '', fatherStatus: '', motherName: '', motherStatus: '',
   brothers: '', brothersMarried: '', sisters: '', sistersMarried: '',
   ancestralOrigin: '',
+  // Partner Preferences
+  partnerMinAge: '', partnerMaxAge: '', partnerReligion: '', partnerCaste: '',
+  partnerEducation: '', partnerCity: '',
   // Photos
   photoVisibility: '',
 };
@@ -298,6 +304,11 @@ export default function CreateMatrimonyProfile() {
       religion: myProfile.religion ?? '',
       caste: myProfile.caste ?? '',
       motherTongue: myProfile.motherTongue ?? '',
+      city: myProfile.city ?? '',
+      state: myProfile.state ?? '',
+      aboutMe: myProfile.aboutMe ?? '',
+      hobbies: myProfile.hobbies?.join(', ') ?? '',
+      diet: myProfile.diet ?? '',
       birthTime: myProfile.birthTime ?? '',
       placeOfBirth: myProfile.placeOfBirth ?? '',
       raashi: myProfile.raashi ?? '',
@@ -325,6 +336,13 @@ export default function CreateMatrimonyProfile() {
       sisters: myProfile.sisters?.toString() ?? '',
       sistersMarried: myProfile.sistersMarried === 1 ? 'Yes' : myProfile.sistersMarried === 0 ? 'No' : '',
       ancestralOrigin: myProfile.ancestralOrigin ?? '',
+      educationDetails: myProfile.educationDetails ?? '',
+      partnerMinAge: myProfile.partnerMinAge?.toString() ?? '',
+      partnerMaxAge: myProfile.partnerMaxAge?.toString() ?? '',
+      partnerReligion: myProfile.partnerReligion ?? '',
+      partnerCaste: myProfile.partnerCaste ?? '',
+      partnerEducation: myProfile.partnerEducation ?? '',
+      partnerCity: myProfile.partnerCity ?? '',
       photoVisibility: myProfile.photoVisibility ?? '',
     });
   }, [myProfile]);
@@ -404,6 +422,9 @@ export default function CreateMatrimonyProfile() {
       ...form,
       brothers: toNum(form.brothers), brothersMarried: yesNo(form.brothersMarried),
       sisters: toNum(form.sisters), sistersMarried: yesNo(form.sistersMarried),
+      hobbies: form.hobbies ? form.hobbies.split(',').map(h => h.trim()).filter(Boolean) : [],
+      partnerMinAge: toNum(form.partnerMinAge),
+      partnerMaxAge: toNum(form.partnerMaxAge),
       photos,
     };
     try {
@@ -472,6 +493,15 @@ export default function CreateMatrimonyProfile() {
           <TextInput style={inputStyle} value={form.caste} onChangeText={set('caste')} placeholder="e.g. Gowda" placeholderTextColor={colors.textMuted} />
           <FieldLabel label="Mother Tongue" colors={colors} />
           <TextInput style={inputStyle} value={form.motherTongue} onChangeText={set('motherTongue')} placeholder="e.g. Kannada" placeholderTextColor={colors.textMuted} />
+          <FieldLabel label="City *" colors={colors} />
+          <TextInput style={inputStyle} value={form.city} onChangeText={set('city')} placeholder="e.g. Bengaluru" placeholderTextColor={colors.textMuted} />
+          <FieldLabel label="State *" colors={colors} />
+          <TextInput style={inputStyle} value={form.state} onChangeText={set('state')} placeholder="e.g. Karnataka" placeholderTextColor={colors.textMuted} />
+          <FieldLabel label="About Me" colors={colors} />
+          <TextInput style={[inputStyle, { minHeight: 80, textAlignVertical: 'top' }]} value={form.aboutMe} onChangeText={set('aboutMe')} placeholder="Write a short bio about yourself..." placeholderTextColor={colors.textMuted} multiline numberOfLines={3} />
+          <FieldLabel label="Hobbies (comma separated)" colors={colors} />
+          <TextInput style={inputStyle} value={form.hobbies} onChangeText={set('hobbies')} placeholder="e.g. Reading, Cooking, Travelling" placeholderTextColor={colors.textMuted} />
+          <Dropdown label="Diet Preference" options={EATING_HABITS_OPTIONS} value={form.diet} onChange={set('diet')} colors={colors} />
         </>)}
 
         {step === 1 && (<>
@@ -496,6 +526,8 @@ export default function CreateMatrimonyProfile() {
         {step === 2 && (<>
           <SectionHeader title="Career & Education" colors={colors} />
           <Dropdown label="Highest Education *" options={EDUCATION_OPTIONS.map(o => EDUCATION_LABELS[o])} value={form.education ? EDUCATION_LABELS[form.education as EducationLevel] : ''} onChange={v => { const k = EDUCATION_OPTIONS.find(o => EDUCATION_LABELS[o] === v); if (k) setForm(f => ({ ...f, education: k })); }} colors={colors} />
+          <FieldLabel label="Education Details" colors={colors} />
+          <TextInput style={inputStyle} value={form.educationDetails} onChangeText={set('educationDetails')} placeholder="e.g. B.Tech in Computer Science" placeholderTextColor={colors.textMuted} />
           <Dropdown label="Education Field *" options={EDUCATION_FIELD_OPTIONS} value={form.educationField} onChange={set('educationField')} colors={colors} />
           <Dropdown label="Working With *" options={WORKING_WITH_OPTIONS} value={form.workingWith} onChange={set('workingWith')} colors={colors} />
           <FieldLabel label="Designation *" colors={colors} />
@@ -540,6 +572,18 @@ export default function CreateMatrimonyProfile() {
         </>)}
 
         {step === 4 && (<>
+          <SectionHeader title="Partner Preferences" colors={colors} />
+          <FieldLabel label="Partner Min Age" colors={colors} />
+          <TextInput style={inputStyle} value={form.partnerMinAge} onChangeText={set('partnerMinAge')} placeholder="e.g. 22" placeholderTextColor={colors.textMuted} keyboardType="numeric" />
+          <FieldLabel label="Partner Max Age" colors={colors} />
+          <TextInput style={inputStyle} value={form.partnerMaxAge} onChangeText={set('partnerMaxAge')} placeholder="e.g. 30" placeholderTextColor={colors.textMuted} keyboardType="numeric" />
+          <FieldLabel label="Preferred Religion" colors={colors} />
+          <TextInput style={inputStyle} value={form.partnerReligion} onChangeText={set('partnerReligion')} placeholder="e.g. Hindu" placeholderTextColor={colors.textMuted} />
+          <FieldLabel label="Preferred Caste" colors={colors} />
+          <TextInput style={inputStyle} value={form.partnerCaste} onChangeText={set('partnerCaste')} placeholder="e.g. Gowda" placeholderTextColor={colors.textMuted} />
+          <Dropdown label="Preferred Education" options={EDUCATION_OPTIONS.map(o => EDUCATION_LABELS[o])} value={form.partnerEducation ? EDUCATION_LABELS[form.partnerEducation as EducationLevel] ?? form.partnerEducation : ''} onChange={set('partnerEducation')} colors={colors} />
+          <FieldLabel label="Preferred City / Location" colors={colors} />
+          <TextInput style={inputStyle} value={form.partnerCity} onChangeText={set('partnerCity')} placeholder="e.g. Bengaluru" placeholderTextColor={colors.textMuted} />
           <SectionHeader title="Profile Photos" colors={colors} />
           <View style={styles.photosRow}>
             {photos.map((p, i) => (
