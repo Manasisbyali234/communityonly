@@ -7,6 +7,61 @@ export type EducationLevel = 'HIGH_SCHOOL' | 'DIPLOMA' | 'BACHELORS' | 'MASTERS'
 export type InterestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+export const HEIGHT_OPTIONS = [
+  "4'6\"","4'7\"","4'8\"","4'9\"","4'10\"","4'11\"",
+  "5'0\"","5'1\"","5'2\"","5'3\"","5'4\"","5'5\"","5'6\"","5'7\"","5'8\"","5'9\"","5'10\"","5'11\"",
+  "6'0\"","6'1\"","6'2\"","6'3\"","6'4\"+",
+];
+
+export const BLOOD_GROUP_OPTIONS = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
+export const EATING_HABITS_OPTIONS = ['Vegetarian','Non-Vegetarian','Eggetarian'];
+export const DISABILITY_OPTIONS = ['None','Physical Disability'];
+
+export const RAASHI_OPTIONS = [
+  'Mesha (Aries)','Vrishabha (Taurus)','Mithuna (Gemini)','Karkataka (Cancer)',
+  'Simha (Leo)','Kanya (Virgo)','Tula (Libra)','Vrischika (Scorpio)',
+  'Dhanu (Sagittarius)','Makara (Capricorn)','Kumbha (Aquarius)','Meena (Pisces)',
+];
+
+export const NAKSHATHRA_OPTIONS = [
+  'Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya',
+  'Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati',
+  'Vishakha','Anuradha','Jyeshtha','Moola','Purva Ashada','Uttarashada','Shravana',
+  'Dhanishta','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati',
+];
+
+export const GANA_OPTIONS = ['Deva','Manushya','Rakshasa'];
+export const DOSHAM_OPTIONS = ['None','Manglik / Kuja Dosha','Naga Dosha','Other',"Don't Know"];
+export const BALI_OPTIONS = ['Yes','No',"Don't Know"];
+
+export const EDUCATION_FIELD_OPTIONS = [
+  'Arts','Science','Commerce','Engineering / Technology','Medicine / Healthcare',
+  'Law','Management / Business','Information Technology','Agriculture','Other',
+];
+
+export const WORKING_WITH_OPTIONS = [
+  'Government / Public Sector','Private Sector','Business / Self-Employed','Defense','Not Working',
+];
+
+export const ANNUAL_INCOME_OPTIONS = [
+  'Below ₹3 Lakhs','₹3–5 Lakhs','₹5–8 Lakhs','₹8–10 Lakhs','₹10–15 Lakhs',
+  '₹15–20 Lakhs','₹20–30 Lakhs','₹30–50 Lakhs','₹50 Lakhs+','Not Disclosed',
+];
+
+export const FAMILY_TYPE_OPTIONS = ['Joint Family','Nuclear Family','Other'];
+export const FAMILY_VALUE_OPTIONS = ['Orthodox','Traditional','Moderate','Liberal'];
+export const FATHER_STATUS_OPTIONS = ['Employed','Business / Self-Employed','Retired','Passed Away'];
+export const MOTHER_STATUS_OPTIONS = ['Homemaker','Employed','Business / Self-Employed','Retired','Passed Away'];
+export const SIBLING_COUNT_OPTIONS = ['0','1','2','3','4+'];
+export const PHOTO_VISIBILITY_OPTIONS = ['Registered Matrimony Members','Private'];
+
+export const GOTRA_LIST = [
+  'Agastya','Atri','Bharadwaja','Bhrigu','Gautama','Garga','Harita','Jamadagni',
+  'Kashyapa','Kaushika','Koundinya','Kratu','Kutsa','Maudgalya','Parasara',
+  'Pulaha','Pulastya','Sandilya','Shandilya','Shaunaka','Srivatsa','Upamanyu',
+  'Vashishtha','Vatsa','Vishwamitra','Other',
+];
+
 export interface MatrimonyProfile {
   id: string;
   userId: string;
@@ -16,24 +71,56 @@ export interface MatrimonyProfile {
   age: number;
   height: string;
   maritalStatus: MaritalStatus;
+  bloodGroup?: string;
+  eatingHabits?: string;
+  disability?: string;
   religion: string;
   caste?: string;
   motherTongue: string;
+  // Astrology
+  birthTime?: string;
+  placeOfBirth?: string;
+  raashi?: string;
+  nakshathra?: string;
+  gana?: string;
+  gotra?: string;
+  dosham?: string;
+  bali?: string;
+  // Career
   education: EducationLevel;
   educationDetails?: string;
+  educationField?: string;
+  workingWith?: string;
+  designation?: string;
   occupation: string;
+  workLocation?: string;
   annualIncome?: string;
+  // Location
   city: string;
   state: string;
+  // Family
+  familyType?: string;
+  familyValue?: string;
+  familyLocation?: string;
+  fatherName?: string;
+  fatherStatus?: string;
+  fatherOccupation?: string;
+  motherName?: string;
+  motherStatus?: string;
+  motherOccupation?: string;
+  brothers?: number;
+  brothersMarried?: number;
+  sisters?: number;
+  sistersMarried?: number;
+  ancestralOrigin?: string;
+  siblings?: number;
+  // Photos
+  photos: string[];
+  photoVisibility?: string;
+  avatarUrl?: string;
   aboutMe?: string;
   hobbies?: string[];
   diet?: string;
-  familyType?: string;
-  fatherOccupation?: string;
-  motherOccupation?: string;
-  siblings?: number;
-  photos: string[];
-  avatarUrl?: string;
   isVerified: boolean;
   partnerMinAge?: number;
   partnerMaxAge?: number;
@@ -74,6 +161,7 @@ export interface ProfileInterest {
   toProfile?: Partial<MatrimonyProfile>;
 }
 
+export const MARITAL_STATUS_OPTIONS: MaritalStatus[] = ['NEVER_MARRIED','DIVORCED','WIDOWED'];
 export const MARITAL_STATUS_LABELS: Record<MaritalStatus, string> = {
   NEVER_MARRIED: 'Never Married',
   DIVORCED: 'Divorced',
@@ -81,12 +169,13 @@ export const MARITAL_STATUS_LABELS: Record<MaritalStatus, string> = {
   SEPARATED: 'Separated',
 };
 
+export const EDUCATION_OPTIONS: EducationLevel[] = ['HIGH_SCHOOL','DIPLOMA','BACHELORS','MASTERS','PHD','OTHER'];
 export const EDUCATION_LABELS: Record<EducationLevel, string> = {
-  HIGH_SCHOOL: 'High School',
-  DIPLOMA: 'Diploma',
-  BACHELORS: "Bachelor's",
-  MASTERS: "Master's",
-  PHD: 'PhD',
+  HIGH_SCHOOL: '10th / 12th Pass',
+  DIPLOMA: 'Diploma / ITI',
+  BACHELORS: 'Graduate',
+  MASTERS: 'Post Graduate',
+  PHD: 'PhD / Doctorate',
   OTHER: 'Other',
 };
 

@@ -3,6 +3,14 @@ import { Platform } from 'react-native';
 import { apiClient, API_BASE_URL } from './client';
 import { ApiResponse } from '../types';
 import { useAuthStore } from '../store/authStore';
+import { getApiBaseUrl } from './config';
+
+const getBase = () => getApiBaseUrl().replace('/api/v1', '');
+const toAbsStory = (url?: string): string => {
+  if (!url) return '';
+  if (url.startsWith('/')) return `${getBase()}${url}`;
+  return url;
+};
 
 export const storyKeys = {
   all: ['stories'] as const,
@@ -41,7 +49,8 @@ export function useStoryByIdQuery(id: string) {
     enabled: isAuthenticated && !!id,
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<Story>>(`/stories/${id}`);
-      return res.data.data;
+      const s = res.data.data;
+      return { ...s, mediaUrl: toAbsStory(s.mediaUrl) };
     },
     staleTime: 0,
   });
@@ -60,6 +69,7 @@ export function useStoriesFeedQuery() {
           ...group,
           stories: group.stories
             .filter((s) => new Date(s.expiresAt) > now)
+            .map((s) => ({ ...s, mediaUrl: toAbsStory(s.mediaUrl) }))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
         }))
         .filter((group) => group.stories.length > 0)

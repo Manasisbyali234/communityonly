@@ -142,6 +142,12 @@ export default function AdminDashboard() {
   }, []);
   useEffect(() => { if (hydrated) load(); }, [hydrated, load]);
 
+  // Safety net: if hydration never fires (e.g. SSR / fast refresh), unblock loading after 3s
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 3000);
+    return () => clearTimeout(t);
+  }, []);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     load();

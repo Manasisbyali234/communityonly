@@ -145,7 +145,8 @@ export function useUserPostsQuery(userId: string) {
     enabled: !!userId && isAuthenticated,
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<PaginatedResponse<Post>>>(`/users/${userId}/posts`);
-      return (res.data.data.data ?? []).map(normalizePost);
+      // Filter out archived posts (isDraft: true) — they should only appear on the archived screen
+      return (res.data.data.data ?? []).map(normalizePost).filter((p: any) => !p.isDraft);
     },
   });
 }
@@ -335,6 +336,8 @@ export function useArchivePostMutation() {
       });
       queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
       queryClient.invalidateQueries({ queryKey: feedKeys.archivedPosts() });
+      // Invalidate profile posts so the Posts tab removes the archived post immediately
+      queryClient.invalidateQueries({ queryKey: [...feedKeys.all, 'posts'] });
     },
   });
 }
@@ -349,6 +352,8 @@ export function useUnarchivePostMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: feedKeys.archivedPosts() });
       queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
+      // Invalidate profile posts so the Posts tab shows the restored post immediately
+      queryClient.invalidateQueries({ queryKey: [...feedKeys.all, 'posts'] });
     },
   });
 }
