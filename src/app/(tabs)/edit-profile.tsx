@@ -62,7 +62,7 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const LANGUAGE_SUGGESTIONS = ['Kannada', 'English', 'Kodava', 'Tulu'];
+const LANGUAGE_SUGGESTIONS = ['Kannada', 'English', 'Arebase'];
 const INTEREST_SUGGESTIONS = ['Agriculture', 'Community Service', 'Culture & Arts', 'Sports', 'Business', 'Technology', 'Education'];
 
 export default function EditProfile() {
@@ -584,7 +584,7 @@ export default function EditProfile() {
                 <View style={styles.accordionTitleWrap}>
                   <Text style={[styles.accordionTitle, { color: TEXT }]}>Community & Roots</Text>
                   <Text style={[styles.accordionSubtitle, { color: TEXT3 }]} numberOfLines={1}>
-                    {[watch('village') || user?.village, watch('occupation') || user?.occupation].filter(Boolean).join(' • ') || 'Native place & profession'}
+                    {[watch('village') || user?.village, watch('currentLocation') || user?.currentLocation].filter(Boolean).join(' • ') || 'Native place & current location'}
                   </Text>
                 </View>
               </View>
@@ -652,34 +652,9 @@ export default function EditProfile() {
 
                 <Controller
                   control={control}
-                  name="nativePlace"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <Input label="Native Place / Hometown" placeholder="e.g. Somwarpet, Kodagu" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="location-outline" error={errors.nativePlace?.message} containerStyle={styles.fieldItem} />
-                  )}
-                />
-
-                <Controller
-                  control={control}
                   name="currentLocation"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <Input label="Current Location" placeholder="e.g. Bengaluru, Dubai" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="navigate-outline" error={errors.currentLocation?.message} containerStyle={styles.fieldItem} />
-                  )}
-                />
-
-                <Controller
-                  control={control}
-                  name="occupation"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <Input
-                      label="Profession / Occupation"
-                      placeholder="e.g. Planter, Software Engineer"
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      leftIcon="briefcase-outline"
-                      error={errors.occupation?.message}
-                      containerStyle={styles.fieldItem}
-                    />
                   )}
                 />
               </View>
@@ -700,7 +675,7 @@ export default function EditProfile() {
                 <View style={styles.accordionTitleWrap}>
                   <Text style={[styles.accordionTitle, { color: TEXT }]}>Professional Details</Text>
                   <Text style={[styles.accordionSubtitle, { color: TEXT3 }]} numberOfLines={1}>
-                    {[watch('occupation'), watch('profession'), watch('company')].filter(Boolean).join(' • ') || 'Work, education & skills'}
+                    {[watch('profession'), watch('company'), watch('education')].filter(Boolean).join(' • ') || 'Work, education & skills'}
                   </Text>
                 </View>
               </View>
@@ -715,7 +690,7 @@ export default function EditProfile() {
                   control={control}
                   name="profession"
                   render={({ field: { onChange, onBlur, value } }) => (
-                    <Input label="Profession / Industry" placeholder="e.g. Information Technology" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="briefcase-outline" error={errors.profession?.message} containerStyle={styles.fieldItem} />
+                    <Input label="Profession / Occupation" placeholder="e.g. Planter, Software Engineer" value={value} onChangeText={onChange} onBlur={onBlur} leftIcon="briefcase-outline" error={errors.profession?.message} containerStyle={styles.fieldItem} />
                   )}
                 />
                 <Controller

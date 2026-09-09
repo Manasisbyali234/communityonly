@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AdminShell from '../../components/admin/AdminShell';
@@ -87,7 +88,11 @@ export default function AdminEmployers() {
                   <View key={emp.id} style={[s.mobileCard, i % 2 === 0 && { backgroundColor: C.rowEven }]}>
                     <View style={s.mobileTop}>
                       {emp.logoUrl ? (
+<<<<<<< HEAD
                         <Image source={{ uri: toProxyUrl(emp.logoUrl) }} style={s.logo} />
+=======
+                        <Image source={{ uri: emp.logoUrl }} style={s.logo} contentFit="cover" />
+>>>>>>> a31bc2d3f81339e13853c68fe1e2c0915b89bcd6
                       ) : (
                         <View style={[s.logo, s.logoFallback]}>
                           <Feather name="briefcase" size={16} color={C.accent} />
@@ -113,7 +118,11 @@ export default function AdminEmployers() {
                 <View key={emp.id} style={[s.row, i % 2 === 0 && { backgroundColor: C.rowEven }]}>
                   <View style={[s.cell, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
                     {emp.logoUrl ? (
+<<<<<<< HEAD
                       <Image source={{ uri: toProxyUrl(emp.logoUrl) }} style={s.logo} />
+=======
+                      <Image source={{ uri: emp.logoUrl }} style={s.logo} contentFit="cover" />
+>>>>>>> a31bc2d3f81339e13853c68fe1e2c0915b89bcd6
                     ) : (
                       <View style={[s.logo, s.logoFallback]}>
                         <Feather name="briefcase" size={14} color={C.accent} />

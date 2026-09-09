@@ -62,18 +62,7 @@ export default function AppearanceScreen() {
           })}
         </View>
 
-        {/* Live preview strip */}
-        <Text style={[styles.sectionLabel, { color: C.textMuted, fontSize: T.sizes.xs, marginTop: 24 }]}>PREVIEW</Text>
-        <View style={[styles.preview, { backgroundColor: C.cardBg, borderColor: C.border, borderRadius: roundness.md }]}>
-          <View style={[styles.previewHeader, { backgroundColor: C.primary }]}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: T.sizes.sm }}>Community</Text>
-          </View>
-          <View style={{ padding: 14, gap: 8 }}>
-            <View style={[styles.previewLine, { backgroundColor: C.border, width: '70%' }]} />
-            <View style={[styles.previewLine, { backgroundColor: C.border, width: '50%' }]} />
-            <View style={[styles.previewLine, { backgroundColor: C.border, width: '85%' }]} />
-          </View>
-        </View>
+
       </View>
     </View>
   );
@@ -99,7 +88,5 @@ const styles = StyleSheet.create({
   rowSub: { marginTop: 2 },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 10, height: 10, borderRadius: 5 },
-  preview: { borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  previewHeader: { height: 36, justifyContent: 'center', paddingHorizontal: 14 },
-  previewLine: { height: 10, borderRadius: 5 },
+
 });

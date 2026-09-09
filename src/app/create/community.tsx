@@ -309,7 +309,7 @@ export default function CreateCommunity() {
         </View>
 
         <View style={styles.formContent}>
-          <InputField label="Community Name" value={name} onChangeText={(t) => { setName(t); if (t.trim()) setErrors((e) => ({ ...e, name: undefined })); }} placeholder="e.g. Mandya Youth Association" colors={colors} error={errors.name} />
+          <InputField label="Community Name" value={name} onChangeText={(t) => { setName(t); if (t.trim()) setErrors((e) => ({ ...e, name: undefined })); }} placeholder="e.g. Arebhashe Gowda Association" colors={colors} error={errors.name} />
           <InputField label="Description" value={description} onChangeText={(t) => { setDescription(t); if (t.trim()) setErrors((e) => ({ ...e, description: undefined })); }} placeholder="What is this community about?" multiline colors={colors} error={errors.description} />
           
           <View style={styles.row}>
