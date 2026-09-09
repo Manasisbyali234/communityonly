@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator, Image, Platform, ScrollView, Modal,
+  StyleSheet, Alert, ActivityIndicator, Image, Platform, ScrollView, Modal, useWindowDimensions,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AdminShell from '../../components/admin/AdminShell';
@@ -48,6 +49,9 @@ export default function AdminAddJob() {
   const [skillInput, setSkillInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const { width } = useWindowDimensions();
+  const isMobile = width < 600;
 
   // Load employers list
   useEffect(() => {
@@ -230,15 +234,15 @@ export default function AdminAddJob() {
           </View>
         </Field>
 
-        <View style={s.twoCol}>
-          <View style={{ flex: 1 }}>
+        <View style={[s.twoCol, isMobile && s.twoColMobile]}>
+          <View style={isMobile ? s.fullCol : { flex: 1 }}>
             <Field label="Salary (LPA)" required>
               <TextInput style={s.input} value={form.salaryLPA} onChangeText={v => set('salaryLPA', v)}
                 placeholder="e.g. 5 LPA or 8-10 LPA" placeholderTextColor={C.textMuted} />
             </Field>
           </View>
-          <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}>
+          {!isMobile && <View style={{ width: 12 }} />}
+          <View style={isMobile ? s.fullCol : { flex: 1 }}>
             <Field label="Vacancies" required>
               <TextInput style={s.input} value={form.vacancyCount} onChangeText={v => set('vacancyCount', v)}
                 keyboardType="numeric" placeholder="1" placeholderTextColor={C.textMuted} />
@@ -256,15 +260,15 @@ export default function AdminAddJob() {
             placeholder="Full address" placeholderTextColor={C.textMuted} />
         </Field>
 
-        <View style={s.twoCol}>
-          <View style={{ flex: 1 }}>
+        <View style={[s.twoCol, isMobile && s.twoColMobile]}>
+          <View style={isMobile ? s.fullCol : { flex: 1 }}>
             <Field label="Experience Required" required>
               <TextInput style={s.input} value={form.experience} onChangeText={v => set('experience', v)}
                 placeholder="e.g. 2-4 years" placeholderTextColor={C.textMuted} />
             </Field>
           </View>
-          <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}>
+          {!isMobile && <View style={{ width: 12 }} />}
+          <View style={isMobile ? s.fullCol : { flex: 1 }}>
             <Field label="Education" optional>
               <TextInput style={s.input} value={form.education} onChangeText={v => set('education', v)}
                 placeholder="e.g. B.Tech" placeholderTextColor={C.textMuted} />
@@ -293,19 +297,45 @@ export default function AdminAddJob() {
         </Field>
 
         <Field label="Last Date to Apply" optional>
-          <TextInput style={s.input} value={form.lastDate} onChangeText={v => set('lastDate', v)}
-            placeholder="YYYY-MM-DD" placeholderTextColor={C.textMuted} />
+          {Platform.OS === 'web' ? (
+            <input
+              type="date"
+              value={form.lastDate}
+              onChange={e => set('lastDate', e.target.value)}
+              style={{ borderWidth: 1, borderColor: C.border, borderRadius: 8, padding: '10px 12px', fontSize: 13, color: form.lastDate ? C.textPrimary : C.textMuted, backgroundColor: C.bg, width: '100%', boxSizing: 'border-box' } as any}
+            />
+          ) : (
+            <>
+              <TouchableOpacity style={s.input} onPress={() => setShowDatePicker(true)}>
+                <Text style={{ fontSize: 13, color: form.lastDate ? C.textPrimary : C.textMuted }}>
+                  {form.lastDate || 'Select date'}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.lastDate ? new Date(form.lastDate) : new Date()}
+                  mode="date"
+                  display="default"
+                  minimumDate={new Date()}
+                  onChange={(_, date) => {
+                    setShowDatePicker(false);
+                    if (date) set('lastDate', date.toISOString().split('T')[0]);
+                  }}
+                />
+              )}
+            </>
+          )}
         </Field>
 
-        <View style={s.twoCol}>
-          <View style={{ flex: 1 }}>
+        <View style={[s.twoCol, isMobile && s.twoColMobile]}>
+          <View style={isMobile ? s.fullCol : { flex: 1 }}>
             <Field label="HR Contact" optional>
               <TextInput style={s.input} value={form.hrContact} onChangeText={v => set('hrContact', v)}
                 placeholder="HR Name" placeholderTextColor={C.textMuted} />
             </Field>
           </View>
-          <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}>
+          {!isMobile && <View style={{ width: 12 }} />}
+          <View style={isMobile ? s.fullCol : { flex: 1 }}>
             <Field label="HR Email" optional>
               <TextInput style={s.input} value={form.hrEmail} onChangeText={v => set('hrEmail', v)}
                 placeholder="hr@company.com" placeholderTextColor={C.textMuted}
@@ -405,11 +435,13 @@ function Field({ label, children, required, optional }: {
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: C.white, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
+  card: { backgroundColor: C.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
   label: { fontSize: 12, fontWeight: '700', color: C.textSecond, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 },
   input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: C.textPrimary, backgroundColor: C.bg },
   textarea: { minHeight: 100 },
   twoCol: { flexDirection: 'row' },
+  twoColMobile: { flexDirection: 'column' },
+  fullCol: { width: '100%' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg },
   chipActive: { backgroundColor: C.accent, borderColor: C.accent },

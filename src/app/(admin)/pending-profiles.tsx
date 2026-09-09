@@ -342,32 +342,21 @@ export default function PendingProfilesScreen() {
                   ) : null}
 
                   {/* Card Actions */}
-                  <View style={[styles.cardActionsRow, isMobile && styles.cardActionsRowMobile]}>
+                  <View style={styles.cardActionsRow}>
                     <TouchableOpacity
                       style={styles.viewBtn}
-                      onPress={() => {
-                        setSelectedUser(item);
-                        setShowDetailModal(true);
-                      }}
+                      onPress={() => { setSelectedUser(item); setShowDetailModal(true); }}
                     >
-                      <Feather name="eye" size={14} color="#1E293B" />
-                      <Text style={styles.viewBtnText}>View Profile</Text>
+                      <Feather name="eye" size={16} color="#1E293B" />
                     </TouchableOpacity>
 
                     {isActionable ? (
                       <>
-                        <TouchableOpacity
-                          style={styles.rejectBtn}
-                          onPress={() => handleOpenReject(item)}
-                        >
+                        <TouchableOpacity style={styles.rejectBtn} onPress={() => handleOpenReject(item)}>
                           <Feather name="x" size={14} color="#DC2626" />
                           <Text style={styles.rejectBtnText}>Reject</Text>
                         </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={styles.approveBtn}
-                          onPress={() => handleApprove(item)}
-                        >
+                        <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(item)}>
                           <Feather name="check" size={14} color="#FFF" />
                           <Text style={styles.approveBtnText}>Approve</Text>
                         </TouchableOpacity>
@@ -384,9 +373,7 @@ export default function PendingProfilesScreen() {
                             isDestructive: true,
                           });
                           if (ok) {
-                            const res = await adminApiClient.put(`/admin-panel/profile-approvals/${item.id}/suspend`, {
-                              reason: 'Administrative suspension',
-                            });
+                            const res = await adminApiClient.put(`/admin-panel/profile-approvals/${item.id}/suspend`, { reason: 'Administrative suspension' });
                             replaceUser(res.data?.data ?? { ...item, approvalStatus: 'SUSPENDED', isBanned: true, isActive: false });
                             showToast(`${item.displayName} suspended.`, 'info');
                           }
@@ -396,22 +383,16 @@ export default function PendingProfilesScreen() {
                         <Text style={styles.suspendBtnText}>Suspend</Text>
                       </TouchableOpacity>
                     ) : item.approvalStatus === 'SUSPENDED' ? (
-                      <TouchableOpacity
-                        style={styles.approveBtn}
-                        onPress={async () => {
-                          const res = await adminApiClient.put(`/admin-panel/profile-approvals/${item.id}/reactivate`);
-                          replaceUser(res.data?.data ?? { ...item, approvalStatus: 'APPROVED', isBanned: false, isActive: true });
-                          showToast(`${item.displayName} reactivated!`, 'success');
-                        }}
-                      >
+                      <TouchableOpacity style={styles.approveBtn} onPress={async () => {
+                        const res = await adminApiClient.put(`/admin-panel/profile-approvals/${item.id}/reactivate`);
+                        replaceUser(res.data?.data ?? { ...item, approvalStatus: 'APPROVED', isBanned: false, isActive: true });
+                        showToast(`${item.displayName} reactivated!`, 'success');
+                      }}>
                         <Feather name="check" size={13} color="#FFF" />
                         <Text style={styles.approveBtnText}>Reactivate</Text>
                       </TouchableOpacity>
                     ) : (
-                      <TouchableOpacity
-                        style={styles.approveBtn}
-                        onPress={() => handleApprove(item)}
-                      >
+                      <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(item)}>
                         <Feather name="refresh-cw" size={13} color="#FFF" />
                         <Text style={styles.approveBtnText}>Re-Approve</Text>
                       </TouchableOpacity>
@@ -748,27 +729,21 @@ const styles = StyleSheet.create({
   cardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
     gap: 8,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  cardActionsRowMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-  },
   viewBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
+    justifyContent: 'center',
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#CBD5E1',
     backgroundColor: '#FFF',
-    flex: 1,
   },
   viewBtnText: {
     fontSize: 12,
@@ -776,10 +751,11 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   rejectBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
-    paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
@@ -792,10 +768,11 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   approveBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
-    paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 8,
     backgroundColor: '#16A34A',
@@ -806,10 +783,11 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   suspendBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
-    paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,

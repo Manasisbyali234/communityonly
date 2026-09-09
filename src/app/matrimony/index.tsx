@@ -430,20 +430,7 @@ export default function MatrimonyScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <Text style={[styles.filterLabel, { color: colors.textSecondary, marginTop: 10 }]}>Religion</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
-            {RELIGION_OPTIONS.map(r => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.chip, { backgroundColor: filters.religion === (r || undefined) ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, religion: r || undefined }))}
-              >
-                <Text style={[styles.chipText, { color: filters.religion === (r || undefined) ? '#fff' : colors.primary }]}>
-                  {r || 'Any Religion'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+
         </View>
       )}
 
