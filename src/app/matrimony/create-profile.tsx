@@ -344,9 +344,10 @@ export default function CreateMatrimonyProfile() {
   });
 
   const handleSubmit = async () => {
-    if (photos.length < 4) { Alert.alert('More Photos Required', 'Please upload at least 4 photos.'); return; }
+    if (photos.length < 4) { Alert.alert('More Photos Required', `Please upload at least 4 photos. You have ${photos.length}.`); return; }
     if (!consents.accurate || !consents.terms || !consents.privacy || !consents.display) {
-      Alert.alert('Declaration Required', 'Please check all declaration boxes.'); return;
+      const missing = ['accurate','terms','privacy','display'].filter(k => !consents[k as keyof typeof consents]);
+      Alert.alert('Declaration Required', `Please check all declaration boxes. Missing: ${missing.join(', ')}`); return;
     }
     const ok = await useConfirmStore.getState().confirm({
       title: myProfile?.id ? 'Save profile changes?' : 'Submit profile?',
