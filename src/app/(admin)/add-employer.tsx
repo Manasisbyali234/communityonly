@@ -6,7 +6,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AdminShell from '../../components/admin/AdminShell';
-import { C } from '../../components/admin/AdminUI';
+import { C, useIsMobile } from '../../components/admin/AdminUI';
 import { adminApiClient } from '../../api/adminClient';
 import { getApiBaseUrl } from '../../api/config';
 
@@ -27,6 +27,7 @@ const toDisplayUrl = (url?: string | null) => {
 };
 
 export default function AdminAddEmployer() {
+  const isMobile = useIsMobile();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!id;
@@ -36,14 +37,16 @@ export default function AdminAddEmployer() {
   const [loading, setLoading] = useState(isEdit);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoPreviewUri, setLogoPreviewUri] = useState('');
+  const [logoRawUrl, setLogoRawUrl] = useState('');
 
   useEffect(() => {
     if (!isEdit) return;
     adminApiClient.get(`/jobs/employers/${id}`)
       .then(res => {
         const e = res.data?.data ?? res.data;
+        setLogoRawUrl(e.logoUrl ?? '');
         setForm({
-          name: e.name ?? '', logoUrl: toDisplayUrl(e.logoUrl), website: e.website ?? '',
+          name: e.name ?? '', logoUrl: e.logoUrl ?? '', website: e.website ?? '',
           industry: e.industry ?? '', description: e.description ?? '',
           email: e.email ?? '', phone: e.phone ?? '',
           address: e.address ?? '', city: e.city ?? '', state: e.state ?? '',
@@ -58,7 +61,10 @@ export default function AdminAddEmployer() {
   const uploadLogo = async (formData: FormData) => {
     const res = await adminApiClient.post('/jobs/employers/upload-logo', formData);
     const url = res.data?.data?.url ?? res.data?.url;
-    if (url) set('logoUrl', toDisplayUrl(url));
+    if (url) {
+      setLogoRawUrl(url);
+      set('logoUrl', url);
+    }
   };
 
   const pickLogo = async () => {
@@ -139,13 +145,13 @@ export default function AdminAddEmployer() {
 
   return (
     <AdminShell title={isEdit ? 'Edit Employer' : 'Add Employer'}>
-      <View style={s.card}>
+      <ScrollView contentContainerStyle={[s.card, isMobile && s.cardMobile]}>
 
         {/* Logo */}
         <Field label="Company Logo" optional>
           <View style={s.logoRow}>
-            {logoPreviewUri || form.logoUrl ? (
-              <Image source={{ uri: logoPreviewUri || form.logoUrl }} style={s.logoPreview} resizeMode="contain" key={logoPreviewUri || form.logoUrl} />
+            {logoPreviewUri || logoRawUrl ? (
+              <Image source={{ uri: logoPreviewUri || toDisplayUrl(logoRawUrl) }} style={s.logoPreview} resizeMode="contain" key={logoPreviewUri || logoRawUrl} />
             ) : (
               <View style={s.logoPlaceholder}>
                 <Feather name="image" size={24} color={C.textMuted} />
@@ -157,8 +163,8 @@ export default function AdminAddEmployer() {
                 : <><Feather name="upload" size={13} color={C.accent} /><Text style={s.uploadBtnText}> Upload Logo</Text></>}
             </TouchableOpacity>
           </View>
-          {logoPreviewUri || form.logoUrl ? (
-            <TouchableOpacity onPress={() => { setLogoPreviewUri(''); set('logoUrl', ''); }} style={s.removeBtn}>
+          {logoPreviewUri || logoRawUrl ? (
+            <TouchableOpacity onPress={() => { setLogoPreviewUri(''); setLogoRawUrl(''); set('logoUrl', ''); }} style={s.removeBtn}>
               <Feather name="x" size={12} color={C.danger} />
               <Text style={s.removeText}>Remove</Text>
             </TouchableOpacity>
@@ -196,7 +202,7 @@ export default function AdminAddEmployer() {
             textAlignVertical="top" />
         </Field>
 
-        <View style={s.row}>
+        <View style={[s.row, isMobile && s.rowMobile]}>
           <View style={{ flex: 1 }}>
             <Field label="Contact Email" optional>
               <TextInput style={s.input} value={form.email} onChangeText={v => set('email', v)}
@@ -219,7 +225,7 @@ export default function AdminAddEmployer() {
             placeholder="Street address" placeholderTextColor={C.textMuted} />
         </Field>
 
-        <View style={s.row}>
+        <View style={[s.row, isMobile && s.rowMobile]}>
           <View style={{ flex: 1 }}>
             <Field label="City" optional>
               <TextInput style={s.input} value={form.city} onChangeText={v => set('city', v)}
@@ -243,7 +249,7 @@ export default function AdminAddEmployer() {
             </>
           )}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </AdminShell>
   );
 }
@@ -263,10 +269,12 @@ function Field({ label, children, required, optional }: { label: string; childre
 
 const s = StyleSheet.create({
   card: { backgroundColor: C.white, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
+  cardMobile: { padding: 14 },
   label: { fontSize: 12, fontWeight: '700', color: C.textSecond, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 },
   input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: C.textPrimary, backgroundColor: C.bg },
   textarea: { minHeight: 90 },
   row: { flexDirection: 'row' },
+  rowMobile: { flexDirection: 'column' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg },
   chipActive: { backgroundColor: C.accent, borderColor: C.accent },

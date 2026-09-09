@@ -5,7 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  ActivityIndicator, Alert, Modal, Platform, ScrollView,
+  ActivityIndicator, Alert, Animated, Modal, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -70,37 +70,55 @@ function Dropdown({
   onChange: (v: string) => void; colors: any; placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const inputStyle = [styles.textInput, { backgroundColor: colors.elevation1, borderColor: colors.border, color: colors.text }];
+  const rotation = useRef(new Animated.Value(0)).current;
+
+  const toggle = () => {
+    const toValue = open ? 0 : 1;
+    Animated.timing(rotation, { toValue, duration: 180, useNativeDriver: true }).start();
+    setOpen(o => !o);
+  };
+
+  const chevronRotate = rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+
   return (
-    <>
+    <View style={[styles.dropdownWrap, { zIndex: open ? 999 : 1, marginBottom: 14 }]}>
       <FieldLabel label={label} colors={colors} />
-      <TouchableOpacity style={[inputStyle, styles.dropdownBtn]} onPress={() => setOpen(true)}>
-        <Text style={{ color: value ? colors.text : colors.textMuted, flex: 1, fontSize: 14 }}>
+      <TouchableOpacity
+        style={[styles.ddTrigger, { backgroundColor: colors.elevation1, borderColor: open ? colors.primary : colors.border }, open && styles.ddTriggerOpen]}
+        onPress={toggle}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.ddTriggerText, { color: value ? colors.text : colors.textMuted }]} numberOfLines={1}>
           {value || placeholder || `Select ${label}`}
         </Text>
-        <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+        <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+          <Ionicons name="chevron-down" size={16} color={open ? colors.primary : colors.textMuted} />
+        </Animated.View>
       </TouchableOpacity>
-      <Modal visible={open} transparent animationType="slide">
-        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setOpen(false)}>
-          <View style={[styles.sheetContainer, { backgroundColor: colors.surface }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>{label}</Text>
-            <ScrollView style={{ maxHeight: 340 }}>
-              {options.map(o => (
-                <TouchableOpacity
-                  key={o}
-                  style={[styles.sheetRow, { borderBottomColor: colors.border, backgroundColor: value === o ? colors.primaryContainer : 'transparent' }]}
-                  onPress={() => { onChange(o); setOpen(false); }}
-                >
-                  <Text style={{ color: value === o ? colors.primary : colors.text, fontSize: 14, fontWeight: value === o ? '700' : '400' }}>{o}</Text>
-                  {value === o && <Ionicons name="checkmark" size={16} color={colors.primary} />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    </>
+      {open && (
+        <View style={[styles.ddPanel, { backgroundColor: colors.surface, borderColor: colors.primary,
+          shadowColor: colors.shadow ?? '#000' }]}>
+          <ScrollView style={{ maxHeight: 232 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator={false}>
+            {options.map((o, i) => (
+              <TouchableOpacity
+                key={o}
+                style={[
+                  styles.ddRow,
+                  { borderBottomColor: colors.border },
+                  value === o && { backgroundColor: colors.primaryContainer },
+                  i === options.length - 1 && { borderBottomWidth: 0 },
+                ]}
+                onPress={() => { onChange(o); toggle(); }}
+                activeOpacity={0.65}
+              >
+                <Text style={[styles.ddRowText, { color: value === o ? colors.primary : colors.text, fontWeight: value === o ? '600' : '400' }]}>{o}</Text>
+                {value === o && <Ionicons name="checkmark" size={15} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -112,49 +130,73 @@ function SearchableDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const rotation = useRef(new Animated.Value(0)).current;
   const filtered = query.length > 0 ? options.filter(o => o.toLowerCase().includes(query.toLowerCase())) : options;
-  const inputStyle = [styles.textInput, { backgroundColor: colors.elevation1, borderColor: colors.border, color: colors.text }];
+
+  const toggle = (forceClose = false) => {
+    const next = forceClose ? false : !open;
+    Animated.timing(rotation, { toValue: next ? 1 : 0, duration: 180, useNativeDriver: true }).start();
+    if (!next) setQuery('');
+    setOpen(next);
+  };
+
+  const chevronRotate = rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+
   return (
-    <>
+    <View style={[styles.dropdownWrap, { zIndex: open ? 999 : 1, marginBottom: 14 }]}>
       <FieldLabel label={label} colors={colors} />
-      <TouchableOpacity style={[inputStyle, styles.dropdownBtn]} onPress={() => { setQuery(''); setOpen(true); }}>
-        <Text style={{ color: value ? colors.text : colors.textMuted, flex: 1, fontSize: 14 }}>
+      <TouchableOpacity
+        style={[styles.ddTrigger, { backgroundColor: colors.elevation1, borderColor: open ? colors.primary : colors.border }, open && styles.ddTriggerOpen]}
+        onPress={() => toggle()}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.ddTriggerText, { color: value ? colors.text : colors.textMuted }]} numberOfLines={1}>
           {value || `Search ${label}...`}
         </Text>
-        <Ionicons name="search" size={16} color={colors.textMuted} />
+        <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+          <Ionicons name="chevron-down" size={16} color={open ? colors.primary : colors.textMuted} />
+        </Animated.View>
       </TouchableOpacity>
-      <Modal visible={open} transparent animationType="slide">
-        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setOpen(false)}>
-          <View style={[styles.sheetContainer, { backgroundColor: colors.surface }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>{label}</Text>
+      {open && (
+        <View style={[styles.ddPanel, { backgroundColor: colors.surface, borderColor: colors.primary,
+          shadowColor: colors.shadow ?? '#000' }]}>
+          <View style={[styles.ddSearchRow, { borderBottomColor: colors.border }]}>
+            <Ionicons name="search" size={14} color={colors.textMuted} style={{ marginRight: 7 }} />
             <TextInput
-              style={[inputStyle, { marginHorizontal: 0, marginBottom: 8 }]}
+              style={[styles.ddSearchInput, { color: colors.text }]}
               value={query}
               onChangeText={setQuery}
               placeholder={`Search ${label}...`}
               placeholderTextColor={colors.textMuted}
               autoFocus
             />
-            <FlatList
-              data={filtered}
-              keyExtractor={i => i}
-              style={{ maxHeight: 280 }}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.sheetRow, { borderBottomColor: colors.border, backgroundColor: value === item ? colors.primaryContainer : 'transparent' }]}
-                  onPress={() => { onChange(item); setOpen(false); }}
-                >
-                  <Text style={{ color: value === item ? colors.primary : colors.text, fontSize: 14, fontWeight: value === item ? '700' : '400' }}>{item}</Text>
-                  {value === item && <Ionicons name="checkmark" size={16} color={colors.primary} />}
-                </TouchableOpacity>
-              )}
-            />
           </View>
-        </TouchableOpacity>
-      </Modal>
-    </>
+          <FlatList
+            data={filtered}
+            keyExtractor={i => i}
+            style={{ maxHeight: 192 }}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                style={[
+                  styles.ddRow,
+                  { borderBottomColor: colors.border },
+                  value === item && { backgroundColor: colors.primaryContainer },
+                  index === filtered.length - 1 && { borderBottomWidth: 0 },
+                ]}
+                onPress={() => { onChange(item); toggle(true); }}
+                activeOpacity={0.65}
+              >
+                <Text style={[styles.ddRowText, { color: value === item ? colors.primary : colors.text, fontWeight: value === item ? '600' : '400' }]}>{item}</Text>
+                {value === item && <Ionicons name="checkmark" size={15} color={colors.primary} />}
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -279,9 +321,9 @@ export default function CreateMatrimonyProfile() {
       motherName: myProfile.motherName ?? '',
       motherStatus: myProfile.motherStatus ?? '',
       brothers: myProfile.brothers?.toString() ?? '',
-      brothersMarried: myProfile.brothersMarried?.toString() ?? '',
+      brothersMarried: myProfile.brothersMarried === 1 ? 'Yes' : myProfile.brothersMarried === 0 ? 'No' : '',
       sisters: myProfile.sisters?.toString() ?? '',
-      sistersMarried: myProfile.sistersMarried?.toString() ?? '',
+      sistersMarried: myProfile.sistersMarried === 1 ? 'Yes' : myProfile.sistersMarried === 0 ? 'No' : '',
       ancestralOrigin: myProfile.ancestralOrigin ?? '',
       photoVisibility: myProfile.photoVisibility ?? '',
     });
@@ -357,10 +399,11 @@ export default function CreateMatrimonyProfile() {
     });
     if (!ok) return;
     const toNum = (v: string) => { const n = parseInt(v); return isNaN(n) ? undefined : n; };
+    const yesNo = (v: string) => v === 'Yes' ? 1 : v === 'No' ? 0 : undefined;
     const payload: any = {
       ...form,
-      brothers: toNum(form.brothers), brothersMarried: toNum(form.brothersMarried),
-      sisters: toNum(form.sisters), sistersMarried: toNum(form.sistersMarried),
+      brothers: toNum(form.brothers), brothersMarried: yesNo(form.brothersMarried),
+      sisters: toNum(form.sisters), sistersMarried: yesNo(form.sistersMarried),
       photos,
     };
     try {
@@ -409,15 +452,17 @@ export default function CreateMatrimonyProfile() {
           <FieldLabel label="Full Name *" colors={colors} />
           <TextInput style={inputStyle} value={form.displayName} onChangeText={set('displayName')} placeholder="Your full name" placeholderTextColor={colors.textMuted} />
           <ChipGroup label="Gender *" options={['MALE','FEMALE','OTHER']} value={form.gender} onChange={v => setForm(f => ({ ...f, gender: v as Gender }))} colors={colors} />
-          <FieldLabel label="Date of Birth *" colors={colors} />
-          <TouchableOpacity style={[inputStyle, styles.rowBetween, { marginBottom: 14 }]} onPress={() => setShowDatePicker(true)}>
-            <Text style={{ color: form.dateOfBirth ? colors.text : colors.textMuted }}>{form.dateOfBirth || 'Select date of birth'}</Text>
-            <Ionicons name="calendar-outline" size={19} color={colors.primary} />
-          </TouchableOpacity>
-          {showDatePicker && <DateTimePicker value={form.dateOfBirth ? new Date(form.dateOfBirth + 'T12:00:00') : new Date(1995,0,1)} mode="date" maximumDate={new Date()} onValueChange={(_e: any, d?: Date) => { if (Platform.OS !== 'ios') setShowDatePicker(false); if (d) set('dateOfBirth')(d.toISOString().slice(0,10)); }} onDismiss={() => setShowDatePicker(false)} />}
-          {showDatePicker && Platform.OS === 'ios' && <TouchableOpacity style={[styles.doneBtn, { backgroundColor: colors.primary }]} onPress={() => setShowDatePicker(false)}><Text style={styles.doneBtnText}>Done</Text></TouchableOpacity>}
-          <Dropdown label="Marital Status *" options={MARITAL_STATUS_OPTIONS.map(o => MARITAL_STATUS_LABELS[o])} value={form.maritalStatus ? MARITAL_STATUS_LABELS[form.maritalStatus as MaritalStatus] : ''} onChange={v => { const k = MARITAL_STATUS_OPTIONS.find(o => MARITAL_STATUS_LABELS[o] === v); if (k) setForm(f => ({ ...f, maritalStatus: k })); }} colors={colors} />
-          <Dropdown label="Height *" options={HEIGHT_OPTIONS} value={form.height} onChange={set('height')} colors={colors} />
+          {!myProfile?.id && (<>
+            <FieldLabel label="Date of Birth *" colors={colors} />
+            <TouchableOpacity style={[inputStyle, styles.rowBetween, { marginBottom: 14 }]} onPress={() => setShowDatePicker(true)}>
+              <Text style={{ color: form.dateOfBirth ? colors.text : colors.textMuted }}>{form.dateOfBirth || 'Select date of birth'}</Text>
+              <Ionicons name="calendar-outline" size={19} color={colors.primary} />
+            </TouchableOpacity>
+            {showDatePicker && <DateTimePicker value={form.dateOfBirth ? new Date(form.dateOfBirth + 'T12:00:00') : new Date(1995,0,1)} mode="date" maximumDate={new Date()} onValueChange={(_e: any, d?: Date) => { if (Platform.OS !== 'ios') setShowDatePicker(false); if (d) set('dateOfBirth')(d.toISOString().slice(0,10)); }} onDismiss={() => setShowDatePicker(false)} />}
+            {showDatePicker && Platform.OS === 'ios' && <TouchableOpacity style={[styles.doneBtn, { backgroundColor: colors.primary }]} onPress={() => setShowDatePicker(false)}><Text style={styles.doneBtnText}>Done</Text></TouchableOpacity>}
+            <Dropdown label="Marital Status *" options={MARITAL_STATUS_OPTIONS.map(o => MARITAL_STATUS_LABELS[o])} value={form.maritalStatus ? MARITAL_STATUS_LABELS[form.maritalStatus as MaritalStatus] : ''} onChange={v => { const k = MARITAL_STATUS_OPTIONS.find(o => MARITAL_STATUS_LABELS[o] === v); if (k) setForm(f => ({ ...f, maritalStatus: k })); }} colors={colors} />
+            <Dropdown label="Height *" options={HEIGHT_OPTIONS} value={form.height} onChange={set('height')} colors={colors} />
+          </>)}
           <Dropdown label="Blood Group *" options={BLOOD_GROUP_OPTIONS} value={form.bloodGroup} onChange={set('bloodGroup')} colors={colors} />
           <Dropdown label="Eating Habits *" options={EATING_HABITS_OPTIONS} value={form.eatingHabits} onChange={set('eatingHabits')} colors={colors} />
           <Dropdown label="Disability *" options={DISABILITY_OPTIONS} value={form.disability} onChange={set('disability')} colors={colors} />
@@ -474,10 +519,22 @@ export default function CreateMatrimonyProfile() {
           <FieldLabel label="Mother's Name" colors={colors} />
           <TextInput style={inputStyle} value={form.motherName} onChangeText={set('motherName')} placeholder="Mother's full name" placeholderTextColor={colors.textMuted} />
           <Dropdown label="Mother's Status *" options={MOTHER_STATUS_OPTIONS} value={form.motherStatus} onChange={set('motherStatus')} colors={colors} />
-          <NumberSelector label="Brothers *" options={SIBLING_COUNT_OPTIONS} value={form.brothers} onChange={set('brothers')} colors={colors} />
-          <NumberSelector label="Brothers Married *" options={SIBLING_COUNT_OPTIONS} value={form.brothersMarried} onChange={set('brothersMarried')} colors={colors} />
-          <NumberSelector label="Sisters *" options={SIBLING_COUNT_OPTIONS} value={form.sisters} onChange={set('sisters')} colors={colors} />
-          <NumberSelector label="Sisters Married *" options={SIBLING_COUNT_OPTIONS} value={form.sistersMarried} onChange={set('sistersMarried')} colors={colors} />
+          <View style={styles.siblingRow}>
+            <View style={styles.siblingCell}>
+              <Dropdown label="Brothers" options={SIBLING_COUNT_OPTIONS} value={form.brothers} onChange={set('brothers')} colors={colors} />
+            </View>
+            <View style={styles.siblingCell}>
+              <Dropdown label="Brothers Married" options={['Yes', 'No']} value={form.brothersMarried} onChange={set('brothersMarried')} colors={colors} />
+            </View>
+          </View>
+          <View style={styles.siblingRow}>
+            <View style={styles.siblingCell}>
+              <Dropdown label="Sisters" options={SIBLING_COUNT_OPTIONS} value={form.sisters} onChange={set('sisters')} colors={colors} />
+            </View>
+            <View style={styles.siblingCell}>
+              <Dropdown label="Sisters Married" options={['Yes', 'No']} value={form.sistersMarried} onChange={set('sistersMarried')} colors={colors} />
+            </View>
+          </View>
           <FieldLabel label="Ancestral / Family Origin *" colors={colors} />
           <TextInput style={inputStyle} value={form.ancestralOrigin} onChangeText={set('ancestralOrigin')} placeholder="e.g. Kodagu, Karnataka" placeholderTextColor={colors.textMuted} />
         </>)}
@@ -610,6 +667,18 @@ const styles = StyleSheet.create({
   approvalBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14, borderRadius: 12, borderWidth: 1.5, marginBottom: 20 },
   approvalLabel: { fontSize: 13, fontWeight: '800', marginBottom: 3 },
   approvalSub: { fontSize: 12, lineHeight: 17 },
+  siblingRow: { flexDirection: 'row', gap: 12, marginBottom: 0 },
+  siblingCell: { flex: 1 },
+  dropdownWrap: { position: 'relative' },
+  ddTrigger: { flexDirection: 'row', alignItems: 'center', height: 48, paddingHorizontal: 13, borderRadius: 10, borderWidth: 1, marginBottom: 0 },
+  ddTriggerOpen: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  ddTriggerText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  ddPanel: { borderWidth: 1, borderTopWidth: 0, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, overflow: 'hidden', width: '100%',
+    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 6 },
+  ddRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, minHeight: 46, borderBottomWidth: StyleSheet.hairlineWidth },
+  ddRowText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  ddSearchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, height: 46, borderBottomWidth: 1 },
+  ddSearchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheetContainer: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingBottom: 36, paddingTop: 12 },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },

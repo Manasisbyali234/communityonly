@@ -11,6 +11,7 @@ import { C, SearchBar, EmptyState, LoadingOverlay, useIsMobile } from '../../com
 import { fmtDate, fmtDateTime } from '../../utils/adminUtils';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
+import { API_BASE_URL } from '../../api/config';
 import {
   useAdminStoriesQuery,
   useAdminCreateStoryMutation,
@@ -154,6 +155,9 @@ export default function AdminCommunityStories() {
     }
   };
 
+  const resolveUrl = (url: string) =>
+    url.startsWith('http') ? url : `${API_BASE_URL.replace('/api/v1', '')}/${url.replace(/^\//, '')}`;
+
   const handlePickFeaturedImage = async () => {
     if (Platform.OS === 'web') {
       const input = document.createElement('input');
@@ -169,7 +173,7 @@ export default function AdminCommunityStories() {
           const { adminApiClient } = await import('../../api/adminClient');
           const res = await adminApiClient.post('/media/upload', formData);
           const url = res.data?.data?.url ?? res.data?.url;
-          if (url) setForm((p) => ({ ...p, featuredImage: url }));
+          if (url) setForm((p) => ({ ...p, featuredImage: resolveUrl(url) }));
         } catch { showToast('Image upload failed', 'error'); }
         finally { setUploadingImage(false); }
       };
@@ -188,7 +192,7 @@ export default function AdminCommunityStories() {
       const { adminApiClient } = await import('../../api/adminClient');
       const res = await adminApiClient.post('/media/upload', formData);
       const url = res.data?.data?.url ?? res.data?.url;
-      if (url) setForm((p) => ({ ...p, featuredImage: url }));
+      if (url) setForm((p) => ({ ...p, featuredImage: resolveUrl(url) }));
     } catch { showToast('Image upload failed', 'error'); }
     finally { setUploadingImage(false); }
   };
@@ -206,7 +210,7 @@ export default function AdminCommunityStories() {
       const { adminApiClient } = await import('../../api/adminClient');
       const res = await adminApiClient.post('/media/upload', formData);
       const url = res.data?.data?.url ?? res.data?.url;
-      if (url) setForm((p) => ({ ...p, featuredImage: url }));
+      if (url) setForm((p) => ({ ...p, featuredImage: resolveUrl(url) }));
     } catch { showToast('Image upload failed', 'error'); }
     finally { setUploadingImage(false); }
   };
@@ -532,7 +536,7 @@ export default function AdminCommunityStories() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
                 {/* Form Fields */}
                 <View style={s.formGroup}>
                   <Text style={s.formLabel}>Story Headline / Title *</Text>

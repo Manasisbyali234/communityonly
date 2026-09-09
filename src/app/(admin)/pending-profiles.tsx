@@ -202,7 +202,7 @@ export default function PendingProfilesScreen() {
 
   return (
     <AdminShell title="Pending Profiles">
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, isMobile && styles.contentMobile]}>
         {/* Top Header Card */}
         <View style={styles.headerCard}>
           <View>
@@ -214,7 +214,7 @@ export default function PendingProfilesScreen() {
         </View>
 
         {/* Tab Filters */}
-        <View style={styles.tabsRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === 'PENDING' && styles.tabBtnActive]}
             onPress={() => setActiveTab('PENDING')}
@@ -259,7 +259,7 @@ export default function PendingProfilesScreen() {
               All ({counts.all})
             </Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
 
         {/* Search */}
         <View style={styles.searchWrap}>
@@ -310,7 +310,7 @@ export default function PendingProfilesScreen() {
                   </View>
 
                   {/* Contact & Location Details */}
-                  <View style={styles.detailsGrid}>
+                  <View style={[styles.detailsGrid, isMobile && styles.detailsGridMobile]}>
                     <View style={styles.detailItem}>
                       <Feather name="phone" size={13} color="#64748B" />
                       <Text style={styles.detailText}>{item.phone || 'No phone'}</Text>
@@ -342,7 +342,7 @@ export default function PendingProfilesScreen() {
                   ) : null}
 
                   {/* Card Actions */}
-                  <View style={styles.cardActionsRow}>
+                  <View style={[styles.cardActionsRow, isMobile && styles.cardActionsRowMobile]}>
                     <TouchableOpacity
                       style={styles.viewBtn}
                       onPress={() => {
@@ -448,7 +448,7 @@ export default function PendingProfilesScreen() {
 
                 <View style={styles.sectionDivider}>
                   <Text style={styles.sectionHeader}>Basic Details</Text>
-                  <View style={styles.grid2}>
+                  <View style={[styles.grid2, isMobile && styles.grid2Mobile]}>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>Full Name</Text><Text style={styles.fieldVal}>{selectedUser.displayName}</Text></View>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>Family Name</Text><Text style={styles.fieldVal}>{selectedUser.familyName || '—'}</Text></View>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>Date of Birth</Text><Text style={styles.fieldVal}>{selectedUser.dob || '—'}</Text></View>
@@ -460,7 +460,7 @@ export default function PendingProfilesScreen() {
 
                 <View style={styles.sectionDivider}>
                   <Text style={styles.sectionHeader}>Location & Roots</Text>
-                  <View style={styles.grid2}>
+                  <View style={[styles.grid2, isMobile && styles.grid2Mobile]}>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>Country</Text><Text style={styles.fieldVal}>{selectedUser.country || 'India'}</Text></View>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>State</Text><Text style={styles.fieldVal}>{selectedUser.state || 'Karnataka'}</Text></View>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>District</Text><Text style={styles.fieldVal}>{selectedUser.district || '—'}</Text></View>
@@ -472,7 +472,7 @@ export default function PendingProfilesScreen() {
 
                 <View style={styles.sectionDivider}>
                   <Text style={styles.sectionHeader}>Professional & Education</Text>
-                  <View style={styles.grid2}>
+                  <View style={[styles.grid2, isMobile && styles.grid2Mobile]}>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>Occupation</Text><Text style={styles.fieldVal}>{selectedUser.occupation || '—'}</Text></View>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>Industry</Text><Text style={styles.fieldVal}>{selectedUser.profession || '—'}</Text></View>
                     <View style={styles.fieldItem}><Text style={styles.fieldLbl}>Company</Text><Text style={styles.fieldVal}>{selectedUser.company || '—'}</Text></View>
@@ -503,7 +503,7 @@ export default function PendingProfilesScreen() {
                 ) : null}
 
                 {/* Modal Footer Actions */}
-                <View style={styles.modalActionsRow}>
+                <View style={[styles.modalActionsRow, isMobile && styles.modalActionsRowMobile]}>
                   <TouchableOpacity style={styles.closeBtn} onPress={() => setShowDetailModal(false)}>
                     <Text style={styles.closeBtnText}>Close</Text>
                   </TouchableOpacity>
@@ -592,6 +592,7 @@ export default function PendingProfilesScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { padding: 20, paddingBottom: 60, gap: 16 },
+  contentMobile: { padding: 12, paddingBottom: 60, gap: 12 },
   headerCard: {
     backgroundColor: '#FFF',
     padding: 18,
@@ -603,8 +604,8 @@ const styles = StyleSheet.create({
   pageSub: { fontSize: 13, color: '#64748B', marginTop: 4 },
   tabsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
+    paddingBottom: 4,
   },
   tabBtn: {
     paddingHorizontal: 14,
@@ -719,6 +720,9 @@ const styles = StyleSheet.create({
     gap: 6,
     minWidth: 180,
   },
+  detailsGridMobile: {
+    flexDirection: 'column',
+  },
   detailText: {
     fontSize: 12,
     color: '#475569',
@@ -749,6 +753,10 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
+  },
+  cardActionsRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   viewBtn: {
     flexDirection: 'row',
@@ -889,6 +897,9 @@ const styles = StyleSheet.create({
   fieldItem: {
     minWidth: '45%',
   },
+  grid2Mobile: {
+    flexDirection: 'column',
+  },
   fieldLbl: {
     fontSize: 11,
     color: '#64748B',
@@ -934,6 +945,10 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
+  },
+  modalActionsRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   closeBtn: {
     paddingHorizontal: 16,

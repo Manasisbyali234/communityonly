@@ -101,13 +101,6 @@ export default function AdminMatrimonyProfiles() {
     p.user?.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const FILTER_CHIPS = [
-    { key: 'PENDING',  label: 'Pending',  dot: '#f59e0b' },
-    { key: 'APPROVED', label: 'Approved', dot: '#22c55e' },
-    { key: 'REJECTED', label: 'Rejected', dot: '#ef4444' },
-    { key: 'CHATS',    label: 'Chats' },
-  ] as const;
-
   return (
     <AdminShell title="Matrimony Profiles">
       {/* Status tabs — horizontally scrollable */}
@@ -146,18 +139,7 @@ export default function AdminMatrimonyProfiles() {
               </TouchableOpacity>
             ) : null}
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ gap: 8 }}>
-            {FILTER_CHIPS.map(f => (
-              <TouchableOpacity
-                key={f.key}
-                style={[s.chip, activeTab === f.key && s.chipActive]}
-                onPress={() => setActiveTab(f.key)}
-              >
-                {'dot' in f && f.dot ? <View style={[s.chipDot, { backgroundColor: f.dot }]} /> : null}
-                <Text style={[s.chipText, activeTab === f.key && s.chipTextActive]}>{f.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+
         </View>
       ) : (
         <View style={s.toolbar}>

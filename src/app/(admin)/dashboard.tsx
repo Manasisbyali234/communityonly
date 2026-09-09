@@ -249,7 +249,7 @@ export default function AdminDashboard() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={[s.approvalStatLabel, { color: '#B45309', fontWeight: '700' }]}>Pending Approval</Text>
                   <View style={s.pendingPill}>
-                    <Text style={s.pendingPillText}>Action Required</Text>
+                    <Text style={s.pendingPillText}></Text>
                   </View>
                 </View>
                 <Feather name="clock" size={16} color="#D97706" />
@@ -506,7 +506,7 @@ const s = StyleSheet.create({
 
   // Section Headers
   sectionWrap: { gap: 10 },
-  sectionHeaderRow: { marginBottom: 2 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: C.textPrimary, letterSpacing: -0.2 },
   sectionSub: { fontSize: 12, color: C.textMuted, marginTop: 1 },
 

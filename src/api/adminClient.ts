@@ -11,12 +11,21 @@ export const adminApiClient = axios.create({
 });
 
 adminApiClient.interceptors.request.use(async (config) => {
+  const hydrationPromises: Promise<void>[] = [];
   if (!useAdminStore.persist.hasHydrated()) {
-    await new Promise<void>((resolve) => {
+    hydrationPromises.push(new Promise<void>((resolve) => {
       const unsub = useAdminStore.persist.onFinishHydration(() => { unsub(); resolve(); });
       setTimeout(resolve, 1000);
-    });
+    }));
   }
+  if (!useAuthStore.persist.hasHydrated()) {
+    hydrationPromises.push(new Promise<void>((resolve) => {
+      const unsub = useAuthStore.persist.onFinishHydration(() => { unsub(); resolve(); });
+      setTimeout(resolve, 1000);
+    }));
+  }
+  if (hydrationPromises.length) await Promise.all(hydrationPromises);
+
   const { token, isTokenValid, logout } = useAdminStore.getState();
   if (!isTokenValid()) {
     logout();
