@@ -241,8 +241,8 @@ export default function AdminAddEmployer() {
           </View>
         </View>
 
-        <TouchableOpacity style={s.submitBtn} onPress={submit} disabled={saving}>
-          {saving ? <ActivityIndicator size="small" color="#fff" /> : (
+        <TouchableOpacity style={s.submitBtn} onPress={submit} disabled={saving || logoUploading}>
+          {saving || logoUploading ? <ActivityIndicator size="small" color="#fff" /> : (
             <>
               <Feather name="check" size={15} color="#fff" />
               <Text style={s.submitBtnText}>{isEdit ? 'Update Employer' : 'Create Employer'}</Text>

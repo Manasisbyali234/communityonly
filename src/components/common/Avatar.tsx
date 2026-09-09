@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme';
+import { toProxyUrl } from '../../api/media';
 
 interface AvatarProps {
   url?: string;
@@ -25,13 +26,14 @@ export const Avatar: React.FC<AvatarProps> = ({
   const ringPadding = gradientBorder ? 2.5 : 0;
   const innerSize = size - ringPadding * 2;
 
+  const resolvedUrl = toProxyUrl(url);
   const [failedUrl, setFailedUrl] = useState<string | undefined>();
 
   const renderImage = () => {
-    if (url && failedUrl !== url) {
+    if (resolvedUrl && failedUrl !== resolvedUrl) {
       return (
         <Image
-          source={{ uri: url }}
+          source={{ uri: resolvedUrl }}
           style={{
             width: innerSize,
             height: innerSize,
@@ -39,7 +41,7 @@ export const Avatar: React.FC<AvatarProps> = ({
           }}
           contentFit="cover"
           transition={300}
-          onError={() => setFailedUrl(url)}
+          onError={() => setFailedUrl(resolvedUrl)}
         />
       );
     }

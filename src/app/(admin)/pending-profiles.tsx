@@ -21,21 +21,15 @@ import { useConfirmStore } from '../../store/confirmStore';
 import { useAdminStore } from '../../store/adminStore';
 import { adminApiClient } from '../../api/adminClient';
 import { getApiBaseUrl } from '../../api/config';
+import { toProxyUrl } from '../../api/media';
 
 type TabType = 'PENDING' | 'RESUBMITTED' | 'APPROVED' | 'REJECTED' | 'ALL';
 
-const toAbs = (url?: string | null): string | null => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  const base = getApiBaseUrl().replace('/api/v1', '');
-  return `${base}${url}`;
-};
-
 const UserAvatar = ({ url, name, size }: { url?: string | null; name: string; size: number }) => {
-  const abs = toAbs(url);
+  const resolved = toProxyUrl(url ?? undefined) ?? null;
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  if (abs) {
-    return <Image source={{ uri: abs }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#E2E8F0' }} />;
+  if (resolved) {
+    return <Image source={{ uri: resolved }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#E2E8F0' }} />;
   }
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center' }}>

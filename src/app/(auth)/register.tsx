@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
 import { useToastStore } from '../../store/toastStore';
 import * as ImagePicker from 'expo-image-picker';
-import { pickImage, PickedImage } from '../../utils/imagePicker';
+import { pickImage, PickedImage, appendPickedFile } from '../../utils/imagePicker';
 import { useUserApprovalStore } from '../../store/userApprovalStore';
 import { useAuthStore } from '../../store/authStore';
 import { apiClient } from '../../api/client';
@@ -107,7 +107,7 @@ export default function RegisterScreen() {
 
   // Registration is intentionally a single identity step. The remaining
   // profile details are collected after approval in Edit Profile.
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<PickedImage | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -159,7 +159,7 @@ export default function RegisterScreen() {
     setShowPhotoSourceSheet(false);
     try {
       const img = await pickImage({ aspect: [1, 1] });
-      if (img) setProfilePhoto(img.localUri);
+      if (img) setProfilePhoto(img);
     } catch {
       showToast('Could not select photo', 'error');
     }
@@ -172,7 +172,7 @@ export default function RegisterScreen() {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') { showToast('Camera permission required', 'error'); return; }
       const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.85 });
-      if (!result.canceled && result.assets?.[0]) setProfilePhoto(result.assets[0].uri);
+      if (!result.canceled && result.assets?.[0]) setProfilePhoto({ localUri: result.assets[0].uri, filename: 'avatar.jpg', mimeType: 'image/jpeg' });
     } catch {
       showToast('Could not open camera', 'error');
     }
@@ -211,11 +211,11 @@ export default function RegisterScreen() {
       // 2. Upload profile photo
       let uploadedAvatarUrl: string | null = null;
       try {
-        const ext = profilePhoto.split('.').pop()?.split('?')[0] || 'jpg';
         const formData = new FormData();
-        formData.append('file', { uri: profilePhoto, name: `avatar.${ext}`, type: `image/${ext}` } as any);
+        await appendPickedFile(formData, profilePhoto);
         const uploadRes = await apiClient.post('/media/upload-profile-photo', formData, {
-          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 60000,
         });
         uploadedAvatarUrl = uploadRes.data?.data?.url ?? uploadRes.data?.data?.avatarUrl ?? null;
       } catch {
@@ -224,7 +224,7 @@ export default function RegisterScreen() {
 
       registerPendingUser({
         ...profileData,
-        avatarUrl: uploadedAvatarUrl || profilePhoto,
+        avatarUrl: uploadedAvatarUrl || profilePhoto.localUri,
         approvalStatus: 'PENDING',
         phoneVerified: false,
       });
@@ -296,7 +296,7 @@ export default function RegisterScreen() {
               ]}
             >
               {profilePhoto ? (
-                <ExpoImage source={{ uri: profilePhoto }} style={styles.photoCardImg} contentFit="cover" />
+                <ExpoImage source={{ uri: profilePhoto.localUri }} style={styles.photoCardImg} contentFit="cover" />
               ) : (
                 <View style={[styles.photoCardPlaceholder, { backgroundColor: isDark ? 'rgba(46,125,50,0.15)' : '#F0FDF4' }]}>
                   <Ionicons name="camera" size={28} color={C.primary} />

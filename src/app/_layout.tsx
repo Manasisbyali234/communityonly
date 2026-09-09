@@ -117,7 +117,7 @@ function RootLayoutContent() {
     const inAppGroup =
       segments[0] === '(tabs)' ||
       ['create', 'chat', 'story', 'community', 'krushi-mitra', 'market-rates',
-        'jobs', 'matrimony', 'business', 'community-help', 'our-people'].includes(segments[0] ?? '');
+        'jobs', 'matrimony', 'business', 'community-help', 'our-people', 'archived-posts'].includes(segments[0] ?? '');
 
     const navigate = (path: string) => {
       if (lastRedirect.current === path) return;

@@ -79,7 +79,7 @@ async function jpegBlobToWebp(blob: Blob): Promise<Blob> {
   }
 }
 
-async function appendPickedFile(formData: FormData, picked: PickedImage): Promise<void> {
+export async function appendPickedFile(formData: FormData, picked: PickedImage): Promise<void> {
   assertWithinMediaUploadLimit(picked.size);
 
   if (Platform.OS !== 'web') {

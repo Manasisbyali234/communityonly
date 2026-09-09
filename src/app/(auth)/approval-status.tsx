@@ -250,14 +250,8 @@ export default function ApprovalStatusScreen() {
               {[profileUser?.dob, profileUser?.gender].filter(Boolean).join(' / ') || 'Not specified'}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: C.textMuted }]}>Native Place</Text>
-            <Text style={[styles.detailValue, { color: C.text }]}>{profileUser?.nativePlace || 'Not specified'}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: C.textMuted }]}>Current Location</Text>
-            <Text style={[styles.detailValue, { color: C.text }]}>{profileUser?.currentLocation || 'Not specified'}</Text>
-          </View>
+          
+          
           {profileUser?.occupation && (
             <View style={styles.detailRow}>
               <Text style={[styles.detailLabel, { color: C.textMuted }]}>Occupation</Text>

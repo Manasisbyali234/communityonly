@@ -40,6 +40,7 @@ adminApiClient.interceptors.request.use(async (config) => {
   }
   if (config.data instanceof FormData && config.headers) {
     delete config.headers['Content-Type'];
+    config.timeout = 60000; // 60s for file uploads
   }
   return config;
 });
