@@ -62,7 +62,9 @@ export default function MatrimonyProfileDetail() {
   const heroRef = useRef<FlatList>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const heroHeight = Math.min(360, Math.round(windowWidth * 0.9));
+  const isWide = windowWidth >= 768;
+  const contentWidth = isWide ? Math.min(windowWidth, 680) : windowWidth;
+  const heroHeight = isWide ? 420 : Math.min(340, Math.round(windowWidth * 0.85));
 
   const G = colors.primary;
   const BG = colors.background;
@@ -223,11 +225,12 @@ export default function MatrimonyProfileDetail() {
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item, i) => `${item}-${i}`}
-              onMomentumScrollEnd={(e) => setActiveIdx(Math.round(e.nativeEvent.contentOffset.x / windowWidth))}
+              getItemLayout={(_data, index) => ({ length: contentWidth, offset: contentWidth * index, index })}
+              onMomentumScrollEnd={(e) => setActiveIdx(Math.round(e.nativeEvent.contentOffset.x / contentWidth))}
               renderItem={({ item }) => (
                 <ExpoImage
                   source={{ uri: item }}
-                  style={{ width: windowWidth, height: heroHeight }}
+                  style={{ width: contentWidth, height: heroHeight }}
                   contentFit="cover"
                   transition={200}
                 />
@@ -247,7 +250,7 @@ export default function MatrimonyProfileDetail() {
 
           {/* Photo Counter Pill top-right */}
           {photos.length > 1 && (
-            <View style={styles.photoCountPill}>
+            <View style={[styles.photoCountPill, { top: insets.top + 10 }]}>
               <Ionicons name="camera-outline" size={13} color="#FFF" />
               <Text style={styles.photoCountText}>{activeIdx + 1}/{photos.length}</Text>
             </View>
@@ -255,7 +258,7 @@ export default function MatrimonyProfileDetail() {
 
           {/* Match Score Badge top-left */}
           {profile.matchScore != null && (
-            <View style={[styles.matchScoreBadge, { backgroundColor: G }]}>
+            <View style={[styles.matchScoreBadge, { backgroundColor: G, top: insets.top + 10 }]}>
               <Ionicons name="sparkles" size={12} color="#FFF" />
               <Text style={styles.matchScoreText}>{profile.matchScore}% Match</Text>
             </View>
@@ -283,14 +286,14 @@ export default function MatrimonyProfileDetail() {
         {/* ── Photo Thumbnail Strip ────────────────────────────────────── */}
         {photos.length > 1 && (
           <View style={[styles.thumbStripContainer, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbStrip}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.thumbStrip, isWide && { paddingHorizontal: (windowWidth - contentWidth) / 2 + 16 }]}>
               {photos.map((photo, i) => (
                 <TouchableOpacity
                   key={`${photo}-${i}`}
                   activeOpacity={0.8}
                   onPress={() => {
                     setActiveIdx(i);
-                    heroRef.current?.scrollToIndex({ index: i, animated: true });
+                    heroRef.current?.scrollToOffset({ offset: contentWidth * i, animated: true });
                   }}
                 >
                   <ExpoImage
@@ -311,7 +314,7 @@ export default function MatrimonyProfileDetail() {
         )}
 
         {/* ── Masthead Identity Card ──────────────────────────────────── */}
-        <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER, marginTop: 14 }]}>
+        <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER, marginTop: 14, marginHorizontal: isWide ? (windowWidth - contentWidth) / 2 + 16 : 16 }]}>
           <View style={styles.nameHeaderRow}>
             <Text style={[styles.profileNameTitle, { color: TEXT }]} numberOfLines={1}>
               {profile.displayName}, <Text style={{ fontWeight: '500' }}>{profile.age}</Text>
@@ -358,7 +361,7 @@ export default function MatrimonyProfileDetail() {
         </View>
 
         {/* ── Section: Personal & Cultural Background ─────────────────── */}
-        <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+        <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER, marginHorizontal: isWide ? (windowWidth - contentWidth) / 2 + 16 : 16 }]}>
           <View style={styles.sectionHeaderRow}>
             <View style={[styles.sectionIconCircle, { backgroundColor: G + '14' }]}>
               <Ionicons name="person-outline" size={17} color={G} />
@@ -375,7 +378,7 @@ export default function MatrimonyProfileDetail() {
         </View>
 
         {/* ── Section: Education & Career ─────────────────────────────── */}
-        <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+        <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER, marginHorizontal: isWide ? (windowWidth - contentWidth) / 2 + 16 : 16 }]}>
           <View style={styles.sectionHeaderRow}>
             <View style={[styles.sectionIconCircle, { backgroundColor: '#3B82F614' }]}>
               <Ionicons name="school-outline" size={17} color="#3B82F6" />
@@ -391,7 +394,7 @@ export default function MatrimonyProfileDetail() {
 
         {/* ── Section: Family Details ─────────────────────────────────── */}
         {(profile.familyType || profile.fatherOccupation || profile.motherOccupation || profile.siblings != null) ? (
-          <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+          <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER, marginHorizontal: isWide ? (windowWidth - contentWidth) / 2 + 16 : 16 }]}>
             <View style={styles.sectionHeaderRow}>
               <View style={[styles.sectionIconCircle, { backgroundColor: '#8B5CF614' }]}>
                 <Ionicons name="people-outline" size={17} color="#8B5CF6" />
@@ -408,7 +411,7 @@ export default function MatrimonyProfileDetail() {
 
         {/* ── Section: Lifestyle & Hobbies ────────────────────────────── */}
         {(profile.diet || profile.hobbies?.length) ? (
-          <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+          <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER, marginHorizontal: isWide ? (windowWidth - contentWidth) / 2 + 16 : 16 }]}>
             <View style={styles.sectionHeaderRow}>
               <View style={[styles.sectionIconCircle, { backgroundColor: '#F59E0B14' }]}>
                 <Ionicons name="sparkles-outline" size={17} color="#F59E0B" />
@@ -435,7 +438,7 @@ export default function MatrimonyProfileDetail() {
 
         {/* ── Section: Partner Preferences ────────────────────────────── */}
         {(profile.partnerMinAge || profile.partnerReligion || profile.partnerCaste || profile.partnerEducation || profile.partnerCity) ? (
-          <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+          <View style={[styles.contentCard, { backgroundColor: SURF, borderColor: BORDER, marginHorizontal: isWide ? (windowWidth - contentWidth) / 2 + 16 : 16 }]}>
             <View style={styles.sectionHeaderRow}>
               <View style={[styles.sectionIconCircle, { backgroundColor: '#EC489914' }]}>
                 <Ionicons name="heart-half-outline" size={17} color="#EC4899" />
@@ -455,7 +458,7 @@ export default function MatrimonyProfileDetail() {
       </ScrollView>
 
       {/* ── Sticky Bottom Action Bar ──────────────────────────────────── */}
-      <View style={[styles.bottomBar, { backgroundColor: SURF, borderTopColor: BORDER, paddingBottom: Math.max(16, insets.bottom + 8) }]}>
+      <View style={[styles.bottomBar, { backgroundColor: SURF, borderTopColor: BORDER, paddingBottom: Math.max(16, insets.bottom + 8), paddingHorizontal: isWide ? (windowWidth - contentWidth) / 2 + 16 : 16 }]}>
         {isOwnProfile ? (
           <View style={styles.bottomBarActionsRow}>
             <Button
@@ -531,7 +534,7 @@ export default function MatrimonyProfileDetail() {
           activeOpacity={1}
           onPress={() => setShowModal(false)}
         >
-          <View style={[styles.modalSheet, { backgroundColor: SURF }]}>
+          <View style={[styles.modalSheet, { backgroundColor: SURF, maxWidth: 560, width: '100%', alignSelf: 'center' }]}>
             <View style={styles.sheetHandle} />
             <Text style={[styles.modalTitle, { color: TEXT }]}>Express Interest 💌</Text>
             <Text style={[styles.modalSub, { color: TEXT2 }]}>
@@ -681,7 +684,6 @@ const styles = StyleSheet.create({
   },
   photoCountPill: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 56 : 46,
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -698,7 +700,6 @@ const styles = StyleSheet.create({
   },
   matchScoreBadge: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 56 : 46,
     left: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -744,7 +745,6 @@ const styles = StyleSheet.create({
 
   // Content Cards
   contentCard: {
-    marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
@@ -872,7 +872,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
     paddingTop: 12,
     zIndex: 50,
   },

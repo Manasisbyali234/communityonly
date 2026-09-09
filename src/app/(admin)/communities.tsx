@@ -187,19 +187,7 @@ export default function AdminCommunities() {
               </TouchableOpacity>
             ) : null}
           </View>
-          {/* Filter chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ gap: 8 }}>
-            {MOBILE_FILTERS.map((f) => (
-              <TouchableOpacity
-                key={f.key}
-                style={[ms.chip, mobileFilter === f.key && ms.chipActive]}
-                onPress={() => setMobileFilter(f.key)}
-              >
-                {f.dot && <View style={[ms.chipDot, { backgroundColor: f.dot }]} />}
-                <Text style={[ms.chipText, mobileFilter === f.key && ms.chipTextActive]}>{f.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+
         </View>
       )}
 

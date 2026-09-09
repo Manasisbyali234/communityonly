@@ -538,7 +538,7 @@ export default function AdminCommunityStories() {
                   <Text style={s.formLabel}>Story Headline / Title *</Text>
                   <TextInput
                     style={s.formInput}
-                    placeholder="e.g. From a Small Village to Building a Successful Tech Enterprise"
+                    placeholder= "Village to Enterprise"
                     placeholderTextColor={C.textMuted}
                     value={form.title}
                     onChangeText={(t) => setForm((p) => ({ ...p, title: t }))}
@@ -606,7 +606,7 @@ export default function AdminCommunityStories() {
                   <Text style={s.formLabel}>Short Summary / Lead (1-2 sentences) *</Text>
                   <TextInput
                     style={[s.formInput, { minHeight: 56 }]}
-                    placeholder="Brief highlight that captures the reader's attention on the story card..."
+                    placeholder="Inspiring journey of success..."
                     placeholderTextColor={C.textMuted}
                     value={form.shortDescription}
                     onChangeText={(t) => setForm((p) => ({ ...p, shortDescription: t }))}
@@ -832,6 +832,7 @@ const s = StyleSheet.create({
   modalActionsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   modalBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   modalBtnText: { fontSize: 13, fontWeight: '700' },
+  imageUploadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   imageUploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
   imageUploadBtnText: { fontSize: 12.5, fontWeight: '700' },
   featuredImagePreview: { width: '100%', height: 120, borderRadius: 8, marginTop: 4 },
