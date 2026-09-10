@@ -256,6 +256,7 @@ export default function AdminCommunityStories() {
   };
 
   return (
+    <View style={{ flex: 1 }}>
     <AdminShell title="Our People Stories">
       <View style={s.container}>
         {/* KPI Metrics Strip */}
@@ -525,73 +526,55 @@ export default function AdminCommunityStories() {
           </View>
         )}
 
-        {/* ── Create / Edit Story Modal ────────────────────────────────────────── */}
-        <Modal visible={isCreateModalOpen} transparent animationType="fade" onRequestClose={() => setIsCreateModalOpen(false)}>
-          <View style={s.modalOverlay}>
-            <View style={s.modalBox}>
-              <View style={s.modalHeader}>
-                <Text style={s.modalTitle}>{editingStory ? 'Edit Community Story' : 'Write Community Story'}</Text>
-                <TouchableOpacity onPress={() => setIsCreateModalOpen(false)}>
-                  <Feather name="x" size={20} color={C.textSecond} />
-                </TouchableOpacity>
+      </View>
+    </AdminShell>
+
+      {/* ── Create / Edit Story Modal ── */}
+      <Modal visible={isCreateModalOpen} transparent animationType="slide" onRequestClose={() => setIsCreateModalOpen(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalBox}>
+            {/* Header */}
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle} numberOfLines={1}>
+                {editingStory ? 'Edit Story' : 'Write Community Story'}
+              </Text>
+              <TouchableOpacity onPress={() => setIsCreateModalOpen(false)} style={s.modalCloseBtn}>
+                <Feather name="x" size={18} color={C.textSecond} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={s.modalScroll}
+            >
+              {/* Title */}
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Story Title *</Text>
+                <TextInput style={s.formInput} placeholder="Village to Enterprise" placeholderTextColor={C.textMuted} value={form.title} onChangeText={(t) => setForm((p) => ({ ...p, title: t }))} />
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
-                {/* Form Fields */}
-                <View style={s.formGroup}>
-                  <Text style={s.formLabel}>Story Headline / Title *</Text>
-                  <TextInput
-                    style={s.formInput}
-                    placeholder= "Village to Enterprise"
-                    placeholderTextColor={C.textMuted}
-                    value={form.title}
-                    onChangeText={(t) => setForm((p) => ({ ...p, title: t }))}
-                  />
-                </View>
+              {/* Person Name */}
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Person Name *</Text>
+                <TextInput style={s.formInput} placeholder="e.g. Ramesh Gowda" placeholderTextColor={C.textMuted} value={form.personName} onChangeText={(t) => setForm((p) => ({ ...p, personName: t }))} />
+              </View>
 
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <View style={[s.formGroup, { flex: 1 }]}>
-                    <Text style={s.formLabel}>Person Name *</Text>
-                    <TextInput
-                      style={s.formInput}
-                      placeholder="e.g. Ramesh Gowda"
-                      placeholderTextColor={C.textMuted}
-                      value={form.personName}
-                      onChangeText={(t) => setForm((p) => ({ ...p, personName: t }))}
-                    />
-                  </View>
-                  <View style={[s.formGroup, { flex: 1 }]}>
-                    <Text style={s.formLabel}>Profession / Role *</Text>
-                    <TextInput
-                      style={s.formInput}
-                      placeholder="e.g. Entrepreneur · Founder"
-                      placeholderTextColor={C.textMuted}
-                      value={form.profession}
-                      onChangeText={(t) => setForm((p) => ({ ...p, profession: t }))}
-                    />
-                  </View>
-                </View>
+              {/* Profession */}
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Profession / Role *</Text>
+                <TextInput style={s.formInput} placeholder="e.g. Entrepreneur · Founder" placeholderTextColor={C.textMuted} value={form.profession} onChangeText={(t) => setForm((p) => ({ ...p, profession: t }))} />
+              </View>
 
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <View style={[s.formGroup, { flex: 1 }]}>
-                    <Text style={s.formLabel}>Location / Origin *</Text>
-                    <TextInput
-                      style={s.formInput}
-                      placeholder="e.g. Bengaluru, Mandya"
-                      placeholderTextColor={C.textMuted}
-                      value={form.location}
-                      onChangeText={(t) => setForm((p) => ({ ...p, location: t }))}
-                    />
-                  </View>
-                  <View style={[s.formGroup, { flex: 1 }]}>
-                    <Text style={s.formLabel}>Category *</Text>
-                    <View style={s.categorySelectWrap}>
-                      <Text style={s.categorySelectText}>{form.category}</Text>
-                    </View>
-                  </View>
-                </View>
+              {/* Location */}
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Location / Origin *</Text>
+                <TextInput style={s.formInput} placeholder="e.g. Bengaluru, Mandya" placeholderTextColor={C.textMuted} value={form.location} onChangeText={(t) => setForm((p) => ({ ...p, location: t }))} />
+              </View>
 
-                {/* Category Chips */}
+              {/* Category */}
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Category *</Text>
                 <View style={s.categoryChipsRow}>
                   {STORY_CATEGORIES.map((c) => (
                     <TouchableOpacity
@@ -605,84 +588,65 @@ export default function AdminCommunityStories() {
                     </TouchableOpacity>
                   ))}
                 </View>
+              </View>
 
-                <View style={s.formGroup}>
-                  <Text style={s.formLabel}>Short Summary / Lead (1-2 sentences) *</Text>
-                  <TextInput
-                    style={[s.formInput, { minHeight: 56 }]}
-                    placeholder="Inspiring journey of success..."
-                    placeholderTextColor={C.textMuted}
-                    value={form.shortDescription}
-                    onChangeText={(t) => setForm((p) => ({ ...p, shortDescription: t }))}
-                    multiline
-                  />
+              {/* Short Description */}
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Short Summary *</Text>
+                <TextInput style={[s.formInput, { minHeight: 60 }]} placeholder="Inspiring journey of success..." placeholderTextColor={C.textMuted} value={form.shortDescription} onChangeText={(t) => setForm((p) => ({ ...p, shortDescription: t }))} multiline textAlignVertical="top" />
+              </View>
+
+              {/* Full Story */}
+              <View style={s.formGroup}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={s.formLabel}>Full Story *</Text>
+                  <Text style={s.wordCountText}>{form.fullStory.split(/\s+/).filter(Boolean).length} words</Text>
                 </View>
+                <TextInput style={[s.formInput, { minHeight: 120 }]} placeholder="Write the complete journey..." placeholderTextColor={C.textMuted} value={form.fullStory} onChangeText={(t) => setForm((p) => ({ ...p, fullStory: t }))} multiline textAlignVertical="top" />
+              </View>
 
-                <View style={s.formGroup}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={s.formLabel}>Full Story Article *</Text>
-                    <Text style={s.wordCountText}>{form.fullStory.split(/\s+/).filter(Boolean).length} words</Text>
-                  </View>
-                  <TextInput
-                    style={[s.formInput, { minHeight: 120 }]}
-                    placeholder="Write the complete journey, milestones, challenges overcome, and words of inspiration..."
-                    placeholderTextColor={C.textMuted}
-                    value={form.fullStory}
-                    onChangeText={(t) => setForm((p) => ({ ...p, fullStory: t }))}
-                    multiline
-                    textAlignVertical="top"
-                  />
-                </View>
-
-                <View style={s.formGroup}>
-                  <Text style={s.formLabel}>Featured Cover Image *</Text>
-                  <View style={s.imageUploadRow}>
-                    <TouchableOpacity style={[s.imageUploadBtn, { backgroundColor: C.accentLight, borderColor: C.accentBorder }]} onPress={handlePickFeaturedImage} disabled={uploadingImage}>
-                      <Feather name="image" size={15} color={C.accent} />
-                      <Text style={[s.imageUploadBtnText, { color: C.accent }]}>Gallery</Text>
+              {/* Image Upload */}
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Featured Cover Image *</Text>
+                <View style={s.imageUploadRow}>
+                  <TouchableOpacity style={[s.imageUploadBtn, { backgroundColor: C.accentLight, borderColor: C.accentBorder }]} onPress={handlePickFeaturedImage} disabled={uploadingImage}>
+                    <Feather name="image" size={15} color={C.accent} />
+                    <Text style={[s.imageUploadBtnText, { color: C.accent }]}>Gallery</Text>
+                  </TouchableOpacity>
+                  {Platform.OS !== 'web' && (
+                    <TouchableOpacity style={[s.imageUploadBtn, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]} onPress={handleTakeFeaturedPhoto} disabled={uploadingImage}>
+                      <Feather name="camera" size={15} color="#2563EB" />
+                      <Text style={[s.imageUploadBtnText, { color: '#2563EB' }]}>Camera</Text>
                     </TouchableOpacity>
-                    {Platform.OS !== 'web' && (
-                      <TouchableOpacity style={[s.imageUploadBtn, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]} onPress={handleTakeFeaturedPhoto} disabled={uploadingImage}>
-                        <Feather name="camera" size={15} color="#2563EB" />
-                        <Text style={[s.imageUploadBtnText, { color: '#2563EB' }]}>Camera</Text>
-                      </TouchableOpacity>
-                    )}
-                    {uploadingImage && <ActivityIndicator size="small" color={C.accent} />}
-                  </View>
-                  {form.featuredImage ? (
-                    <Image source={{ uri: form.featuredImage }} style={s.featuredImagePreview} resizeMode="cover" />
-                  ) : null}
+                  )}
+                  {uploadingImage && <ActivityIndicator size="small" color={C.accent} />}
                 </View>
+                {form.featuredImage ? <Image source={{ uri: form.featuredImage }} style={s.featuredImagePreview} resizeMode="cover" /> : null}
+              </View>
 
-                {/* Feature switch */}
-                <View style={s.switchRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.switchTitle}>Feature in "Our People" Top Showcase </Text>
-                    <Text style={s.switchSub}>Hero banner display at the top of the magazine section.</Text>
-                  </View>
-                  <Switch
-                    value={form.isFeatured}
-                    onValueChange={(v) => setForm((p) => ({ ...p, isFeatured: v }))}
-                    trackColor={{ false: '#E2E8F0', true: '#86EFAC' }}
-                    thumbColor={form.isFeatured ? '#16A34A' : '#F8FAFC'}
-                  />
+              {/* Feature toggle */}
+              <View style={s.switchRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.switchTitle}>Feature in "Our People" Showcase</Text>
+                  <Text style={s.switchSub}>Show as hero banner at the top.</Text>
                 </View>
+                <Switch value={form.isFeatured} onValueChange={(v) => setForm((p) => ({ ...p, isFeatured: v }))} trackColor={{ false: '#E2E8F0', true: '#86EFAC' }} thumbColor={form.isFeatured ? '#16A34A' : '#F8FAFC'} />
+              </View>
 
-                {/* Submit button */}
-                <View style={s.modalActionsRow}>
-                  <TouchableOpacity style={[s.modalBtn, { backgroundColor: C.bg }]} onPress={() => setIsCreateModalOpen(false)}>
-                    <Text style={[s.modalBtnText, { color: C.textSecond }]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[s.modalBtn, { backgroundColor: C.accent }]} onPress={handleSaveStory}>
-                    <Text style={[s.modalBtnText, { color: '#FFF' }]}>{editingStory ? 'Save Changes' : 'Publish Story'}</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
+              {/* Actions */}
+              <View style={s.modalActionsRow}>
+                <TouchableOpacity style={[s.modalBtn, { backgroundColor: C.bg, borderWidth: 1, borderColor: C.border }]} onPress={() => setIsCreateModalOpen(false)}>
+                  <Text style={[s.modalBtnText, { color: C.textSecond }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.modalBtn, { backgroundColor: C.accent }]} onPress={handleSaveStory}>
+                  <Text style={[s.modalBtnText, { color: '#FFF' }]}>{editingStory ? 'Save Changes' : 'Publish Story'}</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </Modal>
-      </View>
-    </AdminShell>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -799,10 +763,32 @@ const s = StyleSheet.create({
   },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 16 },
-  modalBox: { backgroundColor: C.white, borderRadius: 16, padding: 18, width: '100%', maxWidth: 560, maxHeight: '92%' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: C.textPrimary },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  modalBox: {
+    backgroundColor: C.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    maxHeight: '95%',
+    width: '100%',
+  },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 14, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+  },
+  modalCloseBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center',
+  },
+  modalTitle: { fontSize: 15, fontWeight: '800', color: C.textPrimary, flex: 1, marginRight: 8 },
+  modalScroll: { gap: 12, paddingBottom: 8 },
 
   formGroup: { gap: 3 },
   formLabel: { fontSize: 12, fontWeight: '700', color: C.textPrimary },
