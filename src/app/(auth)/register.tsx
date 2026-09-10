@@ -221,6 +221,7 @@ export default function RegisterScreen() {
         const rawUrl = uploadRes.data?.data?.url ?? uploadRes.data?.data?.avatarUrl ?? null;
         uploadedAvatarUrl = toProxyUrl(rawUrl) ?? rawUrl;
         if (uploadedAvatarUrl) {
+          await apiClient.put('/users/me', { avatarUrl: rawUrl });
           useAuthStore.getState().updateProfile({ avatarUrl: uploadedAvatarUrl });
         }
       } catch (uploadErr: any) {

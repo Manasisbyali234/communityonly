@@ -32,7 +32,27 @@ export const NAKSHATHRA_OPTIONS = [
 
 export const GANA_OPTIONS = ['Deva','Manushya','Rakshasa'];
 export const DOSHAM_OPTIONS = ['None','Manglik / Kuja Dosha','Naga Dosha','Other',"Don't Know"];
-export const BALI_OPTIONS = ['Yes','No',"Don't Know"];
+export const BALI_OPTIONS = [
+  'Hemana Bali',
+  'Nandara Bali',
+  'Bangara Bali',
+  'Kabar Bali',
+  'Setti Bali / Halu Gundar',
+  'Moolyara Bali / Moolar',
+  'Gowda Bali',
+  'Saale Bali',
+  'Goli Bali',
+  'Nayar Bali',
+  'Balasanna Bali',
+  'Karbanna Bali',
+  'Oudanna Bali',
+  'Chalyara Bali',
+  'Kamber / Karmber Bali',
+  'Chittera Bali',
+  'Gundera Bali',
+  'Lingaita Bali',
+  "Don't Know",
+];
 
 export const EDUCATION_FIELD_OPTIONS = [
   'Arts','Science','Commerce','Engineering / Technology','Medicine / Healthcare',
