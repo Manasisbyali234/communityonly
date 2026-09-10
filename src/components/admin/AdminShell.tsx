@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Modal, Pressable, SafeAreaView, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Modal, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -189,20 +189,23 @@ export default function AdminShell({ children, title }: Props) {
           </View>
         </WebOverlay>
       ) : (
-        <Modal visible={menuOpen} transparent animationType="slide" onRequestClose={() => setMenuOpen(false)}>
+        <Modal visible={menuOpen} transparent animationType="none" onRequestClose={() => setMenuOpen(false)}>
           <View style={s.modalContainer}>
-            <SafeAreaView style={s.drawer}>
-              <View style={s.logoRow}>
+            <View style={[s.drawer, { paddingTop: insets.top + 12 }]}>
+              <View style={[s.logoRow, { marginBottom: 4 }]}>
                 <View style={s.logoIcon}>
                   <Feather name="shield" size={14} color="#16A34A" />
                 </View>
                 <Text style={s.logoTitle}>Admin Panel</Text>
+                <TouchableOpacity onPress={() => setMenuOpen(false)} style={s.drawerCloseBtn}>
+                  <Feather name="x" size={20} color="#64748B" />
+                </TouchableOpacity>
               </View>
-              <Text style={s.adminSub}>{admin?.displayName ?? 'Admin'}</Text>
-              <View style={{ flex: 1, marginTop: 8 }}>
+              <Text style={[s.adminSub, { marginBottom: 8 }]}>{admin?.displayName ?? 'Admin'}</Text>
+              <View style={{ flex: 1 }}>
                 <SidebarContent />
               </View>
-            </SafeAreaView>
+            </View>
             <Pressable style={s.overlay} onPress={() => setMenuOpen(false)} />
           </View>
         </Modal>
@@ -466,18 +469,28 @@ const s = StyleSheet.create({
   logoutText: { color: '#DC2626', fontWeight: '600', fontSize: 13 },
 
   modalContainer: { flex: 1, flexDirection: 'row' },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
   drawer: {
-    width: 260, backgroundColor: '#fff',
-    paddingHorizontal: 14, paddingTop: 20,
-    paddingBottom: 20,
+    width: 270, backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingBottom: 24,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 2, height: 0 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 8 },
+    }),
+  },
+  drawerCloseBtn: {
+    marginLeft: 'auto',
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center', justifyContent: 'center',
   },
 
   main: { flex: 1, minWidth: 0 },
   topBarSafe: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
   },
   menuBtn: { padding: 6, borderRadius: 8 },
   pageTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', flex: 1, letterSpacing: -0.2 },

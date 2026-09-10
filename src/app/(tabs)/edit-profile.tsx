@@ -401,7 +401,7 @@ export default function EditProfile() {
           <Text style={styles.navSub}>{completionPct}% complete</Text>
         </View>
         <TouchableOpacity onPress={handleSubmit(onSubmit)} disabled={isSubmitting} style={styles.saveHeaderBtn}>
-          <View style={[styles.saveChip, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+          <View style={[styles.saveChip, { backgroundColor: 'rgba(255,255,255,0.22)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' }]}>
             <Ionicons name="checkmark" size={15} color="#FFF" />
             <Text style={styles.saveHeaderBtnText}>{isRejectedOrPending ? 'Resubmit' : 'Save'}</Text>
           </View>
@@ -910,10 +910,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     zIndex: 10,
   },
-  navBtn: { padding: 6 },
-  navTitle: { fontSize: 17, fontWeight: '700' },
-  saveHeaderBtn: { paddingVertical: 6, paddingHorizontal: 10 },
-  saveHeaderBtnText: { fontSize: 15, fontWeight: '700' },
+  navBtn: { padding: 4 },
+  navIconBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  navCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+  navTitle: { fontSize: 16, fontWeight: '700', color: '#FFF', letterSpacing: -0.2 },
+  navSub: { fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 1 },
+  saveHeaderBtn: { padding: 4 },
+  saveHeaderBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+  saveChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 20,
+  },
+
+  // Progress bar
+  progressBar: { height: 3, width: '100%' },
+  progressFill: { height: '100%', borderRadius: 2 },
 
   // Masthead Section
   mastheadSection: {
@@ -1203,4 +1219,31 @@ const styles = StyleSheet.create({
   rejectionNoticeHint: {
     fontSize: 11,
   },
+
+  // Avatar name/handle under avatar
+  avatarName: { fontSize: 15, fontWeight: '700', marginTop: 8, color: '#0F172A' },
+  avatarHandle: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+
+  // Cover fallback icon
+  coverFallbackIcon: {
+    width: 52, height: 52, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+
+  // Profile completion card
+  completionCard: {
+    marginTop: 14, borderRadius: 14, padding: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+      android: { elevation: 1 },
+    }),
+  },
+  completionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  completionIconBox: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  completionLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
+  completionPct: { fontSize: 14, fontWeight: '800' },
+  completionTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  completionFill: { height: '100%', borderRadius: 3 },
+  completionHint: { fontSize: 11, marginTop: 6, fontWeight: '500' },
 });
