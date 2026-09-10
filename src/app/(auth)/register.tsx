@@ -26,6 +26,7 @@ import { pickImage, PickedImage, appendPickedFile } from '../../utils/imagePicke
 import { useUserApprovalStore } from '../../store/userApprovalStore';
 import { useAuthStore } from '../../store/authStore';
 import { apiClient } from '../../api/client';
+import { toProxyUrl } from '../../api/media';
 
 const KARNATAKA_DISTRICTS = [
   'Dakshina Kannada',
@@ -214,12 +215,16 @@ export default function RegisterScreen() {
         const formData = new FormData();
         await appendPickedFile(formData, profilePhoto);
         const uploadRes = await apiClient.post('/media/upload-profile-photo', formData, {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${accessToken}` },
           timeout: 60000,
         });
-        uploadedAvatarUrl = uploadRes.data?.data?.url ?? uploadRes.data?.data?.avatarUrl ?? null;
-      } catch {
-        // non-blocking — profile still created
+        const rawUrl = uploadRes.data?.data?.url ?? uploadRes.data?.data?.avatarUrl ?? null;
+        uploadedAvatarUrl = toProxyUrl(rawUrl) ?? rawUrl;
+        if (uploadedAvatarUrl) {
+          useAuthStore.getState().updateProfile({ avatarUrl: uploadedAvatarUrl });
+        }
+      } catch (uploadErr: any) {
+        console.warn('[register] profile photo upload failed:', uploadErr?.response?.data || uploadErr?.message);
       }
 
       registerPendingUser({

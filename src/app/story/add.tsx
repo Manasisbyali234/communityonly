@@ -5,6 +5,7 @@ import {
   StatusBar, TextInput, KeyboardAvoidingView, useWindowDimensions,
   PanResponder, Animated,
 } from 'react-native';
+import ViewShot from 'react-native-view-shot';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -552,6 +553,7 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
   };
 
   const containerRef = useRef<KeyboardAvoidingView>(null);
+  const viewShotRef = useRef<ViewShot>(null);
   const [containerSize, setContainerSize] = useState({ w: windowWidth, h: windowHeight });
 
   const compositeImageWithOverlays = async (sourceBlob: Blob): Promise<Blob> => {
@@ -628,10 +630,22 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
       const filename = media.filename ?? `story_${Date.now()}`;
       const mimeType = media.mimeType ?? (media.type === 'video' ? 'video/mp4' : 'image/jpeg');
       if (Platform.OS !== 'web') {
+        let uploadUri = media.uri;
+        let uploadMime = mimeType;
+        // Capture overlays baked into the image on native
+        if (media.type === 'image' && (overlayEmojis.length > 0 || textOverlays.length > 0) && viewShotRef.current) {
+          try {
+            const captured = await (viewShotRef.current as any).capture();
+            uploadUri = captured;
+            uploadMime = 'image/jpeg';
+          } catch {
+            // fallback to original if capture fails
+          }
+        }
         const mediaUrl = await uploadMediaFile(
-          { uri: media.uri, name: filename, type: mimeType },
+          { uri: uploadUri, name: filename, type: uploadMime },
           filename,
-          mimeType,
+          uploadMime,
           setProgress
         );
         const payload = { mediaUrl, mediaType: media.type === 'video' ? 'VIDEO' as const : 'IMAGE' as const };
@@ -672,53 +686,56 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Media */}
-      {media.type === 'image' ? (
-        <Image source={{ uri: media.uri }} style={StyleSheet.absoluteFill} contentFit="contain" />
-      ) : Platform.OS === 'web' ? (
-        // @ts-ignore
-        <video src={media.uri} autoPlay loop playsInline muted={false} controls={false}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' } as any} />
-      ) : (
-        <NativeVideoPreview uri={media.uri} />
-      )}
+      {/* ViewShot wraps media + overlays so they get captured together on native */}
+      <ViewShot ref={viewShotRef} style={StyleSheet.absoluteFill} options={{ format: 'jpg', quality: 0.92 }}>
+        {/* Media */}
+        {media.type === 'image' ? (
+          <Image source={{ uri: media.uri }} style={StyleSheet.absoluteFill} contentFit="contain" />
+        ) : Platform.OS === 'web' ? (
+          // @ts-ignore
+          <video src={media.uri} autoPlay loop playsInline muted={false} controls={false}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' } as any} />
+        ) : (
+          <NativeVideoPreview uri={media.uri} />
+        )}
 
-      <LinearGradient colors={['rgba(0,0,0,0.5)', 'transparent']} style={s.topGradient} />
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={s.bottomGradient} />
+        <LinearGradient colors={['rgba(0,0,0,0.5)', 'transparent']} style={s.topGradient} />
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={s.bottomGradient} />
 
-      {/* ── Emoji overlays (Draggable) ── */}
-      {overlayEmojis.map(item => (
-        <DraggableEmojiOverlay
-          key={item.id}
-          item={item}
-          isSelected={selectedEmojiId === item.id}
-          containerWidth={containerSize.w || windowWidth}
-          containerHeight={containerSize.h || windowHeight}
-          onSelect={() => {
-            setSelectedTextId(null);
-            setSelectedEmojiId(prev => prev === item.id ? null : item.id);
-          }}
-          onUpdatePosition={updateEmojiPosition}
-          onResize={resizeEmoji}
-          onDelete={deleteEmoji}
-        />
-      ))}
+        {/* ── Emoji overlays (Draggable) ── */}
+        {overlayEmojis.map(item => (
+          <DraggableEmojiOverlay
+            key={item.id}
+            item={item}
+            isSelected={selectedEmojiId === item.id}
+            containerWidth={containerSize.w || windowWidth}
+            containerHeight={containerSize.h || windowHeight}
+            onSelect={() => {
+              setSelectedTextId(null);
+              setSelectedEmojiId(prev => prev === item.id ? null : item.id);
+            }}
+            onUpdatePosition={updateEmojiPosition}
+            onResize={resizeEmoji}
+            onDelete={deleteEmoji}
+          />
+        ))}
 
-      {/* ── Text overlays (Draggable) ── */}
-      {textOverlays.map(item => (
-        <DraggableTextOverlay
-          key={item.id}
-          item={item}
-          isSelected={selectedTextId === item.id}
-          containerWidth={containerSize.w || windowWidth}
-          containerHeight={containerSize.h || windowHeight}
-          onSelect={() => {
-            setSelectedEmojiId(null);
-            setSelectedTextId(prev => prev === item.id ? null : item.id);
-          }}
-          onUpdatePosition={updateTextPosition}
-        />
-      ))}
+        {/* ── Text overlays (Draggable) ── */}
+        {textOverlays.map(item => (
+          <DraggableTextOverlay
+            key={item.id}
+            item={item}
+            isSelected={selectedTextId === item.id}
+            containerWidth={containerSize.w || windowWidth}
+            containerHeight={containerSize.h || windowHeight}
+            onSelect={() => {
+              setSelectedEmojiId(null);
+              setSelectedTextId(prev => prev === item.id ? null : item.id);
+            }}
+            onUpdatePosition={updateTextPosition}
+          />
+        ))}
+      </ViewShot>
 
       {/* ── Selected Text Edit Panel (Docked safely above bottom actions) ── */}
       {selectedTextId !== null && (() => {
