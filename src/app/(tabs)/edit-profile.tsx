@@ -69,7 +69,7 @@ export default function EditProfile() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { from } = useLocalSearchParams<{ from?: string }>();
+  const { from, familyName: familyNameParam } = useLocalSearchParams<{ from?: string; familyName?: string }>();
   const { user, updateProfile } = useAuthStore();
   const showToast = useToastStore((state) => state.showToast);
   const getUserById = useUserApprovalStore((s) => s.getUserById);
@@ -102,6 +102,14 @@ export default function EditProfile() {
   const TEXT = colors.text;
   const TEXT2 = colors.textSecondary;
   const TEXT3 = colors.textMuted;
+
+  // Pre-fill familyName from query param (e.g. tapped a suggestion on profile)
+  useEffect(() => {
+    if (familyNameParam) {
+      setValue('familyName', familyNameParam, { shouldValidate: true });
+      setExpandedSection('basic');
+    }
+  }, [familyNameParam]);
 
   // Sync latest profile from server on mount
   useEffect(() => {

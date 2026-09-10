@@ -155,6 +155,8 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
   const showToast = useToastStore((s) => s.showToast);
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const G = colors.primary;
 
   useEffect(() => {
@@ -168,6 +170,28 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));
   }, [familyName, userId]);
+
+  // Fetch popular family names when no family name is set
+  useEffect(() => {
+    if (familyName) return;
+    setSuggestionsLoading(true);
+    apiClient.get('/users', { params: { limit: 100 } })
+      .then((res) => {
+        const data: any[] = res.data?.data ?? res.data ?? [];
+        const counts: Record<string, number> = {};
+        data.forEach((u: any) => {
+          const fn = u.familyName?.trim();
+          if (fn) counts[fn] = (counts[fn] || 0) + 1;
+        });
+        const sorted = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 12)
+          .map(([name]) => name);
+        setSuggestions(sorted);
+      })
+      .catch(() => setSuggestions([]))
+      .finally(() => setSuggestionsLoading(false));
+  }, [familyName]);
 
   const handleInvite = async () => {
     const { shareAppLink } = await import('../../utils/shareUtils');
@@ -189,9 +213,42 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
             <Ionicons name="people-outline" size={26} color={G} />
           </View>
           <Text style={[s.emptyTitle, { color: colors.text }]}>No Family Name Set</Text>
-          <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>Add your Family / Okka name to see family members.</Text>
-          <Button title="Edit Profile" icon="create-outline" variant="primary" size="sm"
-            onPress={() => router.push('/(tabs)/edit-profile' as any)} style={{ marginTop: 12 }} />
+          <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>Add your Family / Okka name to connect with family members.</Text>
+
+          {/* Family name suggestions */}
+          {suggestionsLoading ? (
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 12 }}>Loading suggestions...</Text>
+          ) : suggestions.length > 0 ? (
+            <View style={{ width: '100%', marginTop: 16 }}>
+              <Text style={[{ fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 8, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.4 }]}>
+                Popular Family Names in Community
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                {suggestions.map((name) => (
+                  <TouchableOpacity
+                    key={name}
+                    style={[{
+                      paddingHorizontal: 12, paddingVertical: 6,
+                      borderRadius: 20, borderWidth: 1,
+                      backgroundColor: G + '10', borderColor: G + '35',
+                      flexDirection: 'row', alignItems: 'center', gap: 5,
+                    }]}
+                    onPress={() => router.push(`/(tabs)/edit-profile?familyName=${encodeURIComponent(name)}` as any)}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons name="people" size={12} color={G} />
+                    <Text style={{ fontSize: 12.5, fontWeight: '600', color: G }}>{name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 10 }}>
+                Tap a name to set it as your family name
+              </Text>
+            </View>
+          ) : null}
+
+          <Button title="Set Family Name" icon="create-outline" variant="primary" size="sm"
+            onPress={() => router.push('/(tabs)/edit-profile' as any)} style={{ marginTop: 14 }} />
         </View>
       )}
       {familyName && loading && (
