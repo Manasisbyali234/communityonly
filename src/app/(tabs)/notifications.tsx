@@ -41,19 +41,27 @@ const FILTER_TABS: {
 ];
 
 const ICON_MAP: Record<string, IconCfg> = {
-  LIKE:                { name: 'heart',           color: '#EF4444', bg: '#FEE2E2' },
-  COMMENT:             { name: 'chatbubble',       color: '#3B82F6', bg: '#DBEAFE' },
-  FOLLOW:              { name: 'person-add',       color: '#6366F1', bg: '#E0E7FF' },
-  MENTION:             { name: 'at',              color: '#F59E0B', bg: '#FEF3C7' },
-  MESSAGE:             { name: 'chatbubbles',      color: '#10B981', bg: '#D1FAE5' },
-  STORY_REPLY:         { name: 'arrow-undo',       color: '#8B5CF6', bg: '#EDE9FE' },
-  STORY_LIKE:          { name: 'heart-circle',     color: '#EC4899', bg: '#FCE7F3' },
-  POST_SHARE:          { name: 'share-social',     color: '#14B8A6', bg: '#CCFBF1' },
-  COMMUNITY_JOIN:      { name: 'people',           color: '#8B5CF6', bg: '#EDE9FE' },
-  COMMUNITY_INVITE:    { name: 'mail',             color: '#F97316', bg: '#FFEDD5' },
-  EVENT_REMINDER:      { name: 'calendar',         color: '#0284C7', bg: '#E0F2FE' },
-  CONNECTION_REQUEST:  { name: 'people',           color: '#2563EB', bg: '#DBEAFE' },
-  CONNECTION_ACCEPTED: { name: 'checkmark-circle', color: '#16A34A', bg: '#DCFCE7' },
+  LIKE:                        { name: 'heart',           color: '#EF4444', bg: '#FEE2E2' },
+  COMMENT:                     { name: 'chatbubble',       color: '#3B82F6', bg: '#DBEAFE' },
+  FOLLOW:                      { name: 'person-add',       color: '#6366F1', bg: '#E0E7FF' },
+  MENTION:                     { name: 'at',               color: '#F59E0B', bg: '#FEF3C7' },
+  MESSAGE:                     { name: 'chatbubbles',      color: '#10B981', bg: '#D1FAE5' },
+  STORY_REPLY:                 { name: 'arrow-undo',       color: '#8B5CF6', bg: '#EDE9FE' },
+  STORY_LIKE:                  { name: 'heart-circle',     color: '#EC4899', bg: '#FCE7F3' },
+  POST_SHARE:                  { name: 'share-social',     color: '#14B8A6', bg: '#CCFBF1' },
+  COMMUNITY_JOIN:              { name: 'people',           color: '#8B5CF6', bg: '#EDE9FE' },
+  COMMUNITY_INVITE:            { name: 'mail',             color: '#F97316', bg: '#FFEDD5' },
+  EVENT_REMINDER:              { name: 'calendar',         color: '#0284C7', bg: '#E0F2FE' },
+  CONNECTION_REQUEST:          { name: 'people',           color: '#2563EB', bg: '#DBEAFE' },
+  CONNECTION_ACCEPTED:         { name: 'checkmark-circle', color: '#16A34A', bg: '#DCFCE7' },
+  // Matrimony
+  MATRIMONY_INTEREST:          { name: 'heart',            color: '#EC4899', bg: '#FCE7F3' },
+  MATRIMONY_INTEREST_ACCEPTED: { name: 'checkmark-circle', color: '#16A34A', bg: '#DCFCE7' },
+  MATRIMONY_INTEREST_REJECTED: { name: 'close-circle',     color: '#EF4444', bg: '#FEE2E2' },
+  MATRIMONY_MATCH:             { name: 'heart-circle',     color: '#EC4899', bg: '#FCE7F3' },
+  MATRIMONY_LIKE:              { name: 'heart-half',       color: '#F43F5E', bg: '#FFE4E6' },
+  MATRIMONY_APPROVED:          { name: 'shield-checkmark', color: '#16A34A', bg: '#DCFCE7' },
+  MATRIMONY_REJECTED:          { name: 'close-circle',     color: '#EF4444', bg: '#FEE2E2' },
 };
 
 const formatTime = (createdAt: string) => {
@@ -87,7 +95,7 @@ export default function NotificationsScreen() {
   useNotificationSocket();
 
   const NON_CLICKABLE_TYPES = useMemo(() => new Set([
-    'MATRIMONY_APPROVED', 'MATRIMONY_REJECTED', 'PROFILE_APPROVED', 'PROFILE_REJECTED',
+    'PROFILE_APPROVED', 'PROFILE_REJECTED',
     'ACCOUNT_VERIFIED', 'SYSTEM', 'ANNOUNCEMENT',
   ]), []);
 
@@ -160,6 +168,19 @@ export default function NotificationsScreen() {
       case 'STORY_REPLY':
       case 'STORY_LIKE':
         if (id) router.push(`/story/${id}` as any);
+        break;
+      case 'MATRIMONY_INTEREST':
+      case 'MATRIMONY_INTEREST_ACCEPTED':
+      case 'MATRIMONY_INTEREST_REJECTED':
+        router.push('/matrimony/interests' as any);
+        break;
+      case 'MATRIMONY_MATCH':
+      case 'MATRIMONY_LIKE':
+        router.push('/matrimony' as any);
+        break;
+      case 'MATRIMONY_APPROVED':
+      case 'MATRIMONY_REJECTED':
+        router.push('/matrimony' as any);
         break;
       default:
         break;

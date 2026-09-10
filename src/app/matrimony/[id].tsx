@@ -30,7 +30,6 @@ import {
 import { useTheme } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
-import { useConfirmStore } from '../../store/confirmStore';
 import { apiClient } from '../../api/client';
 import Button from '../../components/common/Button';
 import Skeleton from '../../components/feedback/Skeleton';
@@ -59,6 +58,10 @@ export default function MatrimonyProfileDetail() {
   const [hasLiked, setHasLiked] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [message, setMessage] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteReasonOther, setDeleteReasonOther] = useState('');
+  const [deletingProfile, setDeletingProfile] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const heroRef = useRef<FlatList>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -81,22 +84,30 @@ export default function MatrimonyProfileDetail() {
     setHasLiked(profile?.hasLiked ?? false);
   }, [profile?.hasLiked]);
 
-  const handleDelete = async () => {
-    const ok = await useConfirmStore.getState().confirm({
-      title: 'Delete profile?',
-      message: 'This action cannot be undone and will permanently delete your matrimony profile.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      isDestructive: true,
-      icon: 'trash-outline',
-    });
-    if (!ok) return;
+  const DELETE_REASONS = [
+    'Got married / Found a match',
+    'Not interested anymore',
+    'Privacy concerns',
+    'Too many unwanted messages',
+    'Profile information is outdated',
+    'Other',
+  ];
 
+  const handleDelete = () => setShowDeleteModal(true);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteReason) { showToast('Please select a reason for deleting.', 'error'); return; }
+    const finalReason = deleteReason === 'Other' ? deleteReasonOther.trim() : deleteReason;
+    if (deleteReason === 'Other' && !finalReason) { showToast('Please describe your reason.', 'error'); return; }
+    setDeletingProfile(true);
     try {
-      await apiClient.delete(`/matrimony/profiles/${safeId}`);
+      await apiClient.delete(`/matrimony/profiles/${safeId}`, { data: { reason: finalReason } });
+      setShowDeleteModal(false);
       router.replace('/matrimony' as any);
     } catch (e: any) {
       showToast(e.response?.data?.message ?? 'Failed to delete profile', 'error');
+    } finally {
+      setDeletingProfile(false);
     }
   };
 
@@ -572,6 +583,84 @@ export default function MatrimonyProfileDetail() {
           </View>
         )}
       </View>
+
+      {/* ── Delete Profile Modal ─────────────────────────────────────── */}
+      <Modal visible={showDeleteModal} transparent animationType="slide" onRequestClose={() => setShowDeleteModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDeleteModal(false)}>
+          <View style={[styles.modalSheet, { backgroundColor: SURF, maxWidth: 560, width: '100%', alignSelf: 'center' }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.modalHeaderRow}>
+              <View style={[styles.modalIconCircle, { backgroundColor: '#FEE2E2' }]}>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modalTitle, { color: TEXT }]}>Delete Profile</Text>
+                <Text style={[styles.modalSub, { color: TEXT2 }]}>This cannot be undone. Please tell us why.</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowDeleteModal(false)} style={[styles.modalCloseBtn, { backgroundColor: isDark ? '#27272A' : '#F3F4F6' }]}>
+                <Ionicons name="close" size={18} color={TEXT2} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.quickSuggestLabel, { color: TEXT3 }]}>Reason for deleting</Text>
+            <View style={{ gap: 7, marginBottom: 14 }}>
+              {DELETE_REASONS.map((reason) => (
+                <TouchableOpacity
+                  key={reason}
+                  style={[
+                    styles.quickMessagePill,
+                    {
+                      backgroundColor: deleteReason === reason ? '#FEE2E2' : (isDark ? '#1F2937' : '#F9FAFB'),
+                      borderColor: deleteReason === reason ? '#EF4444' : BORDER,
+                    },
+                  ]}
+                  onPress={() => setDeleteReason(reason)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={deleteReason === reason ? 'radio-button-on' : 'radio-button-off'}
+                    size={16}
+                    color={deleteReason === reason ? '#EF4444' : TEXT3}
+                  />
+                  <Text style={[styles.quickMessageText, { color: deleteReason === reason ? '#EF4444' : TEXT2 }]}>{reason}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {deleteReason === 'Other' && (
+              <TextInput
+                style={[styles.messageInput, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB', borderColor: BORDER, color: TEXT }]}
+                value={deleteReasonOther}
+                onChangeText={setDeleteReasonOther}
+                placeholder="Please describe your reason..."
+                placeholderTextColor={TEXT3}
+                multiline
+                numberOfLines={3}
+              />
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtn, { borderColor: BORDER, backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }]}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={[styles.modalCancelText, { color: TEXT2 }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtnPrimary, { flex: 1.5, overflow: 'hidden', backgroundColor: '#EF4444' }]}
+                onPress={handleConfirmDelete}
+                disabled={deletingProfile}
+                activeOpacity={0.85}
+              >
+                {deletingProfile
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <><Ionicons name="trash-outline" size={16} color="#FFF" /><Text style={styles.actionBtnPrimaryText}>Delete Profile</Text></>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ── Express Interest Bottom Sheet Modal ───────────────────────── */}
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>

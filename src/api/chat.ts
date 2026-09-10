@@ -234,6 +234,11 @@ export function useNotificationSocket() {
         queryClient.invalidateQueries({ queryKey: ['communities'] });
         queryClient.invalidateQueries({ queryKey: ['communities', 'my-requests'] });
       }
+      if (['MATRIMONY_INTEREST', 'MATRIMONY_INTEREST_ACCEPTED', 'MATRIMONY_INTEREST_REJECTED', 'MATRIMONY_MATCH', 'MATRIMONY_LIKE'].includes(normalized.type)) {
+        queryClient.invalidateQueries({ queryKey: ['matrimony-interests'] });
+        queryClient.invalidateQueries({ queryKey: ['matrimony-like-matches'] });
+        queryClient.invalidateQueries({ queryKey: ['matrimony-matches'] });
+      }
     };
 
     socket.on('notification:new', handleNew);

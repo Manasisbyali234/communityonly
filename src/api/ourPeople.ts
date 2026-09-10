@@ -9,7 +9,6 @@ export interface StoryFilters { category?: string; search?: string; featuredOnly
 const unwrap = <T,>(r: any) => (r.data?.data ?? r.data) as T;
 const normalizeStory = (s: CommunityStory): CommunityStory => ({
   ...s,
-  featuredImage: toProxyUrl(s.featuredImage) ?? s.featuredImage,
   personAvatarUrl: toProxyUrl(s.personAvatarUrl),
   additionalImages: s.additionalImages?.map((u) => toProxyUrl(u) ?? u),
 });
