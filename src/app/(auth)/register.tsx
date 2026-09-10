@@ -26,7 +26,6 @@ import { pickImage, PickedImage, appendPickedFile } from '../../utils/imagePicke
 import { useUserApprovalStore } from '../../store/userApprovalStore';
 import { useAuthStore } from '../../store/authStore';
 import { apiClient } from '../../api/client';
-import { toProxyUrl } from '../../api/media';
 
 const KARNATAKA_DISTRICTS = [
   'Dakshina Kannada',
@@ -218,19 +217,27 @@ export default function RegisterScreen() {
           headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${accessToken}` },
           timeout: 60000,
         });
-        const rawUrl = uploadRes.data?.data?.url ?? uploadRes.data?.data?.avatarUrl ?? null;
-        uploadedAvatarUrl = toProxyUrl(rawUrl) ?? rawUrl;
+        uploadedAvatarUrl = uploadRes.data?.data?.url ?? uploadRes.data?.data?.avatarUrl ?? null;
         if (uploadedAvatarUrl) {
-          await apiClient.put('/users/me', { avatarUrl: rawUrl });
+          // rawUrl passed so normalizeUser in authStore applies toProxyUrl exactly once
           useAuthStore.getState().updateProfile({ avatarUrl: uploadedAvatarUrl });
         }
       } catch (uploadErr: any) {
         console.warn('[register] profile photo upload failed:', uploadErr?.response?.data || uploadErr?.message);
       }
 
+      // Fallback: if upload failed, use local URI directly (bypass normalizeUser to avoid proxy-wrapping a file:// URI)
+      if (!uploadedAvatarUrl) {
+        useAuthStore.setState((s) => ({
+          user: s.user ? { ...s.user, avatarUrl: profilePhoto.localUri } : s.user,
+        }));
+      }
+
+      const avatarForStore = uploadedAvatarUrl || profilePhoto.localUri;
       registerPendingUser({
         ...profileData,
-        avatarUrl: uploadedAvatarUrl || profilePhoto.localUri,
+        id: serverUser.id,
+        avatarUrl: avatarForStore,
         approvalStatus: 'PENDING',
         phoneVerified: false,
       });

@@ -168,8 +168,8 @@ export default function ApprovalStatusScreen() {
         <View style={[styles.statusCard, { backgroundColor: C.cardBg, borderColor: C.border }]}>
           {/* Avatar & Verification Indicator */}
           <View style={styles.avatarWrapper}>
-            {user?.avatarUrl ? (
-              <ExpoImage source={{ uri: user.avatarUrl }} style={styles.avatar} contentFit="cover" />
+            {(profileUser?.avatarUrl || user?.avatarUrl) ? (
+              <ExpoImage source={{ uri: profileUser?.avatarUrl || user?.avatarUrl }} style={styles.avatar} contentFit="cover" />
             ) : (
               <View style={[styles.avatarPlaceholder, { backgroundColor: C.primaryContainer }]}>
                 <Ionicons name="person" size={44} color={C.primary} />

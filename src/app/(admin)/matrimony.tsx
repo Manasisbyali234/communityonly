@@ -11,6 +11,7 @@ import { adminApiClient } from '../../api/adminClient';
 import { fmtDate, fmtDateTime } from '../../utils/adminUtils';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
+import { toProxyUrl } from '../../api/media';
 
 const STATUS_TABS = ['PENDING', 'APPROVED', 'REJECTED', 'CHATS'] as const;
 type StatusTab = typeof STATUS_TABS[number];
@@ -205,7 +206,7 @@ export default function AdminMatrimonyProfiles() {
                     <View style={s.mobileTop}>
                       <View style={s.avatar}>
                         {(p.avatarUrl || p.photos?.[0])
-                          ? <Image source={{ uri: p.avatarUrl ?? p.photos[0] }} style={s.avatarImg} />
+                          ? <Image source={{ uri: toProxyUrl(p.avatarUrl ?? p.photos[0]) ?? (p.avatarUrl ?? p.photos[0]) }} style={s.avatarImg} />
                           : <Text style={s.avatarFallback}>{p.displayName?.[0]?.toUpperCase()}</Text>
                         }
                       </View>
@@ -236,7 +237,7 @@ export default function AdminMatrimonyProfiles() {
                   <View style={[s.cell, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
                     <View style={s.avatar}>
                       {(p.avatarUrl || p.photos?.[0])
-                        ? <Image source={{ uri: p.avatarUrl ?? p.photos[0] }} style={s.avatarImg} />
+                        ? <Image source={{ uri: toProxyUrl(p.avatarUrl ?? p.photos[0]) ?? (p.avatarUrl ?? p.photos[0]) }} style={s.avatarImg} />
                         : <Text style={s.avatarFallback}>{p.displayName?.[0]?.toUpperCase()}</Text>
                       }
                     </View>
@@ -286,7 +287,7 @@ export default function AdminMatrimonyProfiles() {
                 {reviewProfile.photos?.length > 0 && (
                   <View style={s.reviewPhotoGrid}>
                     {reviewProfile.photos.map((photo: string, i: number) => (
-                      <Image key={i} source={{ uri: photo }} style={s.reviewPhoto} resizeMode="cover" />
+                      <Image key={i} source={{ uri: toProxyUrl(photo) ?? photo }} style={s.reviewPhoto} resizeMode="cover" />
                     ))}
                   </View>
                 )}
@@ -297,15 +298,51 @@ export default function AdminMatrimonyProfiles() {
                 <ReviewRow label="Date of Birth" value={reviewProfile.dateOfBirth?.slice(0, 10)} />
                 <ReviewRow label="Height" value={reviewProfile.height} />
                 <ReviewRow label="Marital Status" value={reviewProfile.maritalStatus} />
+                <ReviewRow label="Blood Group" value={reviewProfile.bloodGroup} />
+                <ReviewRow label="Eating Habits" value={reviewProfile.eatingHabits} />
+                <ReviewRow label="Disability" value={reviewProfile.disability} />
                 <ReviewRow label="Religion" value={reviewProfile.religion} />
                 <ReviewRow label="Caste" value={reviewProfile.caste} />
                 <ReviewRow label="Mother Tongue" value={reviewProfile.motherTongue} />
+                <ReviewRow label="Gotra" value={reviewProfile.gotra} />
+                <ReviewRow label="Raashi" value={reviewProfile.raashi} />
+                <ReviewRow label="Nakshathra" value={reviewProfile.nakshathra} />
+                <ReviewRow label="Gana" value={reviewProfile.gana} />
+                <ReviewRow label="Dosham" value={reviewProfile.dosham} />
+                <ReviewRow label="Bali" value={reviewProfile.bali} />
+                <ReviewRow label="Birth Time" value={reviewProfile.birthTime} />
+                <ReviewRow label="Place of Birth" value={reviewProfile.placeOfBirth} />
                 <ReviewRow label="Education" value={reviewProfile.education} />
+                <ReviewRow label="Education Field" value={reviewProfile.educationField} />
+                <ReviewRow label="Education Details" value={reviewProfile.educationDetails} />
+                <ReviewRow label="Working With" value={reviewProfile.workingWith} />
+                <ReviewRow label="Designation" value={reviewProfile.designation} />
                 <ReviewRow label="Occupation" value={reviewProfile.occupation} />
+                <ReviewRow label="Work Location" value={reviewProfile.workLocation} />
                 <ReviewRow label="Annual Income" value={reviewProfile.annualIncome} />
                 <ReviewRow label="City" value={reviewProfile.city} />
                 <ReviewRow label="State" value={reviewProfile.state} />
-                {reviewProfile.aboutMe && <ReviewRow label="About" value={reviewProfile.aboutMe} />}
+                <ReviewRow label="Family Type" value={reviewProfile.familyType} />
+                <ReviewRow label="Family Value" value={reviewProfile.familyValue} />
+                <ReviewRow label="Family Location" value={reviewProfile.familyLocation} />
+                <ReviewRow label="Father Name" value={reviewProfile.fatherName} />
+                <ReviewRow label="Father Status" value={reviewProfile.fatherStatus} />
+                <ReviewRow label="Father Occupation" value={reviewProfile.fatherOccupation} />
+                <ReviewRow label="Mother Name" value={reviewProfile.motherName} />
+                <ReviewRow label="Mother Status" value={reviewProfile.motherStatus} />
+                <ReviewRow label="Mother Occupation" value={reviewProfile.motherOccupation} />
+                <ReviewRow label="Brothers" value={reviewProfile.brothers != null ? `${reviewProfile.brothers} (${reviewProfile.brothersMarried ?? 0} married)` : undefined} />
+                <ReviewRow label="Sisters" value={reviewProfile.sisters != null ? `${reviewProfile.sisters} (${reviewProfile.sistersMarried ?? 0} married)` : undefined} />
+                <ReviewRow label="Ancestral Origin" value={reviewProfile.ancestralOrigin} />
+                <ReviewRow label="Diet" value={reviewProfile.diet} />
+                <ReviewRow label="Hobbies" value={Array.isArray(reviewProfile.hobbies) ? reviewProfile.hobbies.join(', ') : reviewProfile.hobbies} />
+                <ReviewRow label="About Me" value={reviewProfile.aboutMe} />
+                <ReviewRow label="Partner Age" value={reviewProfile.partnerMinAge != null ? `${reviewProfile.partnerMinAge}–${reviewProfile.partnerMaxAge ?? '+'} yrs` : undefined} />
+                <ReviewRow label="Partner Religion" value={reviewProfile.partnerReligion} />
+                <ReviewRow label="Partner Caste" value={reviewProfile.partnerCaste} />
+                <ReviewRow label="Partner Education" value={reviewProfile.partnerEducation} />
+                <ReviewRow label="Partner City" value={reviewProfile.partnerCity} />
+                {reviewProfile.rejectionReason ? <ReviewRow label="Rejection Reason" value={reviewProfile.rejectionReason} /> : null}
                 <ReviewRow label="Submitted" value={fmtDate(reviewProfile.createdAt)} />
                 {reviewProfile.approvalStatus === 'PENDING' && (
                   <View style={s.reviewActions}>
@@ -479,7 +516,7 @@ const s = StyleSheet.create({
   reviewPhotoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   reviewPhoto: { width: 100, height: 100, borderRadius: 10 },
   reviewRow: { flexDirection: 'row', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.border },
-  reviewLabel: { width: 110, fontSize: 12, fontWeight: '700', color: C.textSecond },
+  reviewLabel: { width: 140, fontSize: 12, fontWeight: '700', color: C.textSecond },
   reviewValue: { flex: 1, fontSize: 12, color: C.textPrimary },
   reviewActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   reviewApproveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, backgroundColor: '#166534' },
