@@ -72,7 +72,8 @@ export default function SettingsScreen() {
     });
     if (ok) {
       await logout();
-      router.replace('/(auth)/login');
+      // Navigate explicitly to login — layout guard may not fire fast enough on all platforms
+      router.replace('/(auth)/login' as any);
     }
   };
 

@@ -126,6 +126,10 @@ function RootLayoutContent() {
     };
 
     if (!isLoggedIn) {
+      // Reset lastRedirect on logout so the guard always fires
+      if (lastRedirect.current && lastRedirect.current !== '/(auth)/login' && lastRedirect.current !== '/(auth)/onboarding') {
+        lastRedirect.current = null;
+      }
       if (!inAuthGroup) {
         navigate(!isOnboarded ? '/(auth)/onboarding' : '/(auth)/login');
       }

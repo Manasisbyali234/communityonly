@@ -82,15 +82,6 @@ export default function EditProfile() {
   const handleBack = () => {
     if (from === 'approval-status' || isRejectedOrPending) {
       router.replace('/(auth)/approval-status' as any);
-    } else if (from === 'settings' || from === '/(tabs)/settings') {
-      router.replace('/(tabs)/settings' as any);
-    } else if (from === 'profile' || from === '/(tabs)/profile') {
-      router.replace('/(tabs)/profile' as any);
-    } else if (from) {
-      const target = from.startsWith('/') ? from : `/(tabs)/${from}`;
-      router.replace(target as any);
-    } else if (router.canGoBack()) {
-      router.back();
     } else {
       router.replace('/(tabs)/profile' as any);
     }
@@ -460,48 +451,78 @@ export default function EditProfile() {
 
         {/* ── Cover & Avatar Header Masthead ──────────────────────────── */}
         <View style={styles.mastheadSection}>
-          <View style={[styles.coverBox, { backgroundColor: isDark ? "#1a2e1a" : "#E8F5E9" }]}>
+          {/* Cover — matches profile page exactly */}
+          <View style={{ height: 180, position: 'relative', overflow: 'hidden' }}>
             {currentCoverUri ? (
-              <ExpoImage source={{ uri: currentCoverUri }} style={styles.coverImg} contentFit="cover" />
+              <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
             ) : (
-              <TouchableOpacity onPress={handlePickCover} style={styles.coverFallback}>
-                <View style={[styles.coverFallbackIcon, { backgroundColor: G + "20" }]}>
-                  <Ionicons name="image-outline" size={28} color={G} />
-                </View>
-                <Text style={[styles.coverFallbackText, { color: G }]}>Tap to add cover photo</Text>
-              </TouchableOpacity>
+              <LinearGradient
+                colors={isDark
+                  ? [colors.primaryDark, colors.primary, colors.forestGreen ?? colors.primary]
+                  : [colors.primaryDark, colors.primary, colors.primaryLight]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill as any}
+              />
             )}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.55)']}
+              style={StyleSheet.absoluteFill as any}
+            />
+            {/* Cover action buttons */}
             <View style={styles.coverActionIconsRow}>
               {currentCoverUri && (
-                <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: "rgba(239,68,68,0.85)" }]}>
+                <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
                   <Ionicons name="trash-outline" size={15} color="#FFF" />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: "rgba(0,0,0,0.6)" }]}>
+              <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
                 <Ionicons name="camera" size={15} color="#FFF" />
               </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.avatarOverlapContainer}>
-            <TouchableOpacity onPress={() => setShowPhotoOptions(true)} activeOpacity={0.85} style={[styles.avatarWrap, { borderColor: BG }]}>
+
+          {/* Masthead row — matches profile page */}
+          <View style={[styles.mastheadRow, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
+            {/* Avatar ring */}
+            <TouchableOpacity
+              onPress={() => setShowPhotoOptions(true)}
+              activeOpacity={0.85}
+              style={[styles.avatarRing, { borderColor: G, backgroundColor: SURF }]}
+            >
               <Avatar url={localAvatarUri ?? user.avatarUrl} name={user.displayName} size={96} />
-              <View style={[styles.avatarCameraBadge, { backgroundColor: G, borderColor: BG }]}>
-                <Ionicons name="camera" size={14} color="#FFF" />
+              <View style={[styles.avatarCameraBadge, { backgroundColor: G, borderColor: SURF }]}>
+                <Ionicons name="camera" size={12} color="#FFF" />
               </View>
             </TouchableOpacity>
-            <Text style={[styles.avatarName, { color: TEXT }]}>{user.displayName}</Text>
-            <Text style={[styles.avatarHandle, { color: TEXT3 }]}>@{user.username || "username"}</Text>
-            {photoError ? <Text style={styles.errorBannerText}>{photoError}</Text> : null}
+
+            {/* Name + username */}
+            <View style={{ flex: 1, paddingLeft: 12, paddingTop: 8 }}>
+              <Text style={[styles.previewName, { color: TEXT }]} numberOfLines={1}>
+                {watch('displayName') || user.displayName}
+              </Text>
+              <Text style={[styles.previewHandle, { color: TEXT3 }]} numberOfLines={1}>
+                @{user.username || 'username'}
+              </Text>
+              {watch('bio') ? (
+                <Text style={[styles.previewBio, { color: TEXT2 }]} numberOfLines={2}>
+                  {watch('bio')}
+                </Text>
+              ) : null}
+            </View>
           </View>
-          <View style={[styles.completionCard, { backgroundColor: SURF, borderColor: BORDER }]}>
+
+          {photoError ? <Text style={[styles.errorBannerText, { marginHorizontal: 16 }]}>{photoError}</Text> : null}
+
+          {/* Completion card */}
+          <View style={[styles.completionCard, { backgroundColor: SURF, borderColor: BORDER, marginHorizontal: 16 }]}>
             <View style={styles.completionRow}>
-              <View style={[styles.completionIconBox, { backgroundColor: G + "15" }]}>
+              <View style={[styles.completionIconBox, { backgroundColor: G + '15' }]}>
                 <Ionicons name="stats-chart" size={14} color={G} />
               </View>
               <Text style={[styles.completionLabel, { color: TEXT }]}>Profile Completion</Text>
               <Text style={[styles.completionPct, { color: G }]}>{completionPct}%</Text>
             </View>
-            <View style={[styles.completionTrack, { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#E8F5E9" }]}>
+            <View style={[styles.completionTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#E8F5E9' }]}>
               <View style={[styles.completionFill, { width: `${completionPct}%` as any, backgroundColor: G }]} />
             </View>
             {completionPct < 100 && (
