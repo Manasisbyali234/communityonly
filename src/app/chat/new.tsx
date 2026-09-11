@@ -10,8 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/common/Avatar';
 import { User } from '../../types';
 import { useAuthStore } from '../../store/authStore';
-import { useSuggestedUsersQuery } from '../../api/user';
 import { useChatsQuery, useStartConversationMutation } from '../../api/chat';
+import { useConnectionsListQuery } from '../../api/connections';
 
 export default function NewChatScreen() {
   const { colors, isDark } = useTheme();
@@ -26,8 +26,13 @@ export default function NewChatScreen() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const { user: currentUser } = useAuthStore();
-  const { data: users = [], isLoading } = useSuggestedUsersQuery(30);
   const { data: conversations = [] } = useChatsQuery();
+  const { data: connectionsList = [], isLoading } = useConnectionsListQuery(currentUser?.id || '');
+
+  // Only show accepted connections
+  const users = connectionsList
+    .map((cn: any) => cn.user ?? cn)
+    .filter((u: any) => u?.id && u.id !== currentUser?.id);
 
   // Auto-resolve participant from query param if provided
   useEffect(() => {
@@ -56,10 +61,7 @@ export default function NewChatScreen() {
     );
   }, [participantId, conversations, router, startConversation]);
 
-  // Exclude current user and admin from list
-  const availableUsers = users.filter((u: any) => u.id !== currentUser?.id && u.role !== 'ADMIN');
-
-  const filteredUsers = availableUsers.filter((user: any) => {
+  const filteredUsers = users.filter((user: any) => {
     if (!searchText.trim()) return true;
     const query = searchText.toLowerCase();
     const name = (user.displayName || user.username || '').toLowerCase();
@@ -87,7 +89,6 @@ export default function NewChatScreen() {
   const SURF = colors.surface;
   const BORDER = colors.border;
   const TEXT = colors.text;
-  const TEXT2 = colors.textSecondary;
   const TEXT3 = colors.textMuted;
 
   const renderUserRow = ({ item }: { item: User }) => {
@@ -106,7 +107,6 @@ export default function NewChatScreen() {
         onPress={() => handleSelectUser(item)}
         disabled={startConversation.isPending}
       >
-        {/* Avatar with online dot */}
         <View style={styles.avatarWrap}>
           <Avatar
             url={item.avatarUrl}
@@ -116,7 +116,6 @@ export default function NewChatScreen() {
           />
         </View>
 
-        {/* User Details */}
         <View style={styles.userInfo}>
           <View style={styles.nameRow}>
             <Text style={[styles.displayName, { color: TEXT }]} numberOfLines={1}>
@@ -131,7 +130,6 @@ export default function NewChatScreen() {
           </Text>
         </View>
 
-        {/* Action Button */}
         <View
           style={[
             styles.messageBtn,
@@ -166,7 +164,7 @@ export default function NewChatScreen() {
         <View style={styles.navTitleWrap}>
           <Text style={[styles.navTitle, { color: TEXT }]}>New Message</Text>
           <Text style={[styles.navSubtitle, { color: TEXT3 }]}>
-            {filteredUsers.length} community members
+            {filteredUsers.length} connected members
           </Text>
         </View>
 
@@ -193,10 +191,10 @@ export default function NewChatScreen() {
         </View>
       </View>
 
-      {/* ── Suggested Contacts Label ───────────────────────────── */}
+      {/* ── Section Label ───────────────────────────────────────── */}
       <View style={styles.sectionHeaderRow}>
         <Text style={[styles.sectionLabel, { color: TEXT3 }]}>
-          {searchText ? 'SEARCH RESULTS' : 'SUGGESTED CONTACTS'}
+          {searchText ? 'SEARCH RESULTS' : 'CONNECTED MEMBERS'}
         </Text>
         <Text style={[styles.sectionCount, { color: TEXT3 }]}>
           {filteredUsers.length}
@@ -223,12 +221,12 @@ export default function NewChatScreen() {
                 <Ionicons name="people-outline" size={36} color={G} />
               </View>
               <Text style={[styles.emptyTitle, { color: TEXT }]}>
-                No Members Found
+                No Connected Members
               </Text>
               <Text style={[styles.emptySub, { color: TEXT3 }]}>
                 {searchText
-                  ? `No community member matches "${searchText}".`
-                  : 'No contacts available to message right now.'}
+                  ? `No connected member matches "${searchText}".`
+                  : 'You can only message members you are connected with.'}
               </Text>
             </View>
           )}
