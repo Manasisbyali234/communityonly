@@ -166,6 +166,7 @@ export interface MatrimonyFilters {
   maritalStatus?: MaritalStatus;
   education?: EducationLevel;
   city?: string;
+  raashi?: string;
   search?: string;
 }
 
@@ -249,11 +250,11 @@ export function useMyMatrimonyProfileQuery() {
   });
 }
 
-export function useMatrimonyMatchesQuery(enabled = true) {
+export function useMatrimonyMatchesQuery(filters?: MatrimonyFilters, enabled = true) {
   return useQuery({
-    queryKey: ['matrimony-matches'],
+    queryKey: ['matrimony-matches', filters],
     queryFn: async () => {
-      const res = await apiClient.get('/matrimony/matches');
+      const res = await apiClient.get('/matrimony/matches', { params: filters });
       return (res.data?.data ?? res.data) as MatrimonyProfile[];
     },
     enabled,

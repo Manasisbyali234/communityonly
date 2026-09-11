@@ -12,7 +12,7 @@ import {
   useMatrimonyProfilesQuery, useMatrimonyMatchesQuery,
   useMyMatrimonyProfileQuery, MatrimonyFilters,
   MARITAL_STATUS_LABELS, EDUCATION_LABELS, MatrimonyProfile,
-  useMatrimonyLikeMatchesQuery, MatrimonyLikeMatch,
+  useMatrimonyLikeMatchesQuery, MatrimonyLikeMatch, RAASHI_OPTIONS,
 } from '../../api/matrimony';
 import { useTheme } from '../../theme';
 
@@ -26,8 +26,6 @@ const AGE_RANGES = [
   { label: '36–40', min: 36, max: 40 },
   { label: '40+', min: 40, max: undefined },
 ];
-
-const RELIGION_OPTIONS = ['', 'Hindu', 'Muslim', 'Christian', 'Sikh', 'Jain', 'Buddhist', 'Other'];
 
 // ── Shimmer Skeleton ──────────────────────────────────────────────────────────
 function Shimmer({ style }: { style?: any }) {
@@ -203,11 +201,9 @@ export default function MatrimonyScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('discover');
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<MatrimonyFilters>({});
   const [ageRangeIdx, setAgeRangeIdx] = useState(0);
-  const [cityInput, setCityInput] = useState('');
 
   const { data: myProfile, isLoading: myProfileLoading, isError: myProfileError } = useMyMatrimonyProfileQuery();
 
@@ -221,8 +217,9 @@ export default function MatrimonyScreen() {
   })();
 
   const isApproved = profileStatus === 'APPROVED';
-  const { data: profiles = [], isLoading } = useMatrimonyProfilesQuery({ ...filters, search: query || undefined }, isApproved);
-  const { data: matches = [], isLoading: matchesLoading } = useMatrimonyMatchesQuery(isApproved);
+  const activeFilters = { ...filters, search: search.trim() || undefined };
+  const { data: profiles = [], isLoading } = useMatrimonyProfilesQuery(activeFilters, isApproved);
+  const { data: matches = [], isLoading: matchesLoading } = useMatrimonyMatchesQuery(activeFilters, isApproved);
   const { data: likeMatches = [], isLoading: likeMatchesLoading } = useMatrimonyLikeMatchesQuery(isApproved);
 
   const applyAgeRange = (idx: number) => {
@@ -231,7 +228,23 @@ export default function MatrimonyScreen() {
     setFilters(f => ({ ...f, minAge: r.min, maxAge: r.max }));
   };
 
-  const list = activeTab === 'matches' ? matches : profiles;
+  const applyClientFilters = (data: MatrimonyProfile[]) => {
+    const s = search.trim().toLowerCase();
+    return data.filter(p => {
+      if (filters.minAge && p.age < filters.minAge) return false;
+      if (filters.maxAge && p.age > filters.maxAge) return false;
+      if (filters.maritalStatus && p.maritalStatus !== filters.maritalStatus) return false;
+      if (filters.education && p.education !== filters.education) return false;
+      if (filters.raashi && p.raashi !== filters.raashi) return false;
+      if (s && ![
+        p.displayName, p.city, p.state, p.occupation, p.caste, p.motherTongue,
+      ].some(v => v?.toLowerCase().includes(s))) return false;
+      return true;
+    });
+  };
+
+  const rawList = activeTab === 'matches' ? matches : profiles;
+  const list = applyClientFilters(rawList);
   const loading = activeTab === 'matches' ? matchesLoading : activeTab === 'liked' ? likeMatchesLoading : isLoading;
 
   // ── Gate: show loading spinner ─────────────────────────────────────────────
@@ -398,10 +411,9 @@ export default function MatrimonyScreen() {
             placeholder="Search by name, city, caste..."
             placeholderTextColor={colors.textMuted}
             returnKeyType="search"
-            onSubmitEditing={() => setQuery(search)}
           />
           {search ? (
-            <TouchableOpacity onPress={() => { setSearch(''); setQuery(''); }}>
+            <TouchableOpacity onPress={() => setSearch('')}>
               <Ionicons name="close-circle" size={17} color={colors.textMuted} />
             </TouchableOpacity>
           ) : null}
@@ -430,22 +442,6 @@ export default function MatrimonyScreen() {
                 onPress={() => applyAgeRange(i)}
               >
                 <Text style={[styles.chipText, { color: ageRangeIdx === i ? '#fff' : colors.primary }]}>{r.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Gender */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Gender</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {(['', 'MALE', 'FEMALE', 'OTHER'] as const).map((g) => (
-              <TouchableOpacity
-                key={g}
-                style={[styles.chip, { backgroundColor: filters.gender === g || (!filters.gender && g === '') ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, gender: g || undefined }))}
-              >
-                <Text style={[styles.chipText, { color: filters.gender === g || (!filters.gender && g === '') ? '#fff' : colors.primary }]}>
-                  {g === '' ? 'Any' : g === 'MALE' ? 'Male' : g === 'FEMALE' ? 'Female' : 'Other'}
-                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -482,45 +478,26 @@ export default function MatrimonyScreen() {
             ))}
           </ScrollView>
 
-          {/* Religion */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Religion</Text>
+          {/* Raashi */}
+          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Raashi</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {RELIGION_OPTIONS.map((rel) => (
+            {[undefined, ...RAASHI_OPTIONS].map((r) => (
               <TouchableOpacity
-                key={rel || 'any'}
-                style={[styles.chip, { backgroundColor: (filters.religion ?? '') === rel ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, religion: rel || undefined }))}
+                key={r ?? 'any'}
+                style={[styles.chip, { backgroundColor: filters.raashi === r ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
+                onPress={() => setFilters(f => ({ ...f, raashi: r }))}
               >
-                <Text style={[styles.chipText, { color: (filters.religion ?? '') === rel ? '#fff' : colors.primary }]}>
-                  {rel || 'Any'}
+                <Text style={[styles.chipText, { color: filters.raashi === r ? '#fff' : colors.primary }]}>
+                  {r ?? 'Any'}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          {/* City */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>City</Text>
-          <View style={[styles.cityInputWrap, { backgroundColor: colors.elevation1, borderColor: colors.border }]}>
-            <Ionicons name="location-outline" size={15} color={colors.textMuted} />
-            <TextInput
-              style={[styles.cityInput, { color: colors.text }]}
-              value={cityInput}
-              onChangeText={(v) => { setCityInput(v); setFilters(f => ({ ...f, city: v.trim() || undefined })); }}
-              placeholder="e.g. Bengaluru"
-              placeholderTextColor={colors.textMuted}
-              returnKeyType="done"
-            />
-            {cityInput ? (
-              <TouchableOpacity onPress={() => { setCityInput(''); setFilters(f => ({ ...f, city: undefined })); }}>
-                <Ionicons name="close-circle" size={15} color={colors.textMuted} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
           {/* Reset */}
           <TouchableOpacity
             style={[styles.resetBtn, { borderColor: colors.primary }]}
-            onPress={() => { setFilters({}); setAgeRangeIdx(0); setCityInput(''); }}
+            onPress={() => { setFilters({}); setAgeRangeIdx(0); setSearch(''); }}
           >
             <Ionicons name="refresh-outline" size={14} color={colors.primary} />
             <Text style={[styles.resetBtnText, { color: colors.primary }]}>Reset All Filters</Text>
@@ -622,7 +599,7 @@ export default function MatrimonyScreen() {
           <Text style={[styles.emptySub, { color: colors.textSecondary }]}>Try adjusting your filters or search.</Text>
           <TouchableOpacity
             style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-            onPress={() => { setFilters({}); setAgeRangeIdx(0); setSearch(''); setQuery(''); }}
+            onPress={() => { setSearch(''); setFilters({}); setAgeRangeIdx(0); setCityInput(''); setOccupationInput(''); }}
           >
             <Text style={styles.emptyBtnText}>Reset Filters</Text>
           </TouchableOpacity>
