@@ -16,6 +16,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 import { Image as ExpoImage } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
@@ -987,32 +988,27 @@ const styles = StyleSheet.create({
 
   // Masthead Section
   mastheadSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
     marginBottom: 8,
   },
-  coverBox: {
-    width: '100%',
-    height: 140,
-    borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
+  mastheadRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    marginTop: -50,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  coverImg: {
-    width: '100%',
-    height: '100%',
+  avatarRing: {
+    width: 104, height: 104, borderRadius: 52,
+    borderWidth: 3, position: 'relative',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 10 },
+      android: { elevation: 8 },
+    }),
   },
-  coverFallback: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  coverFallbackText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  previewName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  previewHandle: { fontSize: 13, fontWeight: '500', marginTop: 2 },
+  previewBio: { fontSize: 13, lineHeight: 18, marginTop: 4 },
   coverActionIconsRow: {
     position: 'absolute',
     bottom: 10,
@@ -1041,41 +1037,16 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // Avatar Overlap
-  avatarOverlapContainer: {
-    alignItems: 'center',
-    marginTop: -44,
-  },
-  avatarWrap: {
-    position: 'relative',
-    borderRadius: 48,
-    borderWidth: 3,
-    borderColor: '#FFF',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6 },
-      android: { elevation: 4 },
-    }),
-  },
   avatarCameraBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    bottom: 2,
+    right: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 2,
-    borderColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  changeAvatarLink: {
-    marginTop: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  changeAvatarText: {
-    fontSize: 13,
-    fontWeight: '700',
   },
   errorBannerText: {
     color: '#EF4444',
@@ -1272,16 +1243,6 @@ const styles = StyleSheet.create({
   },
   rejectionNoticeHint: {
     fontSize: 11,
-  },
-
-  // Avatar name/handle under avatar
-  avatarName: { fontSize: 15, fontWeight: '700', marginTop: 8, color: '#0F172A' },
-  avatarHandle: { fontSize: 12, fontWeight: '500', marginTop: 2 },
-
-  // Cover fallback icon
-  coverFallbackIcon: {
-    width: 52, height: 52, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
 
   // Profile completion card
