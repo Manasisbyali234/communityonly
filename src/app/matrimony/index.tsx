@@ -201,13 +201,7 @@ export default function MatrimonyScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('discover');
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-<<<<<<< HEAD
   const [query, setQuery] = useState('');
-=======
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<MatrimonyFilters>({});
-  const [ageRangeIdx, setAgeRangeIdx] = useState(0);
->>>>>>> 50e081b4b1c66cd97039d2357c394f0a7287a34d
 
   const { data: myProfile, isLoading: myProfileLoading, isError: myProfileError } = useMyMatrimonyProfileQuery();
 
@@ -221,7 +215,6 @@ export default function MatrimonyScreen() {
   })();
 
   const isApproved = profileStatus === 'APPROVED';
-<<<<<<< HEAD
 
   // ── Smart filters derived from user's own profile & partner preferences ──
   const smartFilters = useMemo((): MatrimonyFilters => {
@@ -269,11 +262,6 @@ export default function MatrimonyScreen() {
   }), [smartFilters, filters, query]);
   const { data: profiles = [], isLoading } = useMatrimonyProfilesQuery(combinedFilters, isApproved);
   const { data: matches = [], isLoading: matchesLoading } = useMatrimonyMatchesQuery(isApproved);
-=======
-  const activeFilters = { ...filters, search: search.trim() || undefined };
-  const { data: profiles = [], isLoading } = useMatrimonyProfilesQuery(activeFilters, isApproved);
-  const { data: matches = [], isLoading: matchesLoading } = useMatrimonyMatchesQuery(activeFilters, isApproved);
->>>>>>> 50e081b4b1c66cd97039d2357c394f0a7287a34d
   const { data: likeMatches = [], isLoading: likeMatchesLoading } = useMatrimonyLikeMatchesQuery(isApproved);
 
   const applyAgeRange = (idx: number) => {}; // kept for compat, unused
@@ -510,69 +498,7 @@ export default function MatrimonyScreen() {
               </View>
             ))}
           </ScrollView>
-<<<<<<< HEAD
         </View>
-=======
-
-          {/* Marital Status */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Marital Status</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {([undefined, 'NEVER_MARRIED', 'DIVORCED', 'WIDOWED', 'SEPARATED'] as const).map((ms) => (
-              <TouchableOpacity
-                key={ms ?? 'any'}
-                style={[styles.chip, { backgroundColor: filters.maritalStatus === ms ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, maritalStatus: ms }))}
-              >
-                <Text style={[styles.chipText, { color: filters.maritalStatus === ms ? '#fff' : colors.primary }]}>
-                  {ms === undefined ? 'Any' : MARITAL_STATUS_LABELS[ms]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Education */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Education</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {([undefined, 'HIGH_SCHOOL', 'DIPLOMA', 'BACHELORS', 'MASTERS', 'PHD', 'OTHER'] as const).map((edu) => (
-              <TouchableOpacity
-                key={edu ?? 'any'}
-                style={[styles.chip, { backgroundColor: filters.education === edu ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, education: edu }))}
-              >
-                <Text style={[styles.chipText, { color: filters.education === edu ? '#fff' : colors.primary }]}>
-                  {edu === undefined ? 'Any' : EDUCATION_LABELS[edu]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Raashi */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Raashi</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {[undefined, ...RAASHI_OPTIONS].map((r) => (
-              <TouchableOpacity
-                key={r ?? 'any'}
-                style={[styles.chip, { backgroundColor: filters.raashi === r ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, raashi: r }))}
-              >
-                <Text style={[styles.chipText, { color: filters.raashi === r ? '#fff' : colors.primary }]}>
-                  {r ?? 'Any'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Reset */}
-          <TouchableOpacity
-            style={[styles.resetBtn, { borderColor: colors.primary }]}
-            onPress={() => { setFilters({}); setAgeRangeIdx(0); setSearch(''); }}
-          >
-            <Ionicons name="refresh-outline" size={14} color={colors.primary} />
-            <Text style={[styles.resetBtnText, { color: colors.primary }]}>Reset All Filters</Text>
-          </TouchableOpacity>
-
-        </ScrollView>
->>>>>>> 50e081b4b1c66cd97039d2357c394f0a7287a34d
       )}
 
       {/* Results bar */}

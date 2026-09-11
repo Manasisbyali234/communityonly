@@ -246,6 +246,30 @@ export function useToggleInterestMutation() {
             : e
         ) ?? []
       );
+      queryClient.setQueryData<Event | null>(eventKeys.detail(eventId), (old) =>
+        old ? { ...old, isInterested: data.interested, interestedCount: data.interestedCount } : old
+      );
+    },
+  });
+}
+
+export function useFavoriteEventMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      // Always POST — backend handles idempotency (duplicate prevention)
+      const res = await apiClient.post<ApiResponse<{ interested: boolean; interestedCount: number }>>(`/events/${eventId}/interest`);
+      return res.data.data;
+    },
+    onSuccess: (data, eventId) => {
+      const patch = { isInterested: true, interestedCount: data.interestedCount };
+      queryClient.setQueryData<Event | null>(eventKeys.detail(eventId), (old) =>
+        old ? { ...old, ...patch } : old
+      );
+      queryClient.setQueryData<Event[]>(eventKeys.list(), (old) =>
+        old?.map((e) => e.id === eventId ? { ...e, ...patch } : e) ?? []
+      );
     },
   });
 }
