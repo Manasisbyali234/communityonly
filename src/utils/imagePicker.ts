@@ -87,8 +87,20 @@ export async function appendPickedFile(formData: FormData, picked: PickedImage):
     return;
   }
 
-  const response = await fetch(picked.localUri);
-  let blob = await response.blob();
+  let blob: Blob;
+  // Handle base64 data URIs produced by Canvas crop on web
+  if (picked.localUri.startsWith('data:')) {
+    const [header, base64] = picked.localUri.split(',');
+    const mime = header.match(/:(.*?);/)?.[1] ?? picked.mimeType;
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    blob = new Blob([bytes], { type: mime });
+  } else {
+    const response = await fetch(picked.localUri);
+    blob = await response.blob();
+  }
+
   assertWithinMediaUploadLimit(blob.size);
 
   let filename = picked.filename;

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  FlatList,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -32,7 +33,7 @@ import { useToastStore } from '../../../store/toastStore';
 import { useConfirmStore } from '../../../store/confirmStore';
 import { useAuthStore } from '../../../store/authStore';
 import { FlashList as ShopifyFlashList } from '@shopify/flash-list';
-const FlashList = ShopifyFlashList as any;
+const FlashList = Platform.OS === 'web' ? FlatList : (ShopifyFlashList as any);
 
 type TabType = 'posts' | 'rules' | 'requests';
 
@@ -133,7 +134,7 @@ export default function CommunityDetails() {
   const communityStatus = (community as any).status;
   const isApproved = !communityStatus || communityStatus === 'APPROVED';
   const isCreator = (community as any).creatorId === currentUserId || (community as any).ownerId === currentUserId;
-  const showJoinAction = isApproved && memberRole !== 'ADMIN' && memberRole !== 'OWNER' && !isCreator;
+  const showJoinAction = isApproved && memberRole !== 'ADMIN' && memberRole !== 'OWNER' && memberRole !== 'MODERATOR' && !isCreator;
 
   // Responsive horizontal padding: 16px on small screens, 20px on wider
   const hPad = windowWidth < 360 ? 12 : windowWidth < 480 ? 16 : 20;

@@ -115,6 +115,8 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   const showToast = useToastStore((s) => s.showToast);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const isOwnPost = currentUserId === post.author.id;
+  // Don't show join indicator if user owns the community (is the post author in their own community)
+  const isOwnCommunity = !!post.community && isOwnPost;
 
   const lastTapRef = useRef<number>(0);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -196,7 +198,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
       if (!isLiked && !likeMutation.isPending) {
         setIsLiked(true);
         setLikesCount(c => c + 1);
-        likeMutation.mutate(post.id);
+        likeMutation.mutate({ postId: post.id, wasLiked: false });
       }
       triggerDoubleTapHeart();
     }
@@ -205,10 +207,10 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
 
   const handleLike = () => {
     if (likeMutation.isPending) return;
-    const next = !isLiked;
-    setIsLiked(next);
-    setLikesCount(c => next ? c + 1 : Math.max(0, c - 1));
-    likeMutation.mutate(post.id);
+    const wasLiked = isLiked;
+    setIsLiked(!wasLiked);
+    setLikesCount(c => !wasLiked ? c + 1 : Math.max(0, c - 1));
+    likeMutation.mutate({ postId: post.id, wasLiked });
   };
 
   const handleComment = () => onCommentPress(post.id);
@@ -300,7 +302,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
             url={post.community?.avatarUrl || post.author.avatarUrl}
             name={post.community?.name || post.author.displayName}
             size={42}
-            gradientBorder={post.community?.isJoined === false}
+            gradientBorder={!isOwnCommunity && post.community?.isJoined === false}
           />
           {post.community && (
             <TouchableOpacity

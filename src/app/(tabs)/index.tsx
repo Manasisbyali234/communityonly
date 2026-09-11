@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useRef, useState, useCallback, useMemo } from 'react';
 import {
   Animated,
+  FlatList,
   Platform,
   RefreshControl,
   ScrollView,
@@ -31,7 +32,7 @@ import Avatar from '../../components/common/Avatar';
 import Button from '../../components/common/Button';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme';
-const FlashList = ShopifyFlashList as any;
+const FlashList = Platform.OS === 'web' ? FlatList : (ShopifyFlashList as any);
 
 
 // Quick action shortcut definition with modern 3D icons & squircle cards
@@ -599,7 +600,7 @@ export default function HomeFeed() {
 
                     {/* Footer Action Buttons */}
                     <View style={styles.communityFooter}>
-                      {!isAdminOrOwner && !isCreator && (
+                      {!isAdminOrOwner && !isCreator && !((community as any).memberRole === 'MODERATOR') && (
                         <Button
                           title={isJoined ? 'Joined' : isPending ? 'Pending' : 'Join'}
                           icon={isJoined ? 'checkmark-circle' : isPending ? 'time' : 'add'}

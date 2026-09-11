@@ -152,7 +152,7 @@ export default function CommunitiesDirectory() {
         </Text>
 
         <View style={styles.actionContainer}>
-          {item.memberRole !== 'ADMIN' && item.memberRole !== 'OWNER' &&
+          {item.memberRole !== 'ADMIN' && item.memberRole !== 'OWNER' && item.memberRole !== 'MODERATOR' &&
            item.creatorId !== currentUser?.id && item.ownerId !== currentUser?.id && (
             <Button
               title={

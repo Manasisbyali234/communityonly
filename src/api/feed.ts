@@ -93,6 +93,7 @@ export function usePostsQuery() {
     queryKey: feedKeys.posts(),
     enabled: isAuthenticated,
     staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const [feedRes, trendingRes] = await Promise.all([
         apiClient.get<ApiResponse<PaginatedResponse<Post>>>('/posts/feed'),
@@ -131,6 +132,7 @@ export function useCommunityPostsQuery(communityId: string) {
     queryKey: feedKeys.communityPosts(communityId),
     enabled: !!communityId && isAuthenticated,
     staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<PaginatedResponse<Post>>>(`/communities/${communityId}/posts`);
       return (res.data.data.data ?? []).map(normalizePost).filter((p: any) => !p.status || p.status === 'APPROVED');
@@ -201,19 +203,15 @@ export function useCreatePostMutation() {
 
 export function useLikePostMutation() {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: async (postId) => {
-      const allPosts = queryClient.getQueryData<Post[]>(feedKeys.posts());
-      const cached = allPosts?.find((p) => p.id === postId)
-        ?? queryClient.getQueryData<Post | null>(feedKeys.post(postId));
-      const currentlyLiked = cached?.isLiked ?? false;
-      if (currentlyLiked) {
+  return useMutation<void, Error, { postId: string; wasLiked: boolean }>({
+    mutationFn: async ({ postId, wasLiked }) => {
+      if (wasLiked) {
         await apiClient.delete(`/posts/${postId}/like`);
       } else {
         await apiClient.post(`/posts/${postId}/like`);
       }
     },
-    onMutate: async (postId) => {
+    onMutate: async ({ postId }) => {
       await queryClient.cancelQueries({ queryKey: feedKeys.posts() });
       await queryClient.cancelQueries({ queryKey: feedKeys.post(postId) });
 
@@ -240,11 +238,11 @@ export function useLikePostMutation() {
 
       return { prevPosts, prevPost };
     },
-    onError: (_err, postId, ctx: any) => {
+    onError: (_err, { postId }, ctx: any) => {
       if (ctx?.prevPosts) queryClient.setQueryData(feedKeys.posts(), ctx.prevPosts);
       if (ctx?.prevPost !== undefined) queryClient.setQueryData(feedKeys.post(postId), ctx.prevPost);
     },
-    onSettled: (_, __, postId) => {
+    onSettled: (_, __, { postId }) => {
       queryClient.invalidateQueries({ queryKey: feedKeys.post(postId) });
       queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
     },
