@@ -11,13 +11,28 @@ import { useConfirmStore } from '../../store/confirmStore';
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
 // On web, avoid react-native-web Modal (portal removeChild crash).
-// Use a plain absolutely-positioned overlay instead.
-function WebOverlay({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
+// Drawer is absolutely anchored left:0, top:0, bottom:0 — never overflows viewport.
+function WebDrawerOverlay({
+  visible, onClose, drawerContent, screenW,
+}: { visible: boolean; onClose: () => void; drawerContent: React.ReactNode; screenW: number }) {
   if (!visible) return null;
+  const dw = Math.min(280, Math.floor(screenW * 0.85));
   return (
-    <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-      {children}
+    <View style={[StyleSheet.absoluteFill, { zIndex: 999, flexDirection: 'row' }]}>
+      {/* Drawer panel — absolutely anchored, never overflows */}
+      <View style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0,
+        width: dw, backgroundColor: '#fff', zIndex: 1000,
+        shadowColor: '#000', shadowOffset: { width: 3, height: 0 },
+        shadowOpacity: 0.18, shadowRadius: 16, elevation: 16,
+      }}>
+        {drawerContent}
+      </View>
+      {/* Backdrop */}
+      <Pressable
+        style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 999 }]}
+        onPress={onClose}
+      />
     </View>
   );
 }
@@ -58,6 +73,7 @@ export default function AdminShell({ children, title }: Props) {
   const isWide = Platform.OS === 'web' && screenW >= 768;
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 0 : insets.top;
+  const drawerWidth = Math.min(270, screenW * 0.82);
 
   useEffect(() => {
     if (isWide) { setMenuOpen(false); setBellOpen(false); }
@@ -169,29 +185,34 @@ export default function AdminShell({ children, title }: Props) {
         </View>
       )}
 
-      {/* Drawer — web uses View overlay, native uses Modal */}
+      {/* Drawer — web uses absolutely-anchored overlay, native uses Modal */}
       {Platform.OS === 'web' ? (
-        <WebOverlay visible={!isWide && menuOpen} onClose={() => setMenuOpen(false)}>
-          <View style={s.modalContainer}>
-            <SafeAreaView style={s.drawer}>
-              <View style={s.logoRow}>
+        <WebDrawerOverlay
+          visible={!isWide && menuOpen}
+          onClose={() => setMenuOpen(false)}
+          screenW={screenW}
+          drawerContent={
+            <View style={s.drawerInner}>
+              <View style={[s.logoRow, { marginBottom: 4 }]}>
                 <View style={s.logoIcon}>
                   <Feather name="shield" size={14} color="#16A34A" />
                 </View>
                 <Text style={s.logoTitle}>Admin Panel</Text>
+                <TouchableOpacity onPress={() => setMenuOpen(false)} style={s.drawerCloseBtn}>
+                  <Feather name="x" size={20} color="#64748B" />
+                </TouchableOpacity>
               </View>
-              <Text style={s.adminSub}>{admin?.displayName ?? 'Admin'}</Text>
-              <View style={{ flex: 1, marginTop: 8 }}>
+              <Text style={[s.adminSub, { marginBottom: 8 }]}>{admin?.displayName ?? 'Admin'}</Text>
+              <View style={{ flex: 1 }}>
                 <SidebarContent />
               </View>
-            </SafeAreaView>
-            <Pressable style={s.overlay} onPress={() => setMenuOpen(false)} />
-          </View>
-        </WebOverlay>
+            </View>
+          }
+        />
       ) : (
-        <Modal visible={menuOpen} transparent animationType="none" onRequestClose={() => setMenuOpen(false)}>
+        <Modal visible={menuOpen} transparent animationType="slide" onRequestClose={() => setMenuOpen(false)}>
           <View style={s.modalContainer}>
-            <View style={[s.drawer, { paddingTop: insets.top + 12 }]}>
+            <View style={[s.drawer, { width: drawerWidth, paddingTop: insets.top + 32 }]}>
               <View style={[s.logoRow, { marginBottom: 4 }]}>
                 <View style={s.logoIcon}>
                   <Feather name="shield" size={14} color="#16A34A" />
@@ -238,8 +259,9 @@ export default function AdminShell({ children, title }: Props) {
 
       {/* Bell Notification Dropdown — web uses View overlay, native uses Modal */}
       {Platform.OS === 'web' ? (
-        <WebOverlay visible={bellOpen} onClose={() => setBellOpen(false)}>
-          <View style={s.bellOverlay}>
+        <View style={bellOpen ? [StyleSheet.absoluteFill, { zIndex: 998 }] : { display: 'none' }}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.2)' }]} onPress={() => setBellOpen(false)} />
+          <View style={[s.bellOverlay, { pointerEvents: 'box-none' } as any]}>
             <Pressable style={[s.bellPanel, isWide && s.bellPanelWide]} onPress={(e) => e.stopPropagation()}>
             <View style={s.bellHeader}>
               <Text style={s.bellTitle}>Pending Approvals</Text>
@@ -335,10 +357,10 @@ export default function AdminShell({ children, title }: Props) {
             )}
             </Pressable>
           </View>
-        </WebOverlay>
+        </View>
       ) : (
         <Modal visible={bellOpen} transparent animationType="fade" onRequestClose={() => setBellOpen(false)}>
-          <Pressable style={s.bellOverlay} onPress={() => setBellOpen(false)}>
+          <Pressable style={[s.bellOverlay, { paddingTop: insets.top + 52 }]} onPress={() => setBellOpen(false)}>
             <Pressable style={[s.bellPanel, isWide && s.bellPanelWide]} onPress={(e) => e.stopPropagation()}>
               <View style={s.bellHeader}>
                 <Text style={s.bellTitle}>Pending Approvals</Text>
@@ -429,7 +451,7 @@ const s = StyleSheet.create({
     padding: 18, paddingBottom: 14,
     borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, flexShrink: 1 },
   logoIcon: {
     width: 26, height: 26, borderRadius: 7, backgroundColor: '#F0FDF4',
     alignItems: 'center', justifyContent: 'center', marginRight: 8,
@@ -441,7 +463,7 @@ const s = StyleSheet.create({
   navItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 10, paddingVertical: 9,
-    marginHorizontal: 8, marginBottom: 1, borderRadius: 8,
+    marginHorizontal: 6, marginBottom: 1, borderRadius: 8,
   },
   navItemActive: { backgroundColor: '#F0FDF4' },
   navItemHover: { backgroundColor: '#F8FAFC' },
@@ -451,7 +473,7 @@ const s = StyleSheet.create({
     marginRight: 10, backgroundColor: '#F8FAFC',
   },
   navIconWrapActive: { backgroundColor: '#DCFCE7' },
-  navLabel: { fontSize: 13, color: '#64748B', fontWeight: '500', flex: 1 },
+  navLabel: { fontSize: 13, color: '#64748B', fontWeight: '500', flex: 1, flexShrink: 1 },
   navLabelActive: { color: '#15803D', fontWeight: '600' },
   navBadge: {
     minWidth: 18, height: 18, borderRadius: 9,
@@ -462,28 +484,41 @@ const s = StyleSheet.create({
 
   divider: { height: 1, backgroundColor: '#F1F5F9', marginHorizontal: 10, marginVertical: 4 },
   logoutBtn: {
-    margin: 10, padding: 12, backgroundColor: '#FFF1F2',
+    marginHorizontal: 8, marginBottom: 10, marginTop: 4,
+    padding: 12, backgroundColor: '#FFF1F2',
     borderRadius: 8, flexDirection: 'row', alignItems: 'center',
     borderWidth: 1, borderColor: '#FECDD3',
   },
   logoutText: { color: '#DC2626', fontWeight: '600', fontSize: 13 },
 
+  // Native modal drawer
   modalContainer: { flex: 1, flexDirection: 'row' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
   drawer: {
-    width: 270, backgroundColor: '#fff',
+    // width is set dynamically via drawerWidth
+    backgroundColor: '#fff',
     paddingHorizontal: 14,
     paddingBottom: 24,
+    // fill full height of modal
+    alignSelf: 'stretch',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 2, height: 0 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 8 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 3, height: 0 }, shadowOpacity: 0.18, shadowRadius: 16 },
+      android: { elevation: 16 },
     }),
+  },
+  // Web drawer inner content (absolutely positioned container handles sizing)
+  drawerInner: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingTop: 20,
+    paddingBottom: 24,
   },
   drawerCloseBtn: {
     marginLeft: 'auto',
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: '#F1F5F9',
     alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
 
   main: { flex: 1, minWidth: 0 },
@@ -491,6 +526,7 @@ const s = StyleSheet.create({
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
+    minHeight: 52,
   },
   menuBtn: { padding: 6, borderRadius: 8 },
   pageTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', flex: 1, letterSpacing: -0.2 },
@@ -503,8 +539,11 @@ const s = StyleSheet.create({
   },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
 
-  bellOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 60, paddingHorizontal: 12 },
-  bellPanel: { width: '100%', maxWidth: 320, backgroundColor: '#fff', borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  bellOverlay: {
+    position: 'absolute', top: 60, right: 12, left: 12,
+    alignItems: 'flex-end', zIndex: 1001,
+  },
+  bellPanel: { width: '100%', maxWidth: 340, backgroundColor: '#fff', borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
   bellPanelWide: { marginRight: 8 },
   bellHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   bellTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
@@ -519,5 +558,5 @@ const s = StyleSheet.create({
   bellFooterText: { fontSize: 13, color: '#16A34A', fontWeight: '600' },
 
   content: { flex: 1 },
-  contentInner: { padding: 16, paddingBottom: 40, flexGrow: 1 },
+  contentInner: { padding: 12, paddingBottom: 40, flexGrow: 1 },
 });

@@ -630,11 +630,19 @@ export default function AdminCommunityStories() {
 
               {/* Actions */}
               <View style={s.modalActionsRow}>
-                <TouchableOpacity style={[s.modalBtn, { backgroundColor: C.bg, borderWidth: 1, borderColor: C.border }]} onPress={() => setIsCreateModalOpen(false)}>
+                <TouchableOpacity style={[s.modalBtn, { backgroundColor: C.bg, borderWidth: 1, borderColor: C.border }]} onPress={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending || updateMutation.isPending}>
                   <Text style={[s.modalBtnText, { color: C.textSecond }]}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[s.modalBtn, { backgroundColor: C.accent }]} onPress={handleSaveStory}>
-                  <Text style={[s.modalBtnText, { color: '#FFF' }]}>{editingStory ? 'Save Changes' : 'Publish Story'}</Text>
+                <TouchableOpacity
+                  style={[s.modalBtn, { backgroundColor: C.accent, opacity: (createMutation.isPending || updateMutation.isPending) ? 0.6 : 1 }]}
+                  onPress={handleSaveStory}
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  {(createMutation.isPending || updateMutation.isPending) ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={[s.modalBtnText, { color: '#FFF' }]}>{editingStory ? 'Save Changes' : 'Publish Story'}</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
