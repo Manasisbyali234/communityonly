@@ -236,10 +236,25 @@ export default function EditProfile() {
 
   const handlePickCover = async () => {
     try {
-      const picked = await pickImage();
-      if (picked) {
-        setLocalCoverUri(picked.localUri);
-        setPickedCover(picked);
+      if (Platform.OS === 'web') {
+        const picked = await pickImage();
+        if (picked) { setLocalCoverUri(picked.localUri); setPickedCover(picked); setCoverRemoved(false); }
+        return;
+      }
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') { setPhotoError('Photo library permission is required.'); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 5],
+        quality: 0.9,
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        const mime = asset.mimeType ?? 'image/jpeg';
+        const name = asset.fileName ?? `cover_${Date.now()}.jpg`;
+        setLocalCoverUri(asset.uri);
+        setPickedCover({ localUri: asset.uri, filename: name, mimeType: mime });
         setCoverRemoved(false);
       }
     } catch (_) {}

@@ -164,8 +164,9 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
     setLoading(true);
     apiClient.get('/users', { params: { familyName, limit: 50 } })
       .then((res) => {
-        const data = res.data?.data ?? res.data ?? [];
-        setMembers(Array.isArray(data) ? data.filter((m: any) => m.id !== userId) : []);
+        const raw = res.data?.data ?? res.data ?? [];
+        const data = Array.isArray(raw) ? raw : (raw.users ?? raw.data ?? []);
+        setMembers(data.filter((m: any) => m.id !== userId));
       })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));

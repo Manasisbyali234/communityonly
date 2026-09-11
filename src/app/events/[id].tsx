@@ -101,16 +101,6 @@ export default function EventDetailScreen() {
         icon: 'calendar-outline',
       });
       if (!ok) return;
-    } else {
-      const ok = await confirm({
-        title: 'Join this event?',
-        message: 'You are about to join this event. Do you want to continue?',
-        confirmText: 'Join',
-        cancelText: 'Cancel',
-        isDestructive: false,
-        icon: 'calendar-outline',
-      });
-      if (!ok) return;
     }
 
     toggleInterest.mutate(event.id, {

@@ -635,7 +635,50 @@ export default function CreateMatrimonyProfile() {
         </>)}
 
         {step < 4 && (
-          <TouchableOpacity style={[styles.nextBtn, { backgroundColor: colors.primary }]} onPress={() => setStep(s => s + 1)}>
+          <TouchableOpacity
+            style={[styles.nextBtn, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              // Validate mandatory fields per step before advancing
+              if (step === 0) {
+                if (!form.displayName.trim()) { Alert.alert('Required', 'Please enter your full name.'); return; }
+                if (!form.gender) { Alert.alert('Required', 'Please select your gender.'); return; }
+                if (!myProfile?.id && !form.dateOfBirth) { Alert.alert('Required', 'Please select your date of birth.'); return; }
+                if (!myProfile?.id && !form.maritalStatus) { Alert.alert('Required', 'Please select your marital status.'); return; }
+                if (!myProfile?.id && !form.height) { Alert.alert('Required', 'Please select your height.'); return; }
+                if (!form.bloodGroup) { Alert.alert('Required', 'Please select your blood group.'); return; }
+                if (!form.eatingHabits) { Alert.alert('Required', 'Please select your eating habits.'); return; }
+                if (!form.disability) { Alert.alert('Required', 'Please select disability status.'); return; }
+                if (!form.city.trim()) { Alert.alert('Required', 'Please enter your city.'); return; }
+                if (!form.state.trim()) { Alert.alert('Required', 'Please enter your state.'); return; }
+              }
+              if (step === 1) {
+                if (!form.placeOfBirth.trim()) { Alert.alert('Required', 'Please enter your place of birth.'); return; }
+                if (!form.raashi) { Alert.alert('Required', 'Please select your Raashi.'); return; }
+                if (!form.nakshathra) { Alert.alert('Required', 'Please select your Nakshathra.'); return; }
+                if (!form.gana) { Alert.alert('Required', 'Please select your Gana.'); return; }
+                if (!form.gotra) { Alert.alert('Required', 'Please select your Gotra.'); return; }
+                if (!form.dosham) { Alert.alert('Required', 'Please select Dosham.'); return; }
+              }
+              if (step === 2) {
+                if (!form.education) { Alert.alert('Required', 'Please select your education level.'); return; }
+                if (!form.educationField) { Alert.alert('Required', 'Please select your education field.'); return; }
+                if (!form.workingWith) { Alert.alert('Required', 'Please select working with.'); return; }
+                if (!form.designation.trim()) { Alert.alert('Required', 'Please enter your designation.'); return; }
+                if (!form.workLocation.trim()) { Alert.alert('Required', 'Please enter your work location.'); return; }
+                if (!form.annualIncome) { Alert.alert('Required', 'Please select your annual income.'); return; }
+              }
+              if (step === 3) {
+                if (!form.familyType) { Alert.alert('Required', 'Please select family type.'); return; }
+                if (!form.familyValue) { Alert.alert('Required', 'Please select family value.'); return; }
+                if (!form.familyLocation.trim()) { Alert.alert('Required', 'Please enter family location.'); return; }
+                if (!form.fatherName.trim()) { Alert.alert('Required', "Please enter father's name."); return; }
+                if (!form.fatherStatus) { Alert.alert('Required', "Please select father's status."); return; }
+                if (!form.motherStatus) { Alert.alert('Required', "Please select mother's status."); return; }
+                if (!form.ancestralOrigin.trim()) { Alert.alert('Required', 'Please enter ancestral origin.'); return; }
+              }
+              setStep(s => s + 1);
+            }}
+          >
             <Text style={styles.nextBtnText}>Next: {STEPS[step + 1]} →</Text>
           </TouchableOpacity>
         )}

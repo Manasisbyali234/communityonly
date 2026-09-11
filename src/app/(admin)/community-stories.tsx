@@ -28,10 +28,9 @@ import {
 type StatusTab = 'ALL' | 'PUBLISHED' | 'DRAFT' | 'UNPUBLISHED';
 
 const STATUS_TABS: { id: StatusTab; label: string }[] = [
-  { id: 'ALL',         label: 'All Stories' },
-  { id: 'PUBLISHED',   label: 'Published & Live ✅' },
-  { id: 'DRAFT',       label: 'Drafts 📝' },
-  { id: 'UNPUBLISHED', label: 'Archived' },
+  { id: 'ALL',       label: 'All Stories' },
+  { id: 'PUBLISHED', label: 'Published & Live ✅' },
+  { id: 'DRAFT',     label: 'Drafts 📝' },
 ];
 
 export default function AdminCommunityStories() {

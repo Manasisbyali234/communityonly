@@ -313,10 +313,21 @@ export function useEditPostMutation() {
       return normalizePost(res.data.data);
     },
     onSuccess: (data, { postId }) => {
-      queryClient.setQueryData<Post[]>(feedKeys.posts(), (old) =>
-        old?.map((p) => p.id === postId ? { ...p, content: data.content } : p)
+      // Update all post list caches (feed + user posts + community posts)
+      queryClient.getQueriesData<Post[]>({ queryKey: feedKeys.posts() }).forEach(([key, posts]) => {
+        if (Array.isArray(posts)) {
+          queryClient.setQueryData<Post[]>(key, posts.map((p) =>
+            p.id === postId ? { ...p, content: data.content } : p
+          ));
+        }
+      });
+      // Update single post cache
+      queryClient.setQueryData<Post | null>(feedKeys.post(postId), (old) =>
+        old ? { ...old, content: data.content } : old
       );
+      // Invalidate to ensure fresh data
       queryClient.invalidateQueries({ queryKey: feedKeys.post(postId) });
+      queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
     },
   });
 }
