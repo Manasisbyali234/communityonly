@@ -451,42 +451,28 @@ export default function EditProfile() {
         )}
 
         {/* ── Cover & Avatar Header Masthead ──────────────────────────── */}
-        <View style={styles.mastheadSection}>
-          {/* Cover — full-width, matches profile page */}
-          <View style={{ height: 180, position: 'relative' }}>
-            <View style={{ ...StyleSheet.absoluteFillObject, overflow: 'hidden' }}>
-              {currentCoverUri ? (
-                <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
-              ) : (
-                <LinearGradient
-                  colors={isDark
-                    ? [colors.primaryDark, colors.primary, colors.primary]
-                    : [colors.primaryDark, colors.primary, colors.primaryLight]}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill as any}
-                />
-              )}
+        <View style={[styles.mastheadSection, { position: 'relative' }]}>
+          {/* Cover */}
+          <View style={{ height: 180, overflow: 'hidden' }}>
+            {currentCoverUri ? (
+              <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
+            ) : (
               <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.55)']}
+                colors={isDark
+                  ? [colors.primaryDark, colors.primary, colors.primary]
+                  : [colors.primaryDark, colors.primary, colors.primaryLight]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill as any}
               />
-            </View>
-            {/* Buttons outside overflow:hidden — always visible */}
-            <View style={{ position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', gap: 8, zIndex: 20 }}>
-              {currentCoverUri && (
-                <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
-                  <Ionicons name="trash-outline" size={15} color="#FFF" />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-                <Ionicons name="camera" size={15} color="#FFF" />
-              </TouchableOpacity>
-            </View>
+            )}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.55)']}
+              style={StyleSheet.absoluteFill as any}
+            />
           </View>
 
-          {/* Masthead row — matches profile page */}
+          {/* Masthead row */}
           <View style={[styles.mastheadRow, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
-            {/* Avatar ring */}
             <TouchableOpacity
               onPress={() => setShowPhotoOptions(true)}
               activeOpacity={0.85}
@@ -497,8 +483,6 @@ export default function EditProfile() {
                 <Ionicons name="camera" size={12} color="#FFF" />
               </View>
             </TouchableOpacity>
-
-            {/* Name + username */}
             <View style={{ flex: 1, paddingLeft: 12, paddingTop: 8 }}>
               <Text style={[styles.previewName, { color: TEXT }]} numberOfLines={1}>
                 {watch('displayName') || user.displayName}
@@ -512,6 +496,18 @@ export default function EditProfile() {
                 </Text>
               ) : null}
             </View>
+          </View>
+
+          {/* Cover action buttons — rendered last so they sit on top of everything */}
+          <View style={{ position: 'absolute', top: 180 - 46, right: 10, flexDirection: 'row', gap: 8, zIndex: 100 }}>
+            {currentCoverUri && (
+              <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
+                <Ionicons name="trash-outline" size={15} color="#FFF" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+              <Ionicons name="camera" size={15} color="#FFF" />
+            </TouchableOpacity>
           </View>
 
           {photoError ? <Text style={[styles.errorBannerText, { marginHorizontal: 16 }]}>{photoError}</Text> : null}
