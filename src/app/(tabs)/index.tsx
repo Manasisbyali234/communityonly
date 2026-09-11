@@ -536,6 +536,7 @@ export default function HomeFeed() {
               const isPending = community.memberStatus === 'PENDING';
               const role = (community as any).memberRole;
               const isAdminOrOwner = role === 'ADMIN' || role === 'OWNER';
+              const isCreator = (community as any).creatorId === user?.id || (community as any).ownerId === user?.id;
 
               return (
                 <TouchableOpacity
@@ -598,7 +599,7 @@ export default function HomeFeed() {
 
                     {/* Footer Action Buttons */}
                     <View style={styles.communityFooter}>
-                      {!isAdminOrOwner && (
+                      {!isAdminOrOwner && !isCreator && (
                         <Button
                           title={isJoined ? 'Joined' : isPending ? 'Pending' : 'Join'}
                           icon={isJoined ? 'checkmark-circle' : isPending ? 'time' : 'add'}
@@ -748,7 +749,7 @@ export default function HomeFeed() {
   };
 
   // ── Header ──────────────────────────────────────────────────────────────
-  const FeedHeader = (
+  const renderFeedHeader = useCallback(() => (
     <View>
       {renderStoriesRow()}
       <View style={styles.feedHeaderContent}>
@@ -764,7 +765,7 @@ export default function HomeFeed() {
         </View>
       </View>
     </View>
-  );
+  ), [storyGroups, user, joinedCommunities, upcomingEvents, communities, publicStories, featuredTab, quickActionBadges, unreadCount, isDark, colors, screenWidth]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -835,7 +836,7 @@ export default function HomeFeed() {
           data={posts}
           renderItem={renderPostItem}
           estimatedItemSize={480}
-          ListHeaderComponent={FeedHeader}
+          ListHeaderComponent={renderFeedHeader}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', paddingVertical: 40 }}>
               <Ionicons name="newspaper-outline" size={48} color={colors.textMuted} />

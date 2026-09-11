@@ -152,27 +152,30 @@ export default function CommunitiesDirectory() {
         </Text>
 
         <View style={styles.actionContainer}>
-          <Button
-            title={
-              item.memberStatus === 'PENDING'
-                ? 'Pending'
-                : item.isJoined
-                ? 'Joined'
-                : 'Join'
-            }
-            icon={
-              item.memberStatus === 'PENDING'
-                ? 'time'
-                : item.isJoined
-                ? 'checkmark-circle'
-                : 'add'
-            }
-            variant={item.isJoined || item.memberStatus === 'PENDING' ? 'secondary' : 'primary'}
-            size="sm"
-            onPress={() => handleJoinPress(item.id, item.isJoined, item.memberStatus, item.isPrivate)}
-            disabled={item.memberStatus === 'PENDING'}
-            style={styles.joinBtn}
-          />
+          {item.memberRole !== 'ADMIN' && item.memberRole !== 'OWNER' &&
+           item.creatorId !== currentUser?.id && item.ownerId !== currentUser?.id && (
+            <Button
+              title={
+                item.memberStatus === 'PENDING'
+                  ? 'Pending'
+                  : item.isJoined
+                  ? 'Joined'
+                  : 'Join'
+              }
+              icon={
+                item.memberStatus === 'PENDING'
+                  ? 'time'
+                  : item.isJoined
+                  ? 'checkmark-circle'
+                  : 'add'
+              }
+              variant={item.isJoined || item.memberStatus === 'PENDING' ? 'secondary' : 'primary'}
+              size="sm"
+              onPress={() => handleJoinPress(item.id, item.isJoined, item.memberStatus, item.isPrivate)}
+              disabled={item.memberStatus === 'PENDING'}
+              style={styles.joinBtn}
+            />
+          )}
           <Button
             title="View Group"
             icon="people-outline"

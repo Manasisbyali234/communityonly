@@ -246,6 +246,7 @@ export function useLikePostMutation() {
     },
     onSettled: (_, __, postId) => {
       queryClient.invalidateQueries({ queryKey: feedKeys.post(postId) });
+      queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
     },
   });
 }

@@ -30,6 +30,7 @@ import Skeleton from '../../../components/feedback/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useToastStore } from '../../../store/toastStore';
 import { useConfirmStore } from '../../../store/confirmStore';
+import { useAuthStore } from '../../../store/authStore';
 import { FlashList as ShopifyFlashList } from '@shopify/flash-list';
 const FlashList = ShopifyFlashList as any;
 
@@ -59,6 +60,7 @@ export default function CommunityDetails() {
   const { data: community, isLoading: isDetailsLoading } = useCommunityDetailsQuery(id || '');
   const { data: posts = [], isLoading: isPostsLoading } = useCommunityPostsQuery(id || '');
   const joinMutation = useJoinCommunityMutation();
+  const currentUserId = useAuthStore((s) => s.user?.id);
 
   const memberRole = (community as any)?.memberRole;
   const isAdmin = memberRole === 'ADMIN' || memberRole === 'OWNER';
@@ -130,7 +132,8 @@ export default function CommunityDetails() {
 
   const communityStatus = (community as any).status;
   const isApproved = !communityStatus || communityStatus === 'APPROVED';
-  const showJoinAction = isApproved && memberRole !== 'ADMIN' && memberRole !== 'OWNER';
+  const isCreator = (community as any).creatorId === currentUserId || (community as any).ownerId === currentUserId;
+  const showJoinAction = isApproved && memberRole !== 'ADMIN' && memberRole !== 'OWNER' && !isCreator;
 
   // Responsive horizontal padding: 16px on small screens, 20px on wider
   const hPad = windowWidth < 360 ? 12 : windowWidth < 480 ? 16 : 20;
