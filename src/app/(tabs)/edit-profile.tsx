@@ -452,24 +452,26 @@ export default function EditProfile() {
 
         {/* ── Cover & Avatar Header Masthead ──────────────────────────── */}
         <View style={styles.mastheadSection}>
-          {/* Cover — matches profile page exactly */}
-          <View style={{ height: 180, position: 'relative', overflow: 'hidden' }}>
-            {currentCoverUri ? (
-              <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
-            ) : (
+          {/* Cover — full-width, matches profile page */}
+          <View style={{ height: 180, position: 'relative' }}>
+            <View style={{ height: 180, overflow: 'hidden' }}>
+              {currentCoverUri ? (
+                <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
+              ) : (
+                <LinearGradient
+                  colors={isDark
+                    ? [colors.primaryDark, colors.primary, colors.primary]
+                    : [colors.primaryDark, colors.primary, colors.primaryLight]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill as any}
+                />
+              )}
               <LinearGradient
-                colors={isDark
-                  ? [colors.primaryDark, colors.primary, colors.forestGreen ?? colors.primary]
-                  : [colors.primaryDark, colors.primary, colors.primaryLight]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.55)']}
                 style={StyleSheet.absoluteFill as any}
               />
-            )}
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.55)']}
-              style={StyleSheet.absoluteFill as any}
-            />
-            {/* Cover action buttons */}
+            </View>
+            {/* Cover action buttons — outside overflow:hidden so they are always visible */}
             <View style={styles.coverActionIconsRow}>
               {currentCoverUri && (
                 <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
