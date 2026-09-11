@@ -25,9 +25,13 @@ export function useSuggestedUsersQuery(limit: number = 20) {
   const token = useAuthStore((s) => s.token);
   return useQuery<User[]>({
     queryKey: userKeys.suggested(),
-    enabled: isAuthenticated || !!token,
+    enabled: isAuthenticated && !!token,
+    staleTime: 5 * 60 * 1000, // 5 minutes — avoid refetch on every mount
+    retry: 1,
     queryFn: async () => {
-      const res = await apiClient.get<ApiResponse<User[]>>(`/explore/suggested-users?limit=${limit}`);
+      const res = await apiClient.get<ApiResponse<User[]>>(`/explore/suggested-users?limit=${limit}`, {
+        timeout: 30000,
+      });
       const raw = res.data.data ?? res.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
       return list.filter((u: any) => u.role?.toUpperCase() !== 'ADMIN').map((u: any) => ({

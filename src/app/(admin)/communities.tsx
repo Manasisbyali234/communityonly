@@ -39,7 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function AdminCommunities() {
   const isMobile = useIsMobile();
   const showToast = useToastStore((s) => s.showToast);
-  const [tab, setTab] = useState<'pending' | 'approved'>('pending');
+  const [tab, setTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
   // All communities state
   const [communities, setCommunities] = useState<any[]>([]);
@@ -51,6 +51,12 @@ export default function AdminCommunities() {
   // Pending state
   const [pending, setPending] = useState<any[]>([]);
   const [pendingLoading, setPendingLoading] = useState(true);
+
+  // Rejected state
+  const [rejected, setRejected] = useState<any[]>([]);
+  const [rejectedTotal, setRejectedTotal] = useState(0);
+  const [rejectedSkip, setRejectedSkip] = useState(0);
+  const [rejectedLoading, setRejectedLoading] = useState(true);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -73,10 +79,41 @@ export default function AdminCommunities() {
     setPendingLoading(false);
   }, []);
 
+  const loadRejected = useCallback(async () => {
+    setRejectedLoading(true);
+    try {
+      const res = await adminApiClient.get('/admin-panel/communities', {
+        params: { skip: rejectedSkip, take: 20, status: 'REJECTED' },
+      });
+      setRejected(res.data.data.communities);
+      setRejectedTotal(res.data.data.total);
+    } catch {}
+    setRejectedLoading(false);
+  }, [rejectedSkip]);
+
   useEffect(() => { setSkip(0); }, [q]);
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { loadPending(); }, [loadPending]);
-  useFocusEffect(useCallback(() => { loadAll(); loadPending(); }, [loadAll, loadPending]));
+  useEffect(() => { loadRejected(); }, [loadRejected]);
+  useFocusEffect(useCallback(() => { loadAll(); loadPending(); loadRejected(); }, [loadAll, loadPending, loadRejected]));
+
+  const reApprove = async (id: string) => {
+    const ok = await useConfirmStore.getState().confirm({
+      title: 'Approve community?',
+      message: 'This rejected community will be approved and visible to all members.',
+      confirmText: 'Approve',
+      cancelText: 'Cancel',
+      isDestructive: false,
+      icon: 'checkmark-circle-outline',
+    });
+    if (!ok) return;
+    try {
+      await adminApiClient.put(`/admin-panel/communities/${id}/approve`);
+      loadRejected(); loadAll();
+    } catch (e: any) {
+      useToastStore.getState().showToast(e?.response?.data?.message ?? 'Failed to approve community', 'error');
+    }
+  };
 
   const del = async (id: string) => {
     const ok = await useConfirmStore.getState().confirm({
@@ -165,6 +202,14 @@ export default function AdminCommunities() {
           onPress={() => setTab('approved')}
         >
           <Text style={[ms.tabText, tab === 'approved' && ms.tabTextActive]}>Approved Communities</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[ms.tab, tab === 'rejected' && ms.tabActive]}
+          onPress={() => setTab('rejected')}
+        >
+          <Text style={[ms.tabText, tab === 'rejected' && ms.tabTextActive]}>
+            Rejected{rejected.length > 0 ? ` (${rejected.length})` : ''}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -267,6 +312,83 @@ export default function AdminCommunities() {
               </View>
             </ScrollView>
           )}
+        </SectionCard>
+      )}
+
+      {tab === 'rejected' && (
+        <SectionCard>
+          {isMobile ? (
+            <View style={{ padding: 12 }}>
+              {rejectedLoading ? <Skeleton rows={4} /> : rejected.length === 0 ? (
+                <EmptyState />
+              ) : (
+                rejected.map((c) => (
+                  <MobileCard key={c.id}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                      <View style={[T.avatar, { borderRadius: 8 }]}>
+                        {c.avatarUrl
+                          ? <Image source={{ uri: c.avatarUrl }} style={T.avatarImg} />
+                          : <Text style={T.avatarFallback}>{c.name?.[0]?.toUpperCase()}</Text>
+                        }
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={T.cellPrimary}>{c.name}</Text>
+                        <Text style={T.cellSub}>/{c.slug}</Text>
+                      </View>
+                    </View>
+                    <MobileCardRow label="Category"><Text style={T.td}>{c.category}</Text></MobileCardRow>
+                    <MobileCardRow label="Creator"><Text style={T.td}>{c.members?.[0]?.user?.displayName ?? '—'}</Text></MobileCardRow>
+                    <MobileCardRow label="Type"><Text style={T.td}>{c.isPrivate ? '🔒 Private' : '🌐 Public'}</Text></MobileCardRow>
+                    <MobileCardRow label="Rejected On"><Text style={T.tdMuted}>{fmtDate(c.updatedAt ?? c.createdAt)}</Text></MobileCardRow>
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                      <ActionBtn label="✅ Approve" onPress={() => reApprove(c.id)} variant="success" />
+                      <ActionBtn label="Delete" onPress={() => del(c.id)} variant="danger" />
+                    </View>
+                  </MobileCard>
+                ))
+              )}
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ minWidth: 860 }}>
+                <View style={T.header}>
+                  {COLS_PENDING.map((h) => (
+                    <Text key={h.label} style={[T.th, h.style]}>{h.label}</Text>
+                  ))}
+                </View>
+                {rejectedLoading ? <Skeleton rows={6} /> : rejected.length === 0 ? <EmptyState /> : (
+                  rejected.map((c, i) => (
+                    <TableRow key={c.id} even={i % 2 === 0}>
+                      <View style={[T.td, COL.user, { flexDirection: 'row', alignItems: 'center' }]}>
+                        <View style={[T.avatar, { borderRadius: 8 }]}>
+                          {c.avatarUrl
+                            ? <Image source={{ uri: c.avatarUrl }} style={T.avatarImg} />
+                            : <Text style={T.avatarFallback}>{c.name?.[0]?.toUpperCase()}</Text>
+                          }
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={T.cellPrimary} numberOfLines={1}>{c.name}</Text>
+                          <Text style={T.cellSub} numberOfLines={1}>/{c.slug}</Text>
+                        </View>
+                      </View>
+                      <Text style={[T.td, COL.sm]} numberOfLines={1}>{c.category}</Text>
+                      <View style={[T.td, COL.lg]}>
+                        <Text style={T.cellPrimary} numberOfLines={1}>{c.members?.[0]?.user?.displayName ?? '—'}</Text>
+                        <Text style={T.cellSub} numberOfLines={1}>{c.members?.[0]?.user?.email ?? ''}</Text>
+                      </View>
+                      <Text style={[T.td, COL.sm]}>{c.isPrivate ? '🔒 Private' : '🌐 Public'}</Text>
+                      <Text style={[T.tdMuted, COL.md]} numberOfLines={1}>{fmtDate(c.updatedAt ?? c.createdAt)}</Text>
+                      <View style={[T.td, COL.act, { flexDirection: 'row', gap: 6 }]}>
+                        <ActionBtn label="Approve" onPress={() => reApprove(c.id)} variant="success" />
+                        <ActionBtn label="Delete" onPress={() => del(c.id)} variant="danger" />
+                      </View>
+                    </TableRow>
+                  ))
+                )}
+              </View>
+            </ScrollView>
+          )}
+          <Pagination skip={rejectedSkip} take={20} total={rejectedTotal} onPage={setRejectedSkip} />
         </SectionCard>
       )}
 

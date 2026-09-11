@@ -13,14 +13,12 @@ import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useUserApprovalStore } from '../../store/userApprovalStore';
 
-type FilterType = 'ALL' | 'PENDING' | 'APPROVED' | 'SUSPENDED' | 'ADMINS';
+type FilterType = 'ALL' | 'PENDING' | 'APPROVED' | 'SUSPENDED';
 
 const FILTERS: { id: FilterType; label: string; countKey?: string }[] = [
-  { id: 'ALL',       label: 'All Members' },
   { id: 'PENDING',   label: 'Pending / Review 🟠' },
   { id: 'APPROVED',  label: 'Approved 🟢' },
   { id: 'SUSPENDED', label: 'Suspended ⚫' },
-  { id: 'ADMINS',    label: 'Admins & Staff' },
 ];
 
 const MOCK_USERS = [
@@ -127,7 +125,7 @@ export default function AdminUsers() {
   const [total, setTotal] = useState(0);
   const [skip, setSkip] = useState(0);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<FilterType>('ALL');
+  const [filter, setFilter] = useState<FilterType>('PENDING');
   const [loading, setLoading] = useState(true);
 
   // Inspector / Edit Profile modal
@@ -140,7 +138,6 @@ export default function AdminUsers() {
     try {
       const params: any = { skip, take: 20, q: search || undefined };
       if (filter === 'APPROVED') params.status = 'active';
-      if (filter === 'ADMINS') params.role = 'ADMIN';
       if (filter === 'PENDING') params.status = 'pending';
       if (filter === 'SUSPENDED') params.status = 'suspended';
 
@@ -155,24 +152,22 @@ export default function AdminUsers() {
         if (filter === 'PENDING') {
           list = list.filter((u) => u.approvalStatus === 'PENDING' || u.approvalStatus === 'RESUBMITTED');
         } else if (filter === 'APPROVED') {
-          list = list.filter((u) => u.approvalStatus === 'APPROVED' || (!u.approvalStatus && u.isActive && !u.isBanned));
+          list = list.filter((u) => u.approvalStatus === 'APPROVED' && !u.isBanned && u.isActive !== false);
         } else if (filter === 'SUSPENDED') {
-          list = list.filter((u) => u.approvalStatus === 'SUSPENDED' || !!u.isBanned);
-        } else if (filter === 'ADMINS') {
-          list = list.filter((u) => u.role === 'ADMIN' || u.role === 'MODERATOR');
+          list = list.filter((u) => u.approvalStatus === 'SUSPENDED' || u.isBanned === true);
         }
 
-      if (search) {
-        const q = search.toLowerCase();
-        list = list.filter((u) =>
-          u.displayName.toLowerCase().includes(q) ||
-          u.username.toLowerCase().includes(q) ||
-          (u.email && u.email.toLowerCase().includes(q)) ||
-          (u.village && u.village.toLowerCase().includes(q)) ||
-          (u.familyName && u.familyName.toLowerCase().includes(q)) ||
-          (u.occupation && u.occupation.toLowerCase().includes(q))
-        );
-      }
+        if (search) {
+          const q = search.toLowerCase();
+          list = list.filter((u) =>
+            u.displayName.toLowerCase().includes(q) ||
+            u.username.toLowerCase().includes(q) ||
+            (u.email && u.email.toLowerCase().includes(q)) ||
+            (u.village && u.village.toLowerCase().includes(q)) ||
+            (u.familyName && u.familyName.toLowerCase().includes(q)) ||
+            (u.occupation && u.occupation.toLowerCase().includes(q))
+          );
+        }
         setUsers(list);
         setTotal(list.length);
       }
@@ -236,7 +231,7 @@ export default function AdminUsers() {
     try {
       useUserApprovalStore.getState().suspendUser(u.id);
       await adminApiClient.put(`/admin-panel/users/${u.id}/ban`, { reason: 'Admin action' }).catch(() => null);
-      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, approvalStatus: 'SUSPENDED', isBanned: true, isActive: false } : x));
+      setUsers((prev) => prev.filter((x) => x.id !== u.id));
       showToast(`User @${u.username} suspended.`, 'success');
     } catch {
       showToast('Failed to suspend user', 'error');
@@ -256,7 +251,7 @@ export default function AdminUsers() {
     try {
       useUserApprovalStore.getState().reactivateUser(u.id);
       await adminApiClient.put(`/admin-panel/users/${u.id}/unban`).catch(() => null);
-      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, approvalStatus: 'APPROVED', isBanned: false, isActive: true } : x));
+      setUsers((prev) => prev.filter((x) => x.id !== u.id));
       showToast(`User @${u.username} reactivated.`, 'success');
     } catch {
       showToast('Failed to reactivate user', 'error');
@@ -345,7 +340,7 @@ export default function AdminUsers() {
             {users.map((u) => {
               const roleBg = u.role === 'ADMIN' ? '#FAF5FF' : u.role === 'MODERATOR' ? '#EFF6FF' : '#F0FDF4';
               const roleText = u.role === 'ADMIN' ? '#7C3AED' : u.role === 'MODERATOR' ? '#2563EB' : '#16A34A';
-              const isBanned = !!u.isBanned;
+              const isSuspended = u.approvalStatus === 'SUSPENDED' || !!u.isBanned;
 
               return (
                 <View key={u.id} style={s.userCard}>
@@ -367,7 +362,7 @@ export default function AdminUsers() {
                           <View style={[s.statusPill, { backgroundColor: '#DBEAFE' }]}><Text style={[s.statusPillText, { color: '#2563EB' }]}>🔵 Resubmitted</Text></View>
                         ) : u.approvalStatus === 'REJECTED' ? (
                           <View style={[s.statusPill, { backgroundColor: '#FEE2E2' }]}><Text style={[s.statusPillText, { color: '#DC2626' }]}>🔴 Rejected</Text></View>
-                        ) : u.approvalStatus === 'SUSPENDED' || isBanned ? (
+                        ) : isSuspended ? (
                           <View style={[s.statusPill, { backgroundColor: '#F1F5F9' }]}><Text style={[s.statusPillText, { color: '#475569' }]}>⚫ Suspended</Text></View>
                         ) : (
                           <View style={[s.statusPill, { backgroundColor: '#DCFCE7' }]}><Text style={[s.statusPillText, { color: '#16A34A' }]}>🟢 Approved</Text></View>
@@ -407,7 +402,7 @@ export default function AdminUsers() {
                     <Text style={s.joinedDateText}>Joined {fmtDate(u.createdAt)}</Text>
                   </View>
 
-                  {isBanned && (
+                  {isSuspended && (
                     <View style={s.bannedBanner}>
                       <Feather name="alert-octagon" size={13} color="#DC2626" />
                       <Text style={s.bannedBannerText}>
@@ -425,7 +420,7 @@ export default function AdminUsers() {
                       <Text style={[s.actionPillText, { color: '#1D4ED8' }]}>Edit Role / Inspect</Text>
                     </TouchableOpacity>
 
-                    {isBanned ? (
+                    {isSuspended ? (
                       <TouchableOpacity
                         style={[s.actionPill, { backgroundColor: '#DCFCE7' }]}
                         onPress={() => reactivate(u)}
@@ -472,7 +467,7 @@ export default function AdminUsers() {
                 {users.map((u, i) => {
                   const roleBg = u.role === 'ADMIN' ? '#FAF5FF' : u.role === 'MODERATOR' ? '#EFF6FF' : '#F0FDF4';
                   const roleText = u.role === 'ADMIN' ? '#7C3AED' : u.role === 'MODERATOR' ? '#2563EB' : '#16A34A';
-                  const isBanned = !!u.isBanned;
+                  const isSuspended = u.approvalStatus === 'SUSPENDED' || !!u.isBanned;
 
                   return (
                     <View key={u.id} style={[s.tableRow, i % 2 === 0 && { backgroundColor: C.rowEven }]}>
@@ -509,7 +504,7 @@ export default function AdminUsers() {
 
                       {/* Status */}
                       <View style={[s.cell, { width: 100 }]}>
-                        {isBanned ? (
+                        {isSuspended ? (
                           <View style={[s.statusPill, { backgroundColor: '#FEE2E2' }]}>
                             <Text style={[s.statusPillText, { color: '#DC2626' }]}>Suspended</Text>
                           </View>
@@ -542,7 +537,7 @@ export default function AdminUsers() {
                           <Feather name="edit-2" size={13} color="#1D4ED8" />
                         </TouchableOpacity>
 
-                        {isBanned ? (
+                        {isSuspended ? (
                           <TouchableOpacity
                             style={[s.iconBtn, { backgroundColor: '#DCFCE7' }]}
                             onPress={() => reactivate(u)}

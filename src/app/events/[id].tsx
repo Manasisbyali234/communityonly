@@ -26,6 +26,7 @@ import {
   useArchiveEventMutation,
   useUpdateEventMutation,
   useToggleInterestMutation,
+  useFavoriteEventMutation,
   useToggleLikeMutation,
   useShareEventMutation,
 } from '../../api/event';
@@ -58,6 +59,7 @@ export default function EventDetailScreen() {
   const { data: creator } = useUserQuery(event?.creatorId ?? '');
 
   const toggleInterest = useToggleInterestMutation();
+  const favoriteEvent = useFavoriteEventMutation();
   const toggleLike = useToggleLikeMutation();
   const shareEvent = useShareEventMutation();
   const archiveEvent = useArchiveEventMutation();
@@ -105,6 +107,17 @@ export default function EventDetailScreen() {
 
     toggleInterest.mutate(event.id, {
       onError: (e: any) => showToast(e?.response?.data?.message || 'Failed to update RSVP', 'error'),
+    });
+  };
+
+  const handleFavorite = () => {
+    if (!currentUser) {
+      showToast('Please log in to favorite this event', 'error');
+      return;
+    }
+    if (!event || isInterested || favoriteEvent.isPending) return;
+    favoriteEvent.mutate(event.id, {
+      onError: (e: any) => showToast(e?.response?.data?.message || 'Failed to save favorite', 'error'),
     });
   };
 
@@ -420,21 +433,25 @@ export default function EventDetailScreen() {
       {/* ── Sticky Bottom Action Bar ──────────────────────────────────── */}
       <View style={[styles.bottomBar, { backgroundColor: SURF, borderTopColor: BORDER, paddingBottom: Math.max(16, insets.bottom + 8) }]}>
         <View style={styles.bottomBarInner}>
-          {/* Quick Interest Star Toggle */}
+          {/* Permanent Favorite Star */}
           <TouchableOpacity
             style={[
               styles.interestBtn,
               { backgroundColor: isInterested ? '#F59E0B15' : isDark ? '#27272A' : '#F4F4F5', borderColor: isInterested ? '#F59E0B40' : BORDER },
             ]}
-            onPress={handleInterest}
-            disabled={toggleInterest.isPending}
-            activeOpacity={0.7}
+            onPress={handleFavorite}
+            disabled={isInterested || favoriteEvent.isPending}
+            activeOpacity={isInterested ? 1 : 0.7}
           >
-            <Ionicons
-              name={isInterested ? 'star' : 'star-outline'}
-              size={20}
-              color={isInterested ? '#D97706' : TEXT2}
-            />
+            {favoriteEvent.isPending ? (
+              <ActivityIndicator size="small" color="#D97706" />
+            ) : (
+              <Ionicons
+                name={isInterested ? 'star' : 'star-outline'}
+                size={20}
+                color={isInterested ? '#D97706' : TEXT2}
+              />
+            )}
           </TouchableOpacity>
 
           {/* Primary CTA */}
