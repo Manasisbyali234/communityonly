@@ -26,6 +26,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useCreateEventMutation, useEventDetailQuery, useUpdateEventMutation } from '../../api/event';
 import { apiClient } from '../../api/client';
 import Button from '../../components/common/Button';
+import ImageCropModal, { CropResult } from '../../components/common/ImageCropModal';
 
 function InputField({ label, value, onChangeText, placeholder, multiline = false, icon = null, colors, keyboardType }: any) {
   return (
@@ -279,6 +280,7 @@ export default function CreateEvent() {
   const [venue, setVenue] = useState('');
   const [volunteersRequired, setVolunteersRequired] = useState(false);
   const [bannerUri, setBannerUri] = useState<string | null>(null);
+  const [cropUri, setCropUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const createEvent = useCreateEventMutation();
@@ -308,7 +310,12 @@ export default function CreateEvent() {
       aspect: [16, 9],
       quality: 0.8,
     });
-    if (!result.canceled) setBannerUri(result.assets[0].uri);
+    if (!result.canceled) setCropUri(result.assets[0].uri);
+  };
+
+  const handleCropDone = (result: CropResult) => {
+    setBannerUri(result.uri);
+    setCropUri(null);
   };
 
   const isFormValid = title.trim() && description.trim() && date.trim().match(/^\d{4}-\d{2}-\d{2}$/) && venue.trim();

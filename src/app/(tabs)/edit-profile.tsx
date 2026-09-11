@@ -33,6 +33,7 @@ import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
 import { pickImage, uploadProfilePhoto, uploadCoverPhoto, PickedImage } from '../../utils/imagePicker';
+import ImageCropModal, { CropResult } from '../../components/common/ImageCropModal';
 import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
 
 const BASE = API_BASE_URL.replace('/api/v1', '');
@@ -188,14 +189,20 @@ export default function EditProfile() {
 
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
+  // Crop modal state
+  const [cropUri, setCropUri] = useState<string | null>(null);
+  const [cropAspect, setCropAspect] = useState<[number, number]>([1, 1]);
+  const [cropTarget, setCropTarget] = useState<'avatar' | 'cover'>('avatar');
+
   const handlePickFromGallery = async () => {
     setShowPhotoOptions(false);
     setPhotoError(null);
     try {
       const picked = await pickImage();
       if (picked) {
-        setLocalAvatarUri(picked.localUri);
-        setPickedImage(picked);
+        setCropUri(picked.localUri);
+        setCropAspect([1, 1]);
+        setCropTarget('avatar');
       }
     } catch {
       setPhotoError('Failed to select photo. Please try a valid image.');
@@ -215,19 +222,14 @@ export default function EditProfile() {
         setPhotoError('Camera permission is required. Please enable it in device settings.');
         return;
       }
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.9,
-        cameraType: ImagePicker.CameraType.front,
-      });
+      const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.9 });
       if (!result.canceled && result.assets?.[0]) {
         const asset = result.assets[0];
         const mime = asset.mimeType ?? 'image/jpeg';
-        const ext = mime.split('/')[1] ?? 'jpg';
-        const name = asset.fileName ?? `avatar_${Date.now()}.${ext}`;
-        setLocalAvatarUri(asset.uri);
-        setPickedImage({ localUri: asset.uri, filename: name, mimeType: mime });
+        const name = asset.fileName ?? `avatar_${Date.now()}.jpg`;
+        setCropUri(asset.uri);
+        setCropAspect([1, 1]);
+        setCropTarget('avatar');
       }
     } catch {
       setPhotoError('Failed to open camera. Please check camera permissions in settings.');
@@ -236,28 +238,27 @@ export default function EditProfile() {
 
   const handlePickCover = async () => {
     try {
-      if (Platform.OS === 'web') {
-        const picked = await pickImage();
-        if (picked) { setLocalCoverUri(picked.localUri); setPickedCover(picked); setCoverRemoved(false); }
-        return;
-      }
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') { setPhotoError('Photo library permission is required.'); return; }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [16, 5],
-        quality: 0.9,
-      });
-      if (!result.canceled && result.assets?.[0]) {
-        const asset = result.assets[0];
-        const mime = asset.mimeType ?? 'image/jpeg';
-        const name = asset.fileName ?? `cover_${Date.now()}.jpg`;
-        setLocalCoverUri(asset.uri);
-        setPickedCover({ localUri: asset.uri, filename: name, mimeType: mime });
+      const picked = await pickImage();
+      if (picked) {
+        setCropUri(picked.localUri);
+        setCropAspect([16, 5]);
+        setCropTarget('cover');
         setCoverRemoved(false);
       }
     } catch (_) {}
+  };
+
+  const handleCropDone = (result: CropResult) => {
+    const mime = 'image/jpeg';
+    const filename = `${cropTarget}_${Date.now()}.jpg`;
+    if (cropTarget === 'avatar') {
+      setLocalAvatarUri(result.uri);
+      setPickedImage({ localUri: result.uri, filename, mimeType: mime });
+    } else {
+      setLocalCoverUri(result.uri);
+      setPickedCover({ localUri: result.uri, filename, mimeType: mime });
+    }
+    setCropUri(null);
   };
 
   const handleRemoveCover = () => {
@@ -915,6 +916,15 @@ export default function EditProfile() {
           </View>
         </TouchableOpacity>
       </Modal>
+      {/* ── Crop Modal ─────────────────────────────────────────────────── */}
+      <ImageCropModal
+        visible={!!cropUri}
+        imageUri={cropUri}
+        aspect={cropAspect}
+        accentColor={G}
+        onDone={handleCropDone}
+        onCancel={() => setCropUri(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

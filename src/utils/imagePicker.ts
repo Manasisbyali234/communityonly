@@ -112,9 +112,8 @@ export async function pickImage(options?: PickImageOptions): Promise<PickedImage
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: options?.aspect,
-    quality: 0.8,
+    allowsEditing: false,
+    quality: 0.9,
   });
 
   if (result.canceled) return null;
@@ -140,9 +139,8 @@ export async function takePhoto(options?: PickImageOptions): Promise<PickedImage
 
   const result = await ImagePicker.launchCameraAsync({
     mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: options?.aspect,
-    quality: 0.8,
+    allowsEditing: false,
+    quality: 0.9,
   });
 
   if (result.canceled) return null;
