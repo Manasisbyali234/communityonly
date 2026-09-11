@@ -42,8 +42,8 @@ export default function CommunityDetails() {
   const router = useRouter();
 
   const handleBack = () => {
-    if (from === 'communities') {
-      router.replace('/(tabs)/communities' as any);
+    if (router.canGoBack()) {
+      router.back();
     } else {
       router.replace('/(tabs)/explore?tab=communities' as any);
     }
@@ -60,7 +60,8 @@ export default function CommunityDetails() {
   const { data: posts = [], isLoading: isPostsLoading } = useCommunityPostsQuery(id || '');
   const joinMutation = useJoinCommunityMutation();
 
-  const isAdmin = (community as any)?.memberRole === 'ADMIN';
+  const memberRole = (community as any)?.memberRole;
+  const isAdmin = memberRole === 'ADMIN' || memberRole === 'OWNER';
   const isPrivate = (community as any)?.isPrivate;
   const { data: pendingMembers = [] } = usePendingMembersQuery(
     isAdmin && isPrivate ? id || '' : ''
@@ -129,7 +130,7 @@ export default function CommunityDetails() {
 
   const communityStatus = (community as any).status;
   const isApproved = !communityStatus || communityStatus === 'APPROVED';
-  const showJoinAction = isApproved && (community as any).memberRole !== 'ADMIN';
+  const showJoinAction = isApproved && memberRole !== 'ADMIN' && memberRole !== 'OWNER';
 
   // Responsive horizontal padding: 16px on small screens, 20px on wider
   const hPad = windowWidth < 360 ? 12 : windowWidth < 480 ? 16 : 20;

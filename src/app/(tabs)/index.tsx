@@ -534,6 +534,8 @@ export default function HomeFeed() {
               const memberText = memberCount === 1 ? '1 member' : `${memberCount.toLocaleString()} members`;
               const isJoined = !!community.isJoined;
               const isPending = community.memberStatus === 'PENDING';
+              const role = (community as any).memberRole;
+              const isAdminOrOwner = role === 'ADMIN' || role === 'OWNER';
 
               return (
                 <TouchableOpacity
@@ -596,20 +598,22 @@ export default function HomeFeed() {
 
                     {/* Footer Action Buttons */}
                     <View style={styles.communityFooter}>
-                      <Button
-                        title={isJoined ? 'Joined' : isPending ? 'Pending' : 'Join'}
-                        icon={isJoined ? 'checkmark-circle' : isPending ? 'time' : 'add'}
-                        variant={isJoined || isPending ? 'secondary' : 'primary'}
-                        size="sm"
-                        loading={joinCommunityMutation.isPending && (joinCommunityMutation.variables as any)?.communityId === community.id}
-                        disabled={isPending}
-                        onPress={() => {
-                          if (!isPending) {
-                            joinCommunityMutation.mutate({ communityId: community.id, isJoined });
-                          }
-                        }}
-                        style={{ flex: 1 }}
-                      />
+                      {!isAdminOrOwner && (
+                        <Button
+                          title={isJoined ? 'Joined' : isPending ? 'Pending' : 'Join'}
+                          icon={isJoined ? 'checkmark-circle' : isPending ? 'time' : 'add'}
+                          variant={isJoined || isPending ? 'secondary' : 'primary'}
+                          size="sm"
+                          loading={joinCommunityMutation.isPending && (joinCommunityMutation.variables as any)?.communityId === community.id}
+                          disabled={isPending}
+                          onPress={() => {
+                            if (!isPending) {
+                              joinCommunityMutation.mutate({ communityId: community.id, isJoined });
+                            }
+                          }}
+                          style={{ flex: 1 }}
+                        />
+                      )}
                       <Button
                         title="View Group"
                         icon="people-outline"

@@ -23,7 +23,7 @@ interface Props {
   accentColor?: string;
 }
 
-const FRAME_PADDING = 24; // horizontal padding from screen edge
+const FRAME_PADDING = 24;
 
 export default function ImageCropModal({
   visible, imageUri, aspect, onDone, onCancel, accentColor = '#16A34A',
@@ -33,28 +33,26 @@ export default function ImageCropModal({
   const frameW = SW - FRAME_PADDING * 2;
   const frameH = frameW * (aspect[1] / aspect[0]);
 
-  // image natural size (loaded once)
+  // vertical center of the frame within the full screen
+  const frameTop = (SH - frameH) / 2;
+
   const [imgNatural, setImgNatural] = useState({ w: 1, h: 1 });
-
-  // transform state: scale + translate
-  const scale = useRef(1);
-  const tx = useRef(0);
-  const ty = useRef(0);
-
-  // animated display values (we drive them manually via setRender)
-  const [render, setRender] = useState(0); // bump to re-render
+  const [render, setRender] = useState(0);
   const forceRender = () => setRender(n => n + 1);
-
   const [processing, setProcessing] = useState(false);
 
-  // ── clamp helpers ──────────────────────────────────────────────────────────
+  // transform state
+  const scale = useRef(1);
+  const tx = useRef(0); // offset of image center from frame center
+  const ty = useRef(0);
+
   const clamp = (val: number, min: number, max: number) =>
     Math.max(min, Math.min(max, val));
 
+  // Clamp so the image always fully covers the frame
   const clampTranslation = useCallback((s: number, dx: number, dy: number) => {
     const dispW = imgNatural.w * s;
     const dispH = imgNatural.h * s;
-    // max translation so image always covers the frame
     const maxX = Math.max(0, (dispW - frameW) / 2);
     const maxY = Math.max(0, (dispH - frameH) / 2);
     return {
@@ -63,7 +61,6 @@ export default function ImageCropModal({
     };
   }, [imgNatural, frameW, frameH]);
 
-  // ── initialise scale so image fills frame ─────────────────────────────────
   const initTransform = useCallback((natW: number, natH: number) => {
     const scaleToFill = Math.max(frameW / natW, frameH / natH);
     scale.current = scaleToFill;
@@ -79,7 +76,16 @@ export default function ImageCropModal({
     initTransform(w, h);
   }, [initTransform]);
 
-  // ── PanResponder for drag + pinch ─────────────────────────────────────────
+  // reset when new image arrives
+  const prevUri = useRef<string | null>(null);
+  if (imageUri && imageUri !== prevUri.current) {
+    prevUri.current = imageUri;
+    scale.current = 1;
+    tx.current = 0;
+    ty.current = 0;
+  }
+
+  // ── PanResponder ──────────────────────────────────────────────────────────
   const lastTouches = useRef<{ x: number; y: number }[]>([]);
   const lastDist = useRef<number | null>(null);
 
@@ -97,7 +103,6 @@ export default function ImageCropModal({
         const touches = e.nativeEvent.touches;
 
         if (touches.length === 2) {
-          // ── Pinch zoom ──
           const dx = touches[0].pageX - touches[1].pageX;
           const dy = touches[0].pageY - touches[1].pageY;
           const dist = Math.sqrt(dx * dx + dy * dy);
@@ -115,7 +120,6 @@ export default function ImageCropModal({
           lastDist.current = dist;
           lastTouches.current = touches.map(t => ({ x: t.pageX, y: t.pageY }));
         } else if (touches.length === 1 && lastTouches.current.length >= 1) {
-          // ── Pan ──
           const prev = lastTouches.current[0];
           const ddx = touches[0].pageX - prev.x;
           const ddy = touches[0].pageY - prev.y;
@@ -143,11 +147,9 @@ export default function ImageCropModal({
       const dispW = imgNatural.w * s;
       const dispH = imgNatural.h * s;
 
-      // top-left of frame relative to image display origin
       const imgLeft = (dispW - frameW) / 2 - tx.current;
-      const imgTop = (dispH - frameH) / 2 - ty.current;
+      const imgTop  = (dispH - frameH) / 2 - ty.current;
 
-      // convert back to natural pixel coords
       const cropX = Math.max(0, imgLeft / s);
       const cropY = Math.max(0, imgTop / s);
       const cropW = Math.min(imgNatural.w - cropX, frameW / s);
@@ -160,8 +162,8 @@ export default function ImageCropModal({
             crop: {
               originX: Math.round(cropX),
               originY: Math.round(cropY),
-              width: Math.round(cropW),
-              height: Math.round(cropH),
+              width:   Math.round(cropW),
+              height:  Math.round(cropH),
             },
           },
           { resize: { width: Math.min(1920, Math.round(cropW)) } },
@@ -176,21 +178,64 @@ export default function ImageCropModal({
     }
   };
 
-  // reset when a new image is shown
-  const prevUri = useRef<string | null>(null);
-  if (imageUri && imageUri !== prevUri.current) {
-    prevUri.current = imageUri;
-    scale.current = 1;
-    tx.current = 0;
-    ty.current = 0;
-  }
-
   const dispW = imgNatural.w * scale.current;
   const dispH = imgNatural.h * scale.current;
+
+  // Image is centered on screen; tx/ty shift it within that center
+  const imgLeft = (SW - dispW) / 2 + tx.current;
+  const imgTop  = (SH - dispH) / 2 + ty.current;
 
   return (
     <Modal visible={visible} animationType="fade" transparent statusBarTranslucent>
       <View style={styles.overlay}>
+
+        {/* ── Full image rendered behind everything ── */}
+        <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers}>
+          {imageUri ? (
+            <Image
+              source={{ uri: imageUri }}
+              style={{
+                position: 'absolute',
+                width: dispW,
+                height: dispH,
+                left: imgLeft,
+                top: imgTop,
+              }}
+              contentFit="fill"
+              onLoad={onImageLoad}
+            />
+          ) : null}
+        </View>
+
+        {/* ── Dark overlay with frame cutout ── */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {/* top shade */}
+          <View style={[styles.shade, { height: frameTop }]} />
+          {/* middle row */}
+          <View style={{ flexDirection: 'row', height: frameH }}>
+            <View style={[styles.shade, { width: FRAME_PADDING }]} />
+            {/* transparent frame window */}
+            <View style={[styles.frame, { width: frameW, height: frameH }]}>
+              {/* Corner guides */}
+              {[
+                { top: 0, left: 0 },
+                { top: 0, right: 0 },
+                { bottom: 0, left: 0 },
+                { bottom: 0, right: 0 },
+              ].map((pos, i) => (
+                <View key={i} style={[styles.corner, pos]} />
+              ))}
+              {/* Rule-of-thirds grid */}
+              <View style={[styles.gridLine, styles.gridV1]} />
+              <View style={[styles.gridLine, styles.gridV2]} />
+              <View style={[styles.gridLine, styles.gridH1]} />
+              <View style={[styles.gridLine, styles.gridH2]} />
+            </View>
+            <View style={[styles.shade, { width: FRAME_PADDING }]} />
+          </View>
+          {/* bottom shade */}
+          <View style={[styles.shade, { flex: 1 }]} />
+        </View>
 
         {/* ── Top bar ── */}
         <View style={styles.topBar}>
@@ -207,58 +252,6 @@ export default function ImageCropModal({
               ? <ActivityIndicator size="small" color="#FFF" />
               : <Text style={styles.doneBtnText}>Done</Text>}
           </TouchableOpacity>
-        </View>
-
-        {/* ── Crop area ── */}
-        <View style={styles.cropArea}>
-          {/* Dark overlay — top */}
-          <View style={[styles.shade, { height: (SH - frameH - 80) / 2 }]} />
-
-          {/* Frame row */}
-          <View style={{ flexDirection: 'row', height: frameH }}>
-            <View style={[styles.shade, { width: FRAME_PADDING }]} />
-
-            {/* The actual interactive frame */}
-            <View
-              style={[styles.frame, { width: frameW, height: frameH }]}
-              {...panResponder.panHandlers}
-            >
-              {imageUri ? (
-                <Image
-                  source={{ uri: imageUri }}
-                  style={{
-                    width: dispW,
-                    height: dispH,
-                    transform: [{ translateX: tx.current }, { translateY: ty.current }],
-                  }}
-                  contentFit="fill"
-                  onLoad={onImageLoad}
-                />
-              ) : null}
-
-              {/* Corner guides */}
-              <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-                {[
-                  { top: 0, left: 0 },
-                  { top: 0, right: 0 },
-                  { bottom: 0, left: 0 },
-                  { bottom: 0, right: 0 },
-                ].map((pos, i) => (
-                  <View key={i} style={[styles.corner, pos]} />
-                ))}
-                {/* Rule-of-thirds grid */}
-                <View style={[styles.gridLine, styles.gridV1]} />
-                <View style={[styles.gridLine, styles.gridV2]} />
-                <View style={[styles.gridLine, styles.gridH1]} />
-                <View style={[styles.gridLine, styles.gridH2]} />
-              </View>
-            </View>
-
-            <View style={[styles.shade, { width: FRAME_PADDING }]} />
-          </View>
-
-          {/* Dark overlay — bottom */}
-          <View style={[styles.shade, { flex: 1 }]} />
         </View>
 
         {/* ── Hint ── */}
@@ -301,16 +294,10 @@ const styles = StyleSheet.create({
   doneBtnText: {
     color: '#FFF', fontSize: 14, fontWeight: '700',
   },
-  cropArea: {
-    flex: 1,
-  },
   shade: {
-    backgroundColor: 'rgba(0,0,0,0.72)',
+    backgroundColor: 'rgba(0,0,0,0.62)',
   },
   frame: {
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.85)',
   },
@@ -329,6 +316,8 @@ const styles = StyleSheet.create({
   gridH1: { top: '33.33%', left: 0, right: 0, height: StyleSheet.hairlineWidth },
   gridH2: { top: '66.66%', left: 0, right: 0, height: StyleSheet.hairlineWidth },
   hintRow: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, paddingVertical: 14,
   },

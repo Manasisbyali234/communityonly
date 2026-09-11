@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Animated, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
@@ -204,32 +204,69 @@ export default function MatrimonyScreen() {
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<MatrimonyFilters>({});
-  const [ageRangeIdx, setAgeRangeIdx] = useState(0);
-  const [cityInput, setCityInput] = useState('');
 
   const { data: myProfile, isLoading: myProfileLoading, isError: myProfileError } = useMyMatrimonyProfileQuery();
 
-  // Derive explicit profile status — never fall back to REJECTED for unknown/error states
+  // Derive explicit profile status
   const profileStatus: 'NO_PROFILE' | 'PENDING' | 'APPROVED' | 'REJECTED' = (() => {
     if (!myProfile || !myProfile.id) return 'NO_PROFILE';
     if (myProfile.approvalStatus === 'APPROVED') return 'APPROVED';
     if (myProfile.approvalStatus === 'PENDING') return 'PENDING';
     if (myProfile.approvalStatus === 'REJECTED') return 'REJECTED';
-    return 'PENDING'; // safe default for unknown status on existing profile
+    return 'PENDING';
   })();
 
   const isApproved = profileStatus === 'APPROVED';
-  const { data: profiles = [], isLoading } = useMatrimonyProfilesQuery({ ...filters, search: query || undefined }, isApproved);
+
+  // ── Smart filters derived from user's own profile & partner preferences ──
+  const smartFilters = useMemo((): MatrimonyFilters => {
+    if (!myProfile) return {};
+    const f: MatrimonyFilters = {};
+    // Opposite gender suggestion
+    if (myProfile.gender === 'MALE') f.gender = 'FEMALE';
+    else if (myProfile.gender === 'FEMALE') f.gender = 'MALE';
+    // Partner age preference
+    if (myProfile.partnerMinAge) f.minAge = myProfile.partnerMinAge;
+    if (myProfile.partnerMaxAge) f.maxAge = myProfile.partnerMaxAge;
+    // Same religion
+    if (myProfile.partnerReligion) f.religion = myProfile.partnerReligion;
+    else if (myProfile.religion) f.religion = myProfile.religion;
+    // Partner caste
+    if (myProfile.partnerCaste) f.caste = myProfile.partnerCaste;
+    return f;
+  }, [myProfile]);
+
+  // Active filter pills to display (read-only, showing why these profiles appear)
+  const activePills = useMemo(() => {
+    const pills: { label: string; icon: string }[] = [];
+    if (smartFilters.gender) pills.push({ label: smartFilters.gender === 'FEMALE' ? 'Female' : smartFilters.gender === 'MALE' ? 'Male' : 'Other', icon: 'person-outline' });
+    if (smartFilters.minAge || smartFilters.maxAge) {
+      const ageLabel = smartFilters.minAge && smartFilters.maxAge
+        ? `Age ${smartFilters.minAge}–${smartFilters.maxAge}`
+        : smartFilters.minAge ? `Age ${smartFilters.minAge}+` : `Age up to ${smartFilters.maxAge}`;
+      pills.push({ label: ageLabel, icon: 'calendar-outline' });
+    }
+    if (smartFilters.religion) pills.push({ label: smartFilters.religion, icon: 'prism-outline' });
+    if (smartFilters.caste) pills.push({ label: smartFilters.caste, icon: 'people-outline' });
+    return pills;
+  }, [smartFilters]);
+
+  // Manual override filters (user can still search by name/city)
+  const [filters, setFilters] = useState<MatrimonyFilters>({});
+  const [cityInput, setCityInput] = useState('');
+  const [showCityInput, setShowCityInput] = useState(false);
+
+  // Combined filters: smart base + manual overrides
+  const combinedFilters = useMemo(() => ({
+    ...smartFilters,
+    ...filters,
+    search: query || undefined,
+  }), [smartFilters, filters, query]);
+  const { data: profiles = [], isLoading } = useMatrimonyProfilesQuery(combinedFilters, isApproved);
   const { data: matches = [], isLoading: matchesLoading } = useMatrimonyMatchesQuery(isApproved);
   const { data: likeMatches = [], isLoading: likeMatchesLoading } = useMatrimonyLikeMatchesQuery(isApproved);
 
-  const applyAgeRange = (idx: number) => {
-    setAgeRangeIdx(idx);
-    const r = AGE_RANGES[idx];
-    setFilters(f => ({ ...f, minAge: r.min, maxAge: r.max }));
-  };
+  const applyAgeRange = (idx: number) => {}; // kept for compat, unused
 
   const list = activeTab === 'matches' ? matches : profiles;
   const loading = activeTab === 'matches' ? matchesLoading : activeTab === 'liked' ? likeMatchesLoading : isLoading;
@@ -387,7 +424,7 @@ export default function MatrimonyScreen() {
         </ScrollView>
       </View>
 
-      {/* Search + filter */}
+      {/* Search + city filter */}
       <View style={[styles.searchSection, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={[styles.searchBar, { backgroundColor: colors.elevation1, borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={17} color={colors.textMuted} />
@@ -407,126 +444,48 @@ export default function MatrimonyScreen() {
           ) : null}
         </View>
         <TouchableOpacity
-          style={[styles.filterBtn, { backgroundColor: showFilters ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-          onPress={() => setShowFilters(v => !v)}
+          style={[styles.filterBtn, { backgroundColor: showCityInput ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
+          onPress={() => setShowCityInput(v => !v)}
         >
-          <Ionicons name="options-outline" size={18} color={showFilters ? '#fff' : colors.primary} />
+          <Ionicons name="location-outline" size={18} color={showCityInput ? '#fff' : colors.primary} />
         </TouchableOpacity>
       </View>
 
+      {/* City filter input */}
+      {showCityInput && (
+        <View style={[styles.cityRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <Ionicons name="location-outline" size={15} color={colors.textMuted} />
+          <TextInput
+            style={[styles.cityInput, { color: colors.text }]}
+            value={cityInput}
+            onChangeText={(v) => { setCityInput(v); setFilters(f => ({ ...f, city: v.trim() || undefined })); }}
+            placeholder="Filter by city e.g. Bengaluru"
+            placeholderTextColor={colors.textMuted}
+            returnKeyType="done"
+            autoFocus
+          />
+          {cityInput ? (
+            <TouchableOpacity onPress={() => { setCityInput(''); setFilters(f => ({ ...f, city: undefined })); }}>
+              <Ionicons name="close-circle" size={15} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      )}
 
-
-      {/* Filters panel */}
-      {showFilters && (
-        <ScrollView style={[styles.filtersPanel, { backgroundColor: colors.surface, borderBottomColor: colors.border }]} showsVerticalScrollIndicator={false} nestedScrollEnabled>
-
-          {/* Age Range */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Age Range</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {AGE_RANGES.map((r, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[styles.chip, { backgroundColor: ageRangeIdx === i ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => applyAgeRange(i)}
-              >
-                <Text style={[styles.chipText, { color: ageRangeIdx === i ? '#fff' : colors.primary }]}>{r.label}</Text>
-              </TouchableOpacity>
+      {/* Smart suggestion pills — read-only, derived from user's profile */}
+      {activePills.length > 0 && (
+        <View style={[styles.pillsBar, { backgroundColor: colors.primaryContainer, borderBottomColor: colors.border }]}>
+          <Ionicons name="sparkles" size={13} color={colors.primary} />
+          <Text style={[styles.pillsBarLabel, { color: colors.primary }]}>Showing for you:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, flexDirection: 'row' }}>
+            {activePills.map((pill, i) => (
+              <View key={i} style={[styles.suggestionPill, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}>
+                <Ionicons name={pill.icon as any} size={11} color={colors.primary} />
+                <Text style={[styles.suggestionPillText, { color: colors.primary }]}>{pill.label}</Text>
+              </View>
             ))}
           </ScrollView>
-
-          {/* Gender */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Gender</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {(['', 'MALE', 'FEMALE', 'OTHER'] as const).map((g) => (
-              <TouchableOpacity
-                key={g}
-                style={[styles.chip, { backgroundColor: filters.gender === g || (!filters.gender && g === '') ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, gender: g || undefined }))}
-              >
-                <Text style={[styles.chipText, { color: filters.gender === g || (!filters.gender && g === '') ? '#fff' : colors.primary }]}>
-                  {g === '' ? 'Any' : g === 'MALE' ? 'Male' : g === 'FEMALE' ? 'Female' : 'Other'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Marital Status */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Marital Status</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {([undefined, 'NEVER_MARRIED', 'DIVORCED', 'WIDOWED', 'SEPARATED'] as const).map((ms) => (
-              <TouchableOpacity
-                key={ms ?? 'any'}
-                style={[styles.chip, { backgroundColor: filters.maritalStatus === ms ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, maritalStatus: ms }))}
-              >
-                <Text style={[styles.chipText, { color: filters.maritalStatus === ms ? '#fff' : colors.primary }]}>
-                  {ms === undefined ? 'Any' : MARITAL_STATUS_LABELS[ms]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Education */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Education</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {([undefined, 'HIGH_SCHOOL', 'DIPLOMA', 'BACHELORS', 'MASTERS', 'PHD', 'OTHER'] as const).map((edu) => (
-              <TouchableOpacity
-                key={edu ?? 'any'}
-                style={[styles.chip, { backgroundColor: filters.education === edu ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, education: edu }))}
-              >
-                <Text style={[styles.chipText, { color: filters.education === edu ? '#fff' : colors.primary }]}>
-                  {edu === undefined ? 'Any' : EDUCATION_LABELS[edu]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Religion */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Religion</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-            {RELIGION_OPTIONS.map((rel) => (
-              <TouchableOpacity
-                key={rel || 'any'}
-                style={[styles.chip, { backgroundColor: (filters.religion ?? '') === rel ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
-                onPress={() => setFilters(f => ({ ...f, religion: rel || undefined }))}
-              >
-                <Text style={[styles.chipText, { color: (filters.religion ?? '') === rel ? '#fff' : colors.primary }]}>
-                  {rel || 'Any'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* City */}
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>City</Text>
-          <View style={[styles.cityInputWrap, { backgroundColor: colors.elevation1, borderColor: colors.border }]}>
-            <Ionicons name="location-outline" size={15} color={colors.textMuted} />
-            <TextInput
-              style={[styles.cityInput, { color: colors.text }]}
-              value={cityInput}
-              onChangeText={(v) => { setCityInput(v); setFilters(f => ({ ...f, city: v.trim() || undefined })); }}
-              placeholder="e.g. Bengaluru"
-              placeholderTextColor={colors.textMuted}
-              returnKeyType="done"
-            />
-            {cityInput ? (
-              <TouchableOpacity onPress={() => { setCityInput(''); setFilters(f => ({ ...f, city: undefined })); }}>
-                <Ionicons name="close-circle" size={15} color={colors.textMuted} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* Reset */}
-          <TouchableOpacity
-            style={[styles.resetBtn, { borderColor: colors.primary }]}
-            onPress={() => { setFilters({}); setAgeRangeIdx(0); setCityInput(''); }}
-          >
-            <Ionicons name="refresh-outline" size={14} color={colors.primary} />
-            <Text style={[styles.resetBtnText, { color: colors.primary }]}>Reset All Filters</Text>
-          </TouchableOpacity>
-
-        </ScrollView>
+        </View>
       )}
 
       {/* Results bar */}
@@ -688,25 +647,13 @@ const styles = StyleSheet.create({
   },
 
 
-  filtersPanel: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, maxHeight: 340 },
-  filterLabel: { fontSize: 12, fontWeight: '700', marginBottom: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
-  chipText: { fontSize: 12, fontWeight: '600' },
-  cityInputWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 10, height: 40, marginBottom: 12,
-  },
+  cityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1 },
   cityInput: { flex: 1, fontSize: 13 },
-  resetBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderRadius: 10, paddingVertical: 9, marginBottom: 4,
-  },
-  resetBtnText: { fontSize: 13, fontWeight: '700' },
-
-  resultsBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 8, flexWrap: 'nowrap',
-  },
+  pillsBar: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1 },
+  pillsBarLabel: { fontSize: 11, fontWeight: '700', flexShrink: 0 },
+  suggestionPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  suggestionPillText: { fontSize: 11, fontWeight: '600' },
+  resultsBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8 },
   resultsText: { fontSize: 12, fontWeight: '500' },
   createBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
