@@ -67,6 +67,9 @@ export default function AdminShell({ children, title }: Props) {
   const [bellOpen, setBellOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingProfilesCount, setPendingProfilesCount] = useState(0);
+  const [pendingMatrimonyCount, setPendingMatrimonyCount] = useState(0);
+  const [pendingBusinessCount, setPendingBusinessCount] = useState(0);
+  const [pendingHelpCount, setPendingHelpCount] = useState(0);
   const [pendingData, setPendingData] = useState<{ communities: any[]; events: any[]; profiles: any[] }>({ communities: [], events: [], profiles: [] });
   const currentKey = segments[segments.length - 1] ?? '';
   const { width: screenW } = useWindowDimensions();
@@ -81,15 +84,31 @@ export default function AdminShell({ children, title }: Props) {
 
   const fetchPending = useCallback(async () => {
     try {
-      const [countsRes, commRes, evtRes, profilesRes] = await Promise.all([
+      const [countsRes, commRes, evtRes, profilesRes, matrimonyRes, businessRes, helpRes] = await Promise.all([
         adminApiClient.get('/admin-panel/pending-counts'),
         adminApiClient.get('/admin-panel/communities/pending'),
         adminApiClient.get('/admin-panel/events', { params: { status: 'PENDING', take: 10 } }),
         adminApiClient.get('/admin-panel/profile-approvals', { params: { status: 'PENDING', take: 10 } }),
+        adminApiClient.get('/matrimony/admin/all', { params: { status: 'PENDING' } }).catch(() => ({ data: null })),
+        adminApiClient.get('/businesses/admin', { params: { status: 'PENDING' } }).catch(() => ({ data: null })),
+        adminApiClient.get('/help-requests/admin', { params: { status: 'PENDING' } }).catch(() => ({ data: null })),
       ]);
       const counts = countsRes.data?.data ?? {};
       setPendingCount(counts.total ?? 0);
       setPendingProfilesCount(counts.pendingProfiles ?? 0);
+
+      const toCount = (data: any) =>
+        Array.isArray(data) ? data.length : (data?.total ?? data?.count ?? 0);
+
+      console.log('[AdminShell] pending-counts:', counts);
+      console.log('[AdminShell] matrimony raw:', matrimonyRes?.data);
+      console.log('[AdminShell] business raw:', businessRes?.data);
+      console.log('[AdminShell] help raw:', helpRes?.data);
+
+      setPendingMatrimonyCount(counts.pendingMatrimony ?? toCount(matrimonyRes?.data?.data));
+      setPendingBusinessCount(counts.pendingBusiness ?? toCount(businessRes?.data?.data));
+      setPendingHelpCount(counts.pendingHelp ?? toCount(helpRes?.data?.data));
+
       setPendingData({
         communities: commRes.data?.data?.communities ?? [],
         events: evtRes.data?.data?.events ?? [],
@@ -123,13 +142,13 @@ export default function AdminShell({ children, title }: Props) {
   const renderItem = (item: typeof NAV_MAIN[0]) => {
     const active = currentKey === item.key;
     const badgeCount =
-      item.key === 'pending-profiles'
-        ? pendingProfilesCount
-        : item.key === 'communities'
-        ? pendingData.communities.length
-        : item.key === 'events'
-        ? pendingData.events.length
-        : 0;
+      item.key === 'pending-profiles' ? pendingProfilesCount
+      : item.key === 'communities'    ? pendingData.communities.length
+      : item.key === 'events'         ? pendingData.events.length
+      : item.key === 'matrimony'      ? pendingMatrimonyCount
+      : item.key === 'business'       ? pendingBusinessCount
+      : item.key === 'community-help' ? pendingHelpCount
+      : 0;
     return (
       <Pressable
         key={item.key}
