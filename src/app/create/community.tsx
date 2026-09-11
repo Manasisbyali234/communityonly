@@ -26,6 +26,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { communityKeys, useMyCommunitiesRequestsQuery } from '../../api/community';
 import { feedKeys } from '../../api/feed';
 import Button from '../../components/common/Button';
+import ImageCropModal, { CropResult } from '../../components/common/ImageCropModal';
 type InputFieldProps = {
   label: string;
   value: string;
@@ -80,6 +81,9 @@ export default function CreateCommunity() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [bannerUri, setBannerUri] = useState<string | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [cropUri, setCropUri] = useState<string | null>(null);
+  const [cropAspect, setCropAspect] = useState<[number, number]>([16, 9]);
+  const [cropTarget, setCropTarget] = useState<'banner' | 'avatar'>('banner');
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; description?: string; category?: string }>({});
   const [submitted, setSubmitted] = useState(false);
@@ -131,14 +135,20 @@ export default function CreateCommunity() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: type === 'banner' ? [16, 9] : [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 0.9,
     });
     if (!result.canceled && result.assets[0]) {
-      if (type === 'banner') setBannerUri(result.assets[0].uri);
-      else setAvatarUri(result.assets[0].uri);
+      setCropUri(result.assets[0].uri);
+      setCropAspect(type === 'banner' ? [16, 9] : [1, 1]);
+      setCropTarget(type);
     }
+  };
+
+  const handleCropDone = (result: CropResult) => {
+    if (cropTarget === 'banner') setBannerUri(result.uri);
+    else setAvatarUri(result.uri);
+    setCropUri(null);
   };
 
   const uploadImage = async (uri: string): Promise<string> => {
@@ -483,6 +493,14 @@ export default function CreateCommunity() {
           onPress={handleSubmit}
         />
       </View>
+      <ImageCropModal
+        visible={!!cropUri}
+        imageUri={cropUri}
+        aspect={cropAspect}
+        accentColor={colors.primary}
+        onDone={handleCropDone}
+        onCancel={() => setCropUri(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

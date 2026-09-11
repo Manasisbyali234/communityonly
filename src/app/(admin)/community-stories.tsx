@@ -12,6 +12,7 @@ import { fmtDate, fmtDateTime } from '../../utils/adminUtils';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { API_BASE_URL } from '../../api/config';
+import ImageCropModal, { CropResult } from '../../components/common/ImageCropModal';
 import {
   useAdminStoriesQuery,
   useAdminCreateStoryMutation,
@@ -54,6 +55,7 @@ export default function AdminCommunityStories() {
     status: 'PUBLISHED' as StoryStatus,
   });
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [cropUri, setCropUri] = useState<string | null>(null);
 
   const showToast = useToastStore.getState().showToast;
 
@@ -181,31 +183,25 @@ export default function AdminCommunityStories() {
     }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'Allow photo library access.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.85 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.9 });
     if (result.canceled || !result.assets?.[0]) return;
-    setUploadingImage(true);
-    try {
-      const asset = result.assets[0];
-      const formData = new FormData();
-      formData.append('file', { uri: asset.uri, name: asset.fileName ?? 'image.jpg', type: asset.mimeType ?? 'image/jpeg' } as any);
-      const { adminApiClient } = await import('../../api/adminClient');
-      const res = await adminApiClient.post('/media/upload', formData);
-      const url = res.data?.data?.url ?? res.data?.url;
-      if (url) setForm((p) => ({ ...p, featuredImage: resolveUrl(url) }));
-    } catch { showToast('Image upload failed', 'error'); }
-    finally { setUploadingImage(false); }
+    setCropUri(result.assets[0].uri);
   };
 
   const handleTakeFeaturedPhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'Allow camera access.'); return; }
-    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [16, 9], quality: 0.85 });
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.9 });
     if (result.canceled || !result.assets?.[0]) return;
+    setCropUri(result.assets[0].uri);
+  };
+
+  const handleStoryCropDone = async (result: CropResult) => {
+    setCropUri(null);
     setUploadingImage(true);
     try {
-      const asset = result.assets[0];
       const formData = new FormData();
-      formData.append('file', { uri: asset.uri, name: asset.fileName ?? 'photo.jpg', type: asset.mimeType ?? 'image/jpeg' } as any);
+      formData.append('file', { uri: result.uri, name: `story_${Date.now()}.jpg`, type: 'image/jpeg' } as any);
       const { adminApiClient } = await import('../../api/adminClient');
       const res = await adminApiClient.post('/media/upload', formData);
       const url = res.data?.data?.url ?? res.data?.url;
@@ -645,6 +641,14 @@ export default function AdminCommunityStories() {
           </View>
         </View>
       </Modal>
+      <ImageCropModal
+        visible={!!cropUri}
+        imageUri={cropUri}
+        aspect={[16, 9]}
+        accentColor={C.accent}
+        onDone={handleStoryCropDone}
+        onCancel={() => setCropUri(null)}
+      />
     </View>
   );
 }
