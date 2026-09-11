@@ -454,7 +454,7 @@ export default function EditProfile() {
         <View style={styles.mastheadSection}>
           {/* Cover — full-width, matches profile page */}
           <View style={{ height: 180, position: 'relative' }}>
-            <View style={{ height: 180, overflow: 'hidden' }}>
+            <View style={{ ...StyleSheet.absoluteFillObject, overflow: 'hidden' }}>
               {currentCoverUri ? (
                 <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
               ) : (
@@ -471,8 +471,8 @@ export default function EditProfile() {
                 style={StyleSheet.absoluteFill as any}
               />
             </View>
-            {/* Cover action buttons — outside overflow:hidden so they are always visible */}
-            <View style={styles.coverActionIconsRow}>
+            {/* Buttons outside overflow:hidden — always visible */}
+            <View style={{ position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', gap: 8, zIndex: 20 }}>
               {currentCoverUri && (
                 <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
                   <Ionicons name="trash-outline" size={15} color="#FFF" />
