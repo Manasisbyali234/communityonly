@@ -229,11 +229,24 @@ export default function CommunityHelpScreen() {
       () => ({
         category: selectedCategory !== 'All' ? selectedCategory : undefined,
         urgency: onlyUrgent ? 'URGENT' : undefined,
-        search: debouncedSearch || undefined,
       }),
-      [selectedCategory, onlyUrgent, debouncedSearch]
+      [selectedCategory, onlyUrgent]
     )
   );
+
+  // Client-side matching keeps all visible fields searchable across API versions.
+  const visibleRequests = useMemo(() => {
+    const query = debouncedSearch.trim().toLowerCase();
+    if (!query) return requests;
+    return requests.filter((request) => [
+      request.title,
+      request.description,
+      request.location,
+      request.requesterName,
+      request.requesterLocation,
+      request.category,
+    ].some((value) => value?.toLowerCase().includes(query)));
+  }, [requests, debouncedSearch]);
 
   const offerHelpMutation = useOfferHelpMutation();
   const reportMutation = useReportHelpRequestMutation();
@@ -319,7 +332,7 @@ export default function CommunityHelpScreen() {
         <View style={styles.headerTitleWrap}>
           <Text style={[styles.headerTitle, { color: TEXT }]}>Community Help</Text>
           <Text style={[styles.headerSub, { color: TEXT3 }]}>
-            {isLoading ? 'Loading requests...' : `${requests.length} active request${requests.length !== 1 ? 's' : ''}`}
+            {isLoading ? 'Loading requests...' : `${visibleRequests.length} active request${visibleRequests.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
 
@@ -471,7 +484,7 @@ export default function CommunityHelpScreen() {
         </View>
       ) : (
         <FlatList
-          data={requests}
+          data={visibleRequests}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
             const hasOfferedHelp = item.helpers.some((h) => h.helperId === (user?.id || 'current-user'));

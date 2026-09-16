@@ -127,8 +127,6 @@ function hasEventEnded(event: { startsAt?: string; endsAt?: string }, now = new 
   return !Number.isNaN(endAt.getTime()) && endAt < now;
 }
 
-const COMMUNITY_TYPES = ['All', 'Village', 'Youth', 'Women', 'Farmers', 'Temple', 'Sports', 'Education'];
-
 // ── Skeleton components ───────────────────────────────────────────────────────
 function MemberSkeleton() {
   return (
@@ -412,6 +410,13 @@ export default function ExploreScreen() {
   const myCommunitiesList = communities.filter(isMyCommunity);
   const myCommunitiesCount = myCommunitiesList.length;
   const allCommunitiesCount = communities.length;
+
+  // Build dynamic category list from actual community data
+  const dynamicCommunityTypes = React.useMemo(() => {
+    const cats = new Set<string>();
+    communities.forEach((c: any) => { if (c.category) cats.add(c.category); });
+    return ['All', ...Array.from(cats).sort()];
+  }, [communities]);
 
   const filteredCommunities = communities.filter((c: any) => {
     if (commSubTab === 'my' && !isMyCommunity(c)) {
@@ -1282,7 +1287,7 @@ export default function ExploreScreen() {
     if (activeTab === 'communities') {
       return (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subFiltersScroll} accessibilityLabel="Community filters. Swipe horizontally for more options.">
-          {COMMUNITY_TYPES.map((t) => {
+          {dynamicCommunityTypes.map((t) => {
             const active = selectedCommType === t;
             return (
               <TouchableOpacity
@@ -1586,7 +1591,7 @@ export default function ExploreScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.commCategoriesScroll}
             >
-              {COMMUNITY_TYPES.map((t) => {
+              {dynamicCommunityTypes.map((t) => {
                 const active = selectedCommType === t;
                 return (
                   <TouchableOpacity

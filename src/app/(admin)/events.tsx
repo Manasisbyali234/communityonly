@@ -3,7 +3,7 @@ import {
   View, Text, Image, ScrollView, TouchableOpacity, StyleSheet,
   Modal, Platform, ActivityIndicator,
 } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import AdminShell from '../../components/admin/AdminShell';
 import { C, SearchBar, EmptyState, LoadingOverlay, Pagination, useIsMobile } from '../../components/admin/AdminUI';
@@ -29,64 +29,6 @@ const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
   { id: 'REJECTED', label: 'Rejected' },
 ];
 
-const MOCK_EVENTS = [
-  {
-    id: 'evt-1',
-    title: 'Gowda Community Youth Sports Meet 2026',
-    description: 'Annual inter-district cricket, kabaddi, and athletics championship for community youth with awards & trophies.',
-    coverUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800',
-    location: 'Sir M. Visvesvaraya Stadium, Mandya',
-    startsAt: '2026-09-15T09:00:00Z',
-    endsAt: '2026-09-16T18:00:00Z',
-    status: 'PENDING_APPROVAL',
-    rsvpCount: 148,
-    createdAt: '2026-08-18T10:00:00Z',
-    community: { name: 'Mandya Youth Club' },
-    creator: { displayName: 'Yashwin Gowda', email: 'yashwin.g@gmail.com', phone: '+91 9845012345' },
-  },
-  {
-    id: 'evt-2',
-    title: 'State-Level Gowda Entrepreneurs & Business Summit',
-    description: 'Networking and mentoring symposium bringing together startup founders, business owners, and investors across Karnataka.',
-    coverUrl: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800',
-    location: 'Nalapad Pavilion, Palace Grounds, Bengaluru',
-    startsAt: '2026-09-28T10:00:00Z',
-    endsAt: '2026-09-28T17:30:00Z',
-    status: 'APPROVED',
-    rsvpCount: 420,
-    createdAt: '2026-08-10T14:30:00Z',
-    community: { name: 'Gowda Business Network' },
-    creator: { displayName: 'Ramesh Veerappa Gowda', email: 'ramesh.v@agronext.com' },
-  },
-  {
-    id: 'evt-3',
-    title: 'Organic Farming & Water Conservation Workshop',
-    description: 'Expert-led technical workshop on drip irrigation, natural pest management, and maximizing crop yield for managed farm owners.',
-    coverUrl: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800',
-    location: 'Krushi Vigyan Kendra, Hassan',
-    startsAt: '2026-10-05T09:30:00Z',
-    endsAt: '2026-10-05T16:00:00Z',
-    status: 'APPROVED',
-    rsvpCount: 88,
-    createdAt: '2026-08-12T11:20:00Z',
-    community: { name: 'Krushi Mitra Sangh' },
-    creator: { displayName: 'B.R. Nanjappa Gowda', email: 'nanjappa.farm@yahoo.com' },
-  },
-  {
-    id: 'evt-4',
-    title: 'Unverified Commercial Promotional Seminar',
-    description: 'Third-party commercial seminar requesting entry fees and external lead collection without community sponsorship.',
-    coverUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-    location: 'Hotel Comfort Inn, Mysuru',
-    startsAt: '2026-08-25T11:00:00Z',
-    status: 'REJECTED',
-    rsvpCount: 4,
-    createdAt: '2026-08-15T08:00:00Z',
-    community: { name: 'General Public' },
-    creator: { displayName: 'Unknown Promoter', email: 'promo@externaldeals.com' },
-  },
-];
-
 export default function AdminEvents() {
   const isMobile = useIsMobile();
   const showToast = useToastStore((s) => s.showToast);
@@ -97,6 +39,30 @@ export default function AdminEvents() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING');
   const [loading, setLoading] = useState(true);
+  const [autoApproval, setAutoApproval] = useState(false);
+  const [autoApprovalLoading, setAutoApprovalLoading] = useState(false);
+
+  const fetchAutoApproval = useCallback(() => {
+    adminApiClient.get('/admin-panel/settings/auto-approval')
+      .then((r) => setAutoApproval(r.data.data.eventAutoApproval))
+      .catch(() => {});
+  }, []);
+
+  useFocusEffect(fetchAutoApproval);
+
+  const toggleAutoApproval = async () => {
+    setAutoApprovalLoading(true);
+    try {
+      const next = !autoApproval;
+      await adminApiClient.put('/admin-panel/settings/auto-approval', { type: 'event', enabled: next });
+      setAutoApproval(next);
+      showToast(next ? 'Auto approval enabled — all pending events approved' : 'Auto approval disabled', next ? 'success' : 'info');
+      if (next) load();
+    } catch {
+      showToast('Failed to update auto approval', 'error');
+    }
+    setAutoApprovalLoading(false);
+  };
 
   // Inspector modal
   const [inspectEvent, setInspectEvent] = useState<any | null>(null);
@@ -105,39 +71,25 @@ export default function AdminEvents() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const statusParam =
+        statusFilter === 'ALL' ? undefined :
+        statusFilter === 'PENDING' ? 'PENDING_APPROVAL' :
+        statusFilter; // APPROVED | REJECTED sent as-is
+
       const params: any = {
         skip,
         take: 20,
         q: search || undefined,
-        status: statusFilter === 'ALL' ? undefined : statusFilter === 'PENDING' ? 'PENDING_APPROVAL' : statusFilter,
+        status: statusParam,
       };
 
-      const res = await adminApiClient.get('/admin-panel/events', { params }).catch(() => null);
-      if (res?.data?.data?.events && Array.isArray(res.data.data.events) && res.data.data.events.length > 0) {
-        setEvents(res.data.data.events);
-        setTotal(res.data.data.total ?? res.data.data.events.length);
-      } else {
-        // Fallback to local mock data
-        let list = [...MOCK_EVENTS];
-        if (statusFilter === 'PENDING') list = list.filter((e) => e.status === 'PENDING_APPROVAL');
-        else if (statusFilter === 'APPROVED') list = list.filter((e) => e.status === 'APPROVED');
-        else if (statusFilter === 'REJECTED') list = list.filter((e) => e.status === 'REJECTED');
-
-        if (search) {
-          const q = search.toLowerCase();
-          list = list.filter((e) =>
-            e.title.toLowerCase().includes(q) ||
-            (e.location && e.location.toLowerCase().includes(q)) ||
-            (e.community?.name && e.community.name.toLowerCase().includes(q)) ||
-            (e.creator?.displayName && e.creator.displayName.toLowerCase().includes(q))
-          );
-        }
-        setEvents(list);
-        setTotal(list.length);
-      }
+      const res = await adminApiClient.get('/admin-panel/events', { params });
+      const data = res.data?.data;
+      setEvents(Array.isArray(data?.events) ? data.events : []);
+      setTotal(data?.total ?? 0);
     } catch {
-      setEvents(MOCK_EVENTS);
-      setTotal(MOCK_EVENTS.length);
+      setEvents([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -166,13 +118,12 @@ export default function AdminEvents() {
       icon: 'checkmark-circle-outline',
     });
     if (!ok) return;
-
     setIsProcessing(true);
     try {
-      await adminApiClient.put(`/admin-panel/events/${evt.id}/approve`).catch(() => null);
-      setEvents((prev) => prev.map((x) => x.id === evt.id ? { ...x, status: 'APPROVED' } : x));
+      await adminApiClient.put(`/admin-panel/events/${evt.id}/approve`);
       showToast('Event approved successfully!', 'success');
       if (inspectEvent?.id === evt.id) setInspectEvent(null);
+      load();
     } catch {
       showToast('Could not approve event.', 'error');
     } finally {
@@ -190,13 +141,12 @@ export default function AdminEvents() {
       icon: 'close-circle-outline',
     });
     if (!ok) return;
-
     setIsProcessing(true);
     try {
-      await adminApiClient.put(`/admin-panel/events/${evt.id}/reject`).catch(() => null);
-      setEvents((prev) => prev.map((x) => x.id === evt.id ? { ...x, status: 'REJECTED' } : x));
+      await adminApiClient.put(`/admin-panel/events/${evt.id}/reject`);
       showToast('Event rejected.', 'info');
       if (inspectEvent?.id === evt.id) setInspectEvent(null);
+      load();
     } catch {
       showToast('Could not reject event.', 'error');
     } finally {
@@ -214,13 +164,12 @@ export default function AdminEvents() {
       icon: 'trash-outline',
     });
     if (!ok) return;
-
     setIsProcessing(true);
     try {
-      await adminApiClient.delete(`/admin-panel/events/${evt.id}`).catch(() => null);
-      setEvents((prev) => prev.filter((x) => x.id !== evt.id));
+      await adminApiClient.delete(`/admin-panel/events/${evt.id}`);
       showToast('Event deleted.', 'success');
       if (inspectEvent?.id === evt.id) setInspectEvent(null);
+      load();
     } catch {
       showToast('Could not delete event.', 'error');
     } finally {
@@ -231,6 +180,25 @@ export default function AdminEvents() {
   return (
     <AdminShell title="Community Events">
       <View style={s.container}>
+        {/* Auto Approval Toggle */}
+        <View style={s.autoApprovalBar}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.autoApprovalTitle}>Auto Approval</Text>
+            <Text style={s.autoApprovalSub}>
+              {autoApproval ? 'New events are approved automatically' : 'New events require manual approval'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[s.autoApprovalBtn, autoApproval && s.autoApprovalBtnOn]}
+            onPress={toggleAutoApproval}
+            disabled={autoApprovalLoading}
+          >
+            <Text style={[s.autoApprovalBtnText, autoApproval && s.autoApprovalBtnTextOn]}>
+              {autoApprovalLoading ? '...' : autoApproval ? '✅ ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* KPI Stats Strip */}
         <View style={s.statsGrid}>
           <View style={s.statBox}>
@@ -622,6 +590,31 @@ export default function AdminEvents() {
 
 const s = StyleSheet.create({
   container: { gap: 12, paddingBottom: 24 },
+
+  autoApprovalBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.white,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    gap: 12,
+  },
+  autoApprovalTitle: { fontSize: 13, fontWeight: '700', color: C.textPrimary },
+  autoApprovalSub: { fontSize: 11.5, color: C.textMuted, marginTop: 1 },
+  autoApprovalBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    backgroundColor: C.bg,
+  },
+  autoApprovalBtnOn: { backgroundColor: C.accent, borderColor: C.accent },
+  autoApprovalBtnText: { fontSize: 12, fontWeight: '700', color: C.textSecond },
+  autoApprovalBtnTextOn: { color: '#fff' },
 
   // Stats Grid
   statsGrid: {

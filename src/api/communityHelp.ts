@@ -20,7 +20,20 @@ export function useCreateHelpRequestMutation() { const qc = useQueryClient(); re
 export function useUpdateHelpRequestMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async ({ id, data }: { id: string; data: HelpRequestInput }) => unwrap<HelpRequest>(await apiClient.patch(`/help-requests/${id}`, data)), onSuccess: (request) => { invalidate(qc); qc.invalidateQueries({ queryKey: ['help-request', request.id] }); } }); }
 export function useArchiveHelpRequestMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async (id: string) => unwrap<HelpRequest>(await apiClient.patch(`/help-requests/${id}/archive`)), onSuccess: (request) => { invalidate(qc); qc.invalidateQueries({ queryKey: ['help-request', request.id] }); } }); }
 export function useOfferHelpMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async ({ requestId, message }: { requestId: string; helperName?: string; helperAvatarUrl?: string; helperPhone?: string; message?: string }) => unwrap<HelperOffer>(await apiClient.post(`/help-requests/${requestId}/offers`, { message })), onSuccess: (_, v) => { invalidate(qc); qc.invalidateQueries({ queryKey: ['help-request', v.requestId] }); } }); }
-export function useResolveHelpRequestMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async (id: string) => unwrap(await apiClient.patch(`/help-requests/${id}/resolve`)), onSuccess: () => invalidate(qc) }); }
+export function useResolveHelpRequestMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => unwrap(await apiClient.patch(`/help-requests/${id}/resolve`)),
+    onSuccess: (_, id) => {
+      // Update the open detail immediately so its Resolve action cannot be stale.
+      qc.setQueryData<HelpRequest>(['help-request', id], (current) => current
+        ? { ...current, status: 'RESOLVED', resolvedAt: new Date().toISOString() }
+        : current);
+      qc.invalidateQueries({ queryKey: ['help-request', id] });
+      invalidate(qc);
+    },
+  });
+}
 export function useReportHelpRequestMutation() { return useMutation({ mutationFn: async (data: { requestId: string; reason: string; details?: string }) => { throw new Error('Request reporting endpoint is not available yet'); } }); }
 export function useAdminHelpRequestsQuery(statusTab?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REPORTED' | 'RESOLVED') { return useQuery({ queryKey: ['admin-help-requests', statusTab], queryFn: async () => unwrap<HelpRequest[]>(await apiClient.get('/help-requests/admin', { params: statusTab && statusTab !== 'REPORTED' ? { status: statusTab } : {} })) }); }
 export function useAdminApproveHelpMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async (id: string) => unwrap(await apiClient.patch(`/help-requests/${id}/moderate`, { status: 'APPROVED' })), onSuccess: () => invalidate(qc) }); }

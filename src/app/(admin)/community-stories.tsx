@@ -26,7 +26,7 @@ import {
   StoryStatus,
 } from '../../api/ourPeople';
 
-type StatusTab = 'ALL' | 'PUBLISHED' | 'DRAFT' | 'UNPUBLISHED';
+type StatusTab = 'ALL' | 'PUBLISHED' | 'DRAFT';
 
 const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: 'ALL',       label: 'All Stories' },
@@ -59,9 +59,8 @@ export default function AdminCommunityStories() {
 
   const showToast = useToastStore.getState().showToast;
 
-  const { data: stories = [], isLoading, refetch } = useAdminStoriesQuery(
-    activeTab === 'ALL' ? undefined : activeTab
-  );
+  // Counts and status filters must be calculated from the same complete collection.
+  const { data: stories = [], isLoading, refetch } = useAdminStoriesQuery();
   const createMutation = useAdminCreateStoryMutation();
   const updateMutation = useAdminUpdateStoryMutation();
   const togglePublishMutation = useAdminTogglePublishMutation();
@@ -72,7 +71,7 @@ export default function AdminCommunityStories() {
 
   // Metrics
   const statsOverview = useMemo(() => {
-    const totalCount = stories.length || 5;
+    const totalCount = stories.length;
     const publishedCount = stories.filter((s) => s.status === 'PUBLISHED').length;
     const featuredCount = stories.filter((s) => s.isFeatured).length;
     const draftCount = stories.filter((s) => s.status === 'DRAFT' || s.status === 'UNPUBLISHED').length;
@@ -81,7 +80,9 @@ export default function AdminCommunityStories() {
 
   const filtered = useMemo(() => {
     return stories.filter((s) => {
-      if (activeTab !== 'ALL' && s.status !== activeTab) return false;
+      const isDraft = s.status === 'DRAFT' || s.status === 'UNPUBLISHED';
+      if (activeTab === 'PUBLISHED' && s.status !== 'PUBLISHED') return false;
+      if (activeTab === 'DRAFT' && !isDraft) return false;
       if (!search) return true;
       const q = search.toLowerCase();
       return (
@@ -211,7 +212,8 @@ export default function AdminCommunityStories() {
   };
 
   const handleTogglePublish = async (story: CommunityStory) => {
-    const nextStatus: StoryStatus = story.status === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED';
+    // DRAFT is the single hidden state; legacy UNPUBLISHED records remain readable.
+    const nextStatus: StoryStatus = story.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
     try {
       await togglePublishMutation.mutateAsync({ id: story.id, status: nextStatus });
       showToast(`Story marked as ${nextStatus.toLowerCase()}.`, 'success');
@@ -292,7 +294,7 @@ export default function AdminCommunityStories() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.statNumber}>{statsOverview.draftCount}</Text>
-              <Text style={s.statLabel} numberOfLines={1}>Drafts / Archived</Text>
+              <Text style={s.statLabel} numberOfLines={1}>Draft Stories</Text>
             </View>
           </View>
         </View>
@@ -478,7 +480,7 @@ export default function AdminCommunityStories() {
                       <View style={[s.cell, { width: 100 }]}>
                         <View style={[s.statusPill, { backgroundColor: isPublished ? '#DCFCE7' : '#FEE2E2' }]}>
                           <Text style={[s.statusPillText, { color: isPublished ? '#166534' : '#DC2626' }]}>
-                            {st.status}
+                            {isPublished ? 'PUBLISHED' : 'DRAFT'}
                           </Text>
                         </View>
                       </View>

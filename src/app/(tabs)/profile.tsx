@@ -460,15 +460,7 @@ export default function ProfileScreen() {
             colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.68)']}
             style={StyleSheet.absoluteFill}
           />
-          {/* Cover edit hint */}
-          <TouchableOpacity
-            style={s.coverEditBtn}
-            onPress={() => router.push('/edit-profile' as any)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="camera-outline" size={14} color="#FFF" />
-            <Text style={s.coverEditText}>Edit Cover</Text>
-          </TouchableOpacity>
+
         </View>
 
         {/* ── Masthead ───────────────────────────────────────────────── */}
@@ -921,16 +913,7 @@ const s = StyleSheet.create({
   },
   navBadgeText: { color: '#FFF', fontSize: 8, fontWeight: '800' },
 
-  // Cover
-  coverEditBtn: {
-    position: 'absolute', bottom: 12, right: 14,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-  },
-  coverEditText: { color: '#FFF', fontSize: 11.5, fontWeight: '600' },
 
-  // Masthead
   masthead: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,

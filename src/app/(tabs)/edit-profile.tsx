@@ -386,7 +386,7 @@ export default function EditProfile() {
 
   if (!user) return null;
 
-  const currentCoverUri = localCoverUri || (!coverRemoved ? user.coverImage : null);
+  const currentCoverUri = localCoverUri || (!coverRemoved ? toAbsUrl(user.coverImage) : null);
 
   // Completion score
   const fields = [user?.displayName, user?.bio, user?.village, user?.occupation, user?.country, user?.district, user?.city, user?.profession, user?.education, user?.skills];
@@ -453,61 +453,43 @@ export default function EditProfile() {
         {/* ── Cover & Avatar Header Masthead ──────────────────────────── */}
         <View style={[styles.mastheadSection, { position: 'relative' }]}>
           {/* Cover */}
-          <View style={{ height: 180, overflow: 'hidden' }}>
+          <View style={{ height: 180 }}>
             {currentCoverUri ? (
               <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
             ) : (
               <LinearGradient
-                colors={isDark
-                  ? [colors.primaryDark, colors.primary, colors.primary]
-                  : [colors.primaryDark, colors.primary, colors.primaryLight]}
+                colors={isDark ? [colors.primaryDark, colors.primary, colors.primary] : [colors.primaryDark, colors.primary, colors.primaryLight]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill as any}
               />
             )}
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.55)']}
-              style={StyleSheet.absoluteFill as any}
-            />
+            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.55)']} style={StyleSheet.absoluteFill as any} />
+            {/* Cover action buttons — inside cover, no overflow:hidden blocking them */}
+            <View style={{ position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', gap: 8 }}>
+              {currentCoverUri && (
+                <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
+                  <Ionicons name="trash-outline" size={15} color="#FFF" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                <Ionicons name="camera" size={15} color="#FFF" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Masthead row */}
           <View style={[styles.mastheadRow, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
-            <TouchableOpacity
-              onPress={() => setShowPhotoOptions(true)}
-              activeOpacity={0.85}
-              style={[styles.avatarRing, { borderColor: G, backgroundColor: SURF }]}
-            >
+            <TouchableOpacity onPress={() => setShowPhotoOptions(true)} activeOpacity={0.85} style={[styles.avatarRing, { borderColor: G, backgroundColor: SURF }]}>
               <Avatar url={localAvatarUri ?? user.avatarUrl} name={user.displayName} size={96} />
               <View style={[styles.avatarCameraBadge, { backgroundColor: G, borderColor: SURF }]}>
                 <Ionicons name="camera" size={12} color="#FFF" />
               </View>
             </TouchableOpacity>
             <View style={{ flex: 1, paddingLeft: 12, paddingTop: 8 }}>
-              <Text style={[styles.previewName, { color: TEXT }]} numberOfLines={1}>
-                {watch('displayName') || user.displayName}
-              </Text>
-              <Text style={[styles.previewHandle, { color: TEXT3 }]} numberOfLines={1}>
-                @{user.username || 'username'}
-              </Text>
-              {watch('bio') ? (
-                <Text style={[styles.previewBio, { color: TEXT2 }]} numberOfLines={2}>
-                  {watch('bio')}
-                </Text>
-              ) : null}
+              <Text style={[styles.previewName, { color: TEXT }]} numberOfLines={1}>{watch('displayName') || user.displayName}</Text>
+              <Text style={[styles.previewHandle, { color: TEXT3 }]} numberOfLines={1}>@{user.username || 'username'}</Text>
+              {watch('bio') ? <Text style={[styles.previewBio, { color: TEXT2 }]} numberOfLines={2}>{watch('bio')}</Text> : null}
             </View>
-          </View>
-
-          {/* Cover action buttons — rendered last so they sit on top of everything */}
-          <View style={{ position: 'absolute', top: 180 - 46, right: 10, flexDirection: 'row', gap: 8, zIndex: 100 }}>
-            {currentCoverUri && (
-              <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
-                <Ionicons name="trash-outline" size={15} color="#FFF" />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-              <Ionicons name="camera" size={15} color="#FFF" />
-            </TouchableOpacity>
           </View>
 
           {photoError ? <Text style={[styles.errorBannerText, { marginHorizontal: 16 }]}>{photoError}</Text> : null}

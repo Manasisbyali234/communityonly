@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity,
-  ActivityIndicator, Linking, Platform, Modal, Pressable, TextInput,
+  ActivityIndicator, Linking, Platform, Modal, Pressable, TextInput, useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +26,7 @@ export default function HelpRequestDetailScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const showToast = useToastStore((s) => s.showToast);
@@ -49,6 +50,7 @@ export default function HelpRequestDetailScreen() {
   const isUrgent = request?.urgency === 'URGENT';
   const isMyRequest = !!user && request?.userId === user.id;
   const hasOfferedHelp = !!user && (request?.helpers.some((h) => h.helperId === user.id) ?? false);
+  const isCompact = width < 360;
 
   const handleOfferHelpPrompt = async () => {
     if (!user) {
@@ -230,9 +232,9 @@ export default function HelpRequestDetailScreen() {
       >
         {/* Approval completes moderation; the request remains active until its owner closes it. */}
         {request.status === 'APPROVED' && (
-          <View style={styles.resolvedBanner}>
+          <View style={styles.activeBanner}>
             <Ionicons name="checkmark-circle" size={18} color="#059669" />
-            <Text style={styles.resolvedBannerText}>Status: Resolved — your request has been approved and published.</Text>
+            <Text style={styles.resolvedBannerText}>Status: Active — approved and published.</Text>
           </View>
         )}
         {request.status === 'RESOLVED' && (
@@ -272,7 +274,7 @@ export default function HelpRequestDetailScreen() {
               </View>
             )}
 
-            <View style={styles.dateTag}>
+            <View style={[styles.dateTag, isCompact && styles.dateTagCompact]}>
               <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
               <Text style={[styles.dateText, { color: colors.textMuted }]}>{formattedDate}</Text>
             </View>
@@ -307,7 +309,7 @@ export default function HelpRequestDetailScreen() {
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={styles.requesterNameRow}>
                 <Text style={[styles.requesterName, { color: colors.text }]}>{request.requesterName}</Text>
                 <View style={styles.verifiedBadge}>
                   <Ionicons name="checkmark-circle" size={12} color="#059669" />
@@ -582,6 +584,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#DCFCE7', padding: 12, borderRadius: 12,
   },
+  activeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#DCFCE7', padding: 12, borderRadius: 12,
+  },
   resolvedBannerText: { color: '#166534', fontSize: 13, fontWeight: '700' },
   pendingBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -610,6 +616,7 @@ const styles = StyleSheet.create({
   urgentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#DC2626' },
   urgentText: { color: '#DC2626', fontSize: 11, fontWeight: '800' },
   dateTag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' },
+  dateTagCompact: { marginLeft: 0 },
   dateText: { fontSize: 12 },
 
   title: { fontSize: 19, fontWeight: '800', lineHeight: 26, marginBottom: 10 },
@@ -622,8 +629,9 @@ const styles = StyleSheet.create({
 
   // Requester
   requesterRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 6 },
+  requesterNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   avatar: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
-  requesterName: { fontSize: 15, fontWeight: '700' },
+  requesterName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   verifiedText: { color: '#166534', fontSize: 10.5, fontWeight: '700' },
   requesterLocation: { fontSize: 12.5, marginTop: 2 },
@@ -641,8 +649,8 @@ const styles = StyleSheet.create({
   helperName: { fontSize: 13.5, fontWeight: '700' },
   helperTime: { fontSize: 11 },
   helperMessage: { fontSize: 13, fontStyle: 'italic', lineHeight: 18 },
-  helperContactActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  contactBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  helperContactActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  contactBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, flexGrow: 1 },
   contactBtnText: { fontSize: 12, fontWeight: '700' },
 
   // Bottom bar

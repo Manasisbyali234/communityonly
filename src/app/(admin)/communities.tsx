@@ -40,6 +40,30 @@ export default function AdminCommunities() {
   const isMobile = useIsMobile();
   const showToast = useToastStore((s) => s.showToast);
   const [tab, setTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [autoApproval, setAutoApproval] = useState(false);
+  const [autoApprovalLoading, setAutoApprovalLoading] = useState(false);
+
+  const fetchAutoApproval = useCallback(() => {
+    adminApiClient.get('/admin-panel/settings/auto-approval')
+      .then((r) => setAutoApproval(r.data.data.communityAutoApproval))
+      .catch(() => {});
+  }, []);
+
+  useFocusEffect(fetchAutoApproval);
+
+  const toggleAutoApproval = async () => {
+    setAutoApprovalLoading(true);
+    try {
+      const next = !autoApproval;
+      await adminApiClient.put('/admin-panel/settings/auto-approval', { type: 'community', enabled: next });
+      setAutoApproval(next);
+      showToast(next ? 'Auto approval enabled — all pending communities approved' : 'Auto approval disabled', next ? 'success' : 'info');
+      if (next) { loadPending(); loadAll(); }
+    } catch {
+      showToast('Failed to update auto approval', 'error');
+    }
+    setAutoApprovalLoading(false);
+  };
 
   // All communities state
   const [communities, setCommunities] = useState<any[]>([]);
@@ -182,6 +206,25 @@ export default function AdminCommunities() {
 
   return (
     <AdminShell title="Communities">
+      {/* ── Auto Approval Toggle ── */}
+      <View style={ms.autoApprovalBar}>
+        <View style={{ flex: 1 }}>
+          <Text style={ms.autoApprovalTitle}>Auto Approval</Text>
+          <Text style={ms.autoApprovalSub}>
+            {autoApproval ? 'New communities are approved automatically' : 'New communities require manual approval'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[ms.autoApprovalBtn, autoApproval && ms.autoApprovalBtnOn]}
+          onPress={toggleAutoApproval}
+          disabled={autoApprovalLoading}
+        >
+          <Text style={[ms.autoApprovalBtnText, autoApproval && ms.autoApprovalBtnTextOn]}>
+            {autoApprovalLoading ? '...' : autoApproval ? '✅ ON' : 'OFF'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ── Tabs ── */}
       <ScrollView
         horizontal
@@ -481,6 +524,30 @@ export default function AdminCommunities() {
 }
 
 const ms = StyleSheet.create({
+  autoApprovalBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    gap: 12,
+  },
+  autoApprovalTitle: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  autoApprovalSub: { fontSize: 11.5, color: '#6b7280', marginTop: 1 },
+  autoApprovalBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+    backgroundColor: '#f9fafb',
+  },
+  autoApprovalBtnOn: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
+  autoApprovalBtnText: { fontSize: 12, fontWeight: '700', color: '#6b7280' },
+  autoApprovalBtnTextOn: { color: '#fff' },
   tabsScroll: {
     backgroundColor: '#fff',
     borderBottomWidth: 1,

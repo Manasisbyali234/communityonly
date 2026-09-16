@@ -340,7 +340,7 @@ export default function CreateEvent() {
       formData.append('file', { uri, name: filename, type: mimeType } as any);
     }
 
-    const res = await apiClient.post('/media/upload-event', formData, { timeout: 60000 });
+    const res = await apiClient.post('/media/upload-event-image', formData, { timeout: 60000 });
     const uploadedUrl = res.data.data.url as string;
     console.log('[uploadBanner] upload response url:', uploadedUrl);
     return uploadedUrl;
