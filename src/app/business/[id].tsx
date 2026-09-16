@@ -147,8 +147,8 @@ export default function BusinessDetailScreen() {
     try {
       const conversation = await startConversation.mutateAsync({ participantId: business.userId });
       router.push(`/chat/${conversation.id}` as any);
-    } catch {
-      showToast('Could not open a chat with this business. Please try again.', 'error');
+    } catch (error: any) {
+      showToast(error?.response?.data?.message ?? error?.message ?? 'Could not open a chat with this business. Please try again.', 'error');
     }
   };
 

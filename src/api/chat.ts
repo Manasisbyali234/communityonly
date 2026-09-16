@@ -14,6 +14,19 @@ export const chatKeys = {
 
 const startConversationRequests = new Map<string, Promise<Conversation>>();
 
+/**
+ * Direct messages are only available after a connection request is accepted.
+ * This preflight protects every client entry point (including business cards
+ * and deep links); the messages service must enforce the same rule server-side.
+ */
+export async function assertMutualConnection(participantId: string): Promise<void> {
+  const res = await apiClient.get(`/connections/${participantId}/status`);
+  const connection = res.data?.data;
+  if (!connection || connection.status !== 'ACCEPTED') {
+    throw new Error('You can only message members after your connection request has been accepted.');
+  }
+}
+
 // Fetch active chat list
 export function useChatsQuery() {
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -71,8 +84,12 @@ export function useMessagesQuery(chatId: string) {
 // Send a message
 export function useSendMessageMutation() {
   const queryClient = useQueryClient();
-  return useMutation<Message, Error, { chatId: string; content: string }>({
-    mutationFn: async ({ chatId, content }) => {
+  return useMutation<Message, Error, { chatId: string; content: string; participantId?: string; requireConnection?: boolean }>({
+    mutationFn: async ({ chatId, content, participantId, requireConnection }) => {
+      if (requireConnection) {
+        if (!participantId) throw new Error('The chat participant could not be verified.');
+        await assertMutualConnection(participantId);
+      }
       const res = await apiClient.post<ApiResponse<Message>>(`/messages/conversations/${chatId}`, { content });
       const data = res.data.data;
       return data;
@@ -117,8 +134,9 @@ export function useStartConversationMutation() {
       const pending = startConversationRequests.get(participantId);
       if (pending) return pending;
 
-      const request = apiClient
-        .post<ApiResponse<Conversation>>('/messages/conversations', { participantId })
+      const request = Promise.resolve()
+        .then(() => assertMutualConnection(participantId))
+        .then(() => apiClient.post<ApiResponse<Conversation>>('/messages/conversations', { participantId }))
         .then((res) => res.data.data)
         .finally(() => startConversationRequests.delete(participantId));
 

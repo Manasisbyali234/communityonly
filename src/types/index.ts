@@ -61,6 +61,12 @@ export interface Community {
   feedPostPrompts?: string[];
   createdAt: string;
   updatedAt: string;
+  creatorId?: string;
+  ownerId?: string;
+  createdById?: string;
+  creator?: User;
+  owner?: User;
+  createdBy?: User;
   isJoined?: boolean; // Injected by backend serializers
   role?: 'MEMBER' | 'MODERATOR' | 'ADMIN'; // Injected by backend serializers
 }
@@ -145,6 +151,11 @@ export interface Event {
   startsAt: string;
   endsAt?: string;
   coverUrl?: string;
+  /** API compatibility aliases for event imagery. */
+  imageUrl?: string;
+  bannerUrl?: string;
+  images?: string[];
+  mediaUrls?: string[];
   rsvpCount: number;
   interestedCount: number;
   likesCount: number;

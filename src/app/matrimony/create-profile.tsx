@@ -26,6 +26,19 @@ import { useConfirmStore } from '../../store/confirmStore';
 
 const STEPS = ['Personal', 'Astrology', 'Career', 'Family', 'Photos & Consent'];
 
+const isAtLeast18 = (dateOfBirth: string) => {
+  const birthDate = new Date(`${dateOfBirth}T12:00:00`);
+  if (Number.isNaN(birthDate.getTime())) return false;
+  const today = new Date();
+  const cutoff = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+  return birthDate <= cutoff;
+};
+
+const latestEligibleBirthDate = () => {
+  const today = new Date();
+  return new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+};
+
 const INITIAL_FORM = {
   // Personal
   displayName: '', gender: '' as Gender | '',
@@ -404,6 +417,10 @@ export default function CreateMatrimonyProfile() {
   });
 
   const handleSubmit = async () => {
+    if (!myProfile?.id && !isAtLeast18(form.dateOfBirth)) {
+      Alert.alert('Age requirement', 'You must be at least 18 years old to create a Matrimony profile.');
+      return;
+    }
     if (photos.length < 4) { Alert.alert('More Photos Required', `Please upload at least 4 photos. You have ${photos.length}.`); return; }
     if (!consents.accurate || !consents.terms || !consents.privacy || !consents.display) {
       const missing = ['accurate','terms','privacy','display'].filter(k => !consents[k as keyof typeof consents]);
@@ -479,7 +496,7 @@ export default function CreateMatrimonyProfile() {
               <Text style={{ color: form.dateOfBirth ? colors.text : colors.textMuted }}>{form.dateOfBirth || 'Select date of birth'}</Text>
               <Ionicons name="calendar-outline" size={19} color={colors.primary} />
             </TouchableOpacity>
-            {showDatePicker && <DateTimePicker value={form.dateOfBirth ? new Date(form.dateOfBirth + 'T12:00:00') : new Date(1995,0,1)} mode="date" maximumDate={new Date()} onValueChange={(_e: any, d?: Date) => { if (Platform.OS !== 'ios') setShowDatePicker(false); if (d) set('dateOfBirth')(d.toISOString().slice(0,10)); }} onDismiss={() => setShowDatePicker(false)} />}
+            {showDatePicker && <DateTimePicker value={form.dateOfBirth ? new Date(form.dateOfBirth + 'T12:00:00') : new Date(1995,0,1)} mode="date" maximumDate={latestEligibleBirthDate()} onValueChange={(_e: any, d?: Date) => { if (Platform.OS !== 'ios') setShowDatePicker(false); if (d) set('dateOfBirth')(d.toISOString().slice(0,10)); }} onDismiss={() => setShowDatePicker(false)} />}
             {showDatePicker && Platform.OS === 'ios' && <TouchableOpacity style={[styles.doneBtn, { backgroundColor: colors.primary }]} onPress={() => setShowDatePicker(false)}><Text style={styles.doneBtnText}>Done</Text></TouchableOpacity>}
             <Dropdown label="Marital Status *" options={MARITAL_STATUS_OPTIONS.map(o => MARITAL_STATUS_LABELS[o])} value={form.maritalStatus ? MARITAL_STATUS_LABELS[form.maritalStatus as MaritalStatus] : ''} onChange={v => { const k = MARITAL_STATUS_OPTIONS.find(o => MARITAL_STATUS_LABELS[o] === v); if (k) setForm(f => ({ ...f, maritalStatus: k })); }} colors={colors} />
             <Dropdown label="Height *" options={HEIGHT_OPTIONS} value={form.height} onChange={set('height')} colors={colors} />
@@ -643,6 +660,7 @@ export default function CreateMatrimonyProfile() {
                 if (!form.displayName.trim()) { Alert.alert('Required', 'Please enter your full name.'); return; }
                 if (!form.gender) { Alert.alert('Required', 'Please select your gender.'); return; }
                 if (!myProfile?.id && !form.dateOfBirth) { Alert.alert('Required', 'Please select your date of birth.'); return; }
+                if (!isAtLeast18(form.dateOfBirth)) { Alert.alert('Age requirement', 'You must be at least 18 years old to create a Matrimony profile.'); return; }
                 if (!myProfile?.id && !form.maritalStatus) { Alert.alert('Required', 'Please select your marital status.'); return; }
                 if (!myProfile?.id && !form.height) { Alert.alert('Required', 'Please select your height.'); return; }
                 if (!form.bloodGroup) { Alert.alert('Required', 'Please select your blood group.'); return; }

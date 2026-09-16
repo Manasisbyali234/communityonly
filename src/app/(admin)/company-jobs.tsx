@@ -15,6 +15,18 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   DRAFT:  { bg: '#FEF9C3', text: '#92400E' },
 };
 
+type JobStatusFilter = 'ALL' | 'DRAFT' | 'ACTIVE' | 'CLOSED';
+const JOB_STATUS_FILTERS: JobStatusFilter[] = ['ALL', 'DRAFT', 'ACTIVE', 'CLOSED'];
+
+function getEffectiveJobStatus(job: any): 'DRAFT' | 'ACTIVE' | 'CLOSED' {
+  if (job.status === 'DRAFT') return 'DRAFT';
+  if (job.lastDate) {
+    const closingDate = new Date(`${String(job.lastDate).split('T')[0]}T23:59:59.999`);
+    if (!Number.isNaN(closingDate.getTime()) && closingDate.getTime() < Date.now()) return 'CLOSED';
+  }
+  return job.status === 'CLOSED' ? 'CLOSED' : 'ACTIVE';
+}
+
 const EMP_LABELS: Record<string, string> = {
   FULL_TIME: 'Full Time', PART_TIME: 'Part Time',
   INTERNSHIP: 'Internship', CONTRACT: 'Contract',
@@ -28,6 +40,7 @@ export default function AdminCompanyJobs() {
   const [employer, setEmployer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<JobStatusFilter>('ALL');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,25 +66,6 @@ export default function AdminCompanyJobs() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const closeJob = async (id: string) => {
-    const ok = await useConfirmStore.getState().confirm({
-      title: 'Close job opening?',
-      message: 'This job posting will be closed and applicants will no longer be able to apply.',
-      confirmText: 'Close Job',
-      cancelText: 'Cancel',
-      isDestructive: true,
-      icon: 'lock-closed-outline',
-    });
-    if (!ok) return;
-
-    try {
-      await adminApiClient.put(`/jobs/${id}`, { status: 'CLOSED' });
-      setJobs(j => j.map(x => x.id === id ? { ...x, status: 'CLOSED' } : x));
-    } catch {
-      useToastStore.getState().showToast('Failed to close job', 'error');
-    }
-  };
-
   const deleteJob = async (id: string, title: string) => {
     const ok = await useConfirmStore.getState().confirm({
       title: 'Delete job?',
@@ -91,11 +85,12 @@ export default function AdminCompanyJobs() {
     }
   };
 
-  const filtered = jobs.filter(j =>
-    !search ||
-    j.jobTitle?.toLowerCase().includes(search.toLowerCase()) ||
-    j.location?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = jobs.filter(j => {
+    const matchesSearch = !search ||
+      j.jobTitle?.toLowerCase().includes(search.toLowerCase()) ||
+      j.location?.toLowerCase().includes(search.toLowerCase());
+    return matchesSearch && (statusFilter === 'ALL' || getEffectiveJobStatus(j) === statusFilter);
+  });
 
   const totalApps = filtered.reduce((s, j) => s + (j.applyCount ?? 0), 0);
 
@@ -142,6 +137,22 @@ export default function AdminCompanyJobs() {
         </View>
       </View>
 
+      <View style={s.statusFilters}>
+        {JOB_STATUS_FILTERS.map((status) => {
+          const active = statusFilter === status;
+          const color = status === 'ALL' ? C.accent : STATUS_COLORS[status].text;
+          return (
+            <TouchableOpacity
+              key={status}
+              onPress={() => setStatusFilter(status)}
+              style={[s.statusFilter, active && { backgroundColor: color, borderColor: color }]}
+            >
+              <Text style={[s.statusFilterText, active && { color: '#FFF' }]}>{status === 'ALL' ? 'All' : status}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {loading ? <LoadingOverlay /> : filtered.length === 0 ? (
         <View style={s.card}>
           <EmptyState message={`No jobs posted under ${name} yet.`} />
@@ -162,7 +173,8 @@ export default function AdminCompanyJobs() {
           )}
           <ScrollView>
             {filtered.map((job, i) => {
-              const sc = STATUS_COLORS[job.status] ?? STATUS_COLORS.DRAFT;
+              const effectiveStatus = getEffectiveJobStatus(job);
+              const sc = STATUS_COLORS[effectiveStatus] ?? STATUS_COLORS.DRAFT;
               if (isMobile) {
                 return (
                   <TouchableOpacity
@@ -176,7 +188,7 @@ export default function AdminCompanyJobs() {
                         <Text style={s.jobMeta}>{EMP_LABELS[job.employmentType] ?? job.employmentType} · {job.location}</Text>
                       </View>
                       <View style={[s.statusBadge, { backgroundColor: sc.bg }]}>
-                        <Text style={[s.statusText, { color: sc.text }]}>{job.status}</Text>
+                        <Text style={[s.statusText, { color: sc.text }]}>{effectiveStatus}</Text>
                       </View>
                     </View>
                     <View style={s.mobileRow}>
@@ -191,7 +203,6 @@ export default function AdminCompanyJobs() {
                         onPress={() => router.push({ pathname: '/(admin)/job-applicants', params: { id: job.id } } as any)} />
                       <ActionBtn icon="edit-2" label="Edit"
                         onPress={() => router.push({ pathname: '/(admin)/add-job', params: { id: job.id } } as any)} />
-                      {job.status === 'ACTIVE' && <ActionBtn icon="x-circle" label="Close" color={C.warn} onPress={() => closeJob(job.id)} />}
                       <ActionBtn icon="trash-2" label="Delete" color={C.danger} onPress={() => deleteJob(job.id, job.jobTitle)} />
                     </View>
                   </TouchableOpacity>
@@ -220,7 +231,7 @@ export default function AdminCompanyJobs() {
                   </View>
                   <View style={[s.cell, { width: 80 }]}>
                     <View style={[s.statusBadge, { backgroundColor: sc.bg }]}>
-                      <Text style={[s.statusText, { color: sc.text }]}>{job.status}</Text>
+                      <Text style={[s.statusText, { color: sc.text }]}>{effectiveStatus}</Text>
                     </View>
                   </View>
                   <View style={[s.cell, { width: 180, flexDirection: 'row', gap: 4, flexWrap: 'wrap' }]}>
@@ -228,7 +239,6 @@ export default function AdminCompanyJobs() {
                       onPress={() => router.push({ pathname: '/(admin)/job-applicants', params: { id: job.id } } as any)} />
                     <ActionBtn icon="edit-2" label="Edit"
                       onPress={() => router.push({ pathname: '/(admin)/add-job', params: { id: job.id } } as any)} />
-                    {job.status === 'ACTIVE' && <ActionBtn icon="x-circle" label="Close" color={C.warn} onPress={() => closeJob(job.id)} />}
                     <ActionBtn icon="trash-2" label="Delete" color={C.danger} onPress={() => deleteJob(job.id, job.jobTitle)} />
                   </View>
                 </TouchableOpacity>
@@ -266,6 +276,9 @@ const s = StyleSheet.create({
   bannerStat: { alignItems: 'center' },
   bannerStatVal: { fontSize: 18, fontWeight: '800', color: C.accent },
   bannerStatLabel: { fontSize: 10, color: C.textMuted, fontWeight: '600' },
+  statusFilters: { flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' },
+  statusFilter: { borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: C.white },
+  statusFilterText: { color: C.textSecond, fontSize: 12, fontWeight: '700' },
   // Table
   card: { backgroundColor: C.white, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: C.border, marginBottom: 20 },
   tableHeader: { flexDirection: 'row', backgroundColor: C.headerBg, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: C.border },

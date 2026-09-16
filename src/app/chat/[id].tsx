@@ -18,11 +18,12 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMessagesQuery, useSendMessageMutation, useChatSocket, useChatsQuery, useMarkConversationReadMutation, useConversationQuery } from '../../api/chat';
+import { assertMutualConnection, useMessagesQuery, useSendMessageMutation, useChatSocket, useChatsQuery, useMarkConversationReadMutation, useConversationQuery } from '../../api/chat';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
+import { useConnectionStatusQuery } from '../../api/connections';
 import { apiClient, API_BASE_URL } from '../../api/client';
 import Avatar from '../../components/common/Avatar';
 import { Ionicons } from '@expo/vector-icons';
@@ -220,6 +221,8 @@ export default function ChatScreen() {
   const participantAvatar: string = participant?.avatarUrl ?? '';
   const participantIsOnline = participant?.isOnline === true;
   const participantStatus = participantIsOnline ? 'Online' : formatLastSeen(participant?.lastSeenAt);
+  const { data: connectionStatus, isLoading: isCheckingConnection } = useConnectionStatusQuery(participantId ?? '', currentUser?.id);
+  const canMessage = !!participantId && connectionStatus === 'ACCEPTED';
 
   useChatSocket(id);
   const sendMessageMutation = useSendMessageMutation();
@@ -245,10 +248,10 @@ export default function ChatScreen() {
 
   const handleSend = () => {
     const text = inputText.trim();
-    if (!text) return;
+    if (!text || !canMessage) return;
     setInputText('');
     sendMessageMutation.mutate(
-      { chatId: id, content: text },
+      { chatId: id, content: text, participantId, requireConnection: true },
       {
         onSuccess: () => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100),
         onError: () => setInputText(text),
@@ -257,6 +260,7 @@ export default function ChatScreen() {
   };
 
   const handleAttach = useCallback(async () => {
+    if (!canMessage) return;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: [
@@ -326,6 +330,10 @@ export default function ChatScreen() {
       const msgPayload = { content: msgContent, mediaUrl: url, mediaType: backendMediaType };
       console.log('[attach] message payload:', JSON.stringify(msgPayload));
 
+      // Attachments use a direct request rather than the text mutation, so
+      // apply the same shared authorization preflight here as well.
+      if (!participantId) throw new Error('The chat participant could not be verified.');
+      await assertMutualConnection(participantId);
       const msgRes = await apiClient.post(`/messages/conversations/${id}`, msgPayload);
       const newMessage = (msgRes.data as any)?.data;
       console.log('[attach] message saved:', JSON.stringify(newMessage));
@@ -351,7 +359,7 @@ export default function ChatScreen() {
     } finally {
       setUploading(false);
     }
-  }, [id, queryClient]);
+  }, [id, queryClient, canMessage, participantId]);
 
   useEffect(() => {
     if (messages.length > 0 && messages.length > prevMessageCount.current) {
@@ -556,19 +564,20 @@ export default function ChatScreen() {
           />
         )}
 
-        {showEmoji && (
+        {showEmoji && canMessage && (
           <View style={styles.emojiPanel}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.emojiScroll}>
               {EMOJIS.map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
                   onPress={() => {
+                    if (!canMessage) return;
                     const text = (inputText + emoji).trim();
                     if (!text) return;
                     setInputText('');
                     setShowEmoji(false);
                     sendMessageMutation.mutate(
-                      { chatId: id, content: text },
+                      { chatId: id, content: text, participantId, requireConnection: true },
                       {
                         onSuccess: () => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100),
                         onError: () => setInputText(text),
@@ -591,9 +600,15 @@ export default function ChatScreen() {
           </View>
         )}
 
-        <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        {!isCheckingConnection && !canMessage && participantId ? (
+          <View style={styles.connectionNotice}>
+            <Ionicons name="people-outline" size={16} color="#54656F" />
+            <Text style={styles.connectionNoticeText}>Messaging is available after you are connected.</Text>
+          </View>
+        ) : null}
+        <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 8), opacity: canMessage ? 1 : 0.55 }]}>
           <View style={styles.inputWrapper}>
-            <TouchableOpacity onPress={() => setShowEmoji(v => !v)} style={styles.inputIcon}>
+            <TouchableOpacity onPress={() => setShowEmoji(v => !v)} style={styles.inputIcon} disabled={!canMessage}>
               <Ionicons name="happy-outline" size={24} color={showEmoji ? WA.sendBtn : '#8696A0'} />
             </TouchableOpacity>
             <TextInput
@@ -602,14 +617,15 @@ export default function ChatScreen() {
               value={inputText}
               onChangeText={setInputText}
               onSubmitEditing={handleSend}
+              editable={canMessage}
               multiline
               style={styles.textInput}
             />
-            <TouchableOpacity onPress={handleAttach} style={styles.inputIcon} disabled={uploading}>
-              <Ionicons name="attach" size={24} color={uploading ? '#ccc' : '#8696A0'} />
+            <TouchableOpacity onPress={handleAttach} style={styles.inputIcon} disabled={uploading || !canMessage}>
+              <Ionicons name="attach" size={24} color={uploading || !canMessage ? '#ccc' : '#8696A0'} />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={handleSend} style={[styles.sendButton, { opacity: inputText.trim() ? 1 : 0.85 }]} activeOpacity={0.75}>
+          <TouchableOpacity onPress={handleSend} disabled={!canMessage} style={[styles.sendButton, { opacity: canMessage && inputText.trim() ? 1 : 0.45 }]} activeOpacity={0.75}>
             <Ionicons name={inputText.trim() ? 'send' : 'mic'} size={20} color="#FFFFFF" style={inputText.trim() ? { marginLeft: 2 } : undefined} />
           </TouchableOpacity>
         </View>
@@ -703,6 +719,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4, paddingVertical: Platform.OS === 'ios' ? 8 : 4, minHeight: 44,
   },
   inputIcon: { padding: 6, alignSelf: 'flex-end' },
+  connectionNotice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: '#F1F5F9' },
+  connectionNoticeText: { color: '#54656F', fontSize: 12.5, fontWeight: '600' },
   textInput: {
     flex: 1, fontSize: 15, color: WA.inputText,
     paddingHorizontal: 4, paddingVertical: 0, maxHeight: 120, alignSelf: 'center',

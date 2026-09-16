@@ -32,8 +32,11 @@ const toAbs = (url?: string): string | undefined => {
 };
 
 const normalizeEvent = (e: any): Event => {
-  const coverUrl = toAbs(e.coverUrl);
-  console.log('[normalizeEvent] id:', e.id, '| raw coverUrl:', e.coverUrl, '| resolved:', coverUrl);
+  // Older API deployments serialize the event image under imageUrl, bannerUrl,
+  // or the first entry in images/mediaUrls.  Normalize all supported response
+  // shapes at the boundary so the UI always receives the same field.
+  const rawCoverUrl = e.coverUrl ?? e.imageUrl ?? e.bannerUrl ?? e.images?.[0] ?? e.mediaUrls?.[0];
+  const coverUrl = toAbs(rawCoverUrl);
   return { ...e, coverUrl, userRsvpStatus: e.userRsvpStatus ?? e.myRsvp ?? null };
 };
 

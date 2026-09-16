@@ -133,7 +133,13 @@ export default function CommunityDetails() {
 
   const communityStatus = (community as any).status;
   const isApproved = !communityStatus || communityStatus === 'APPROVED';
-  const isCreator = (community as any).creatorId === currentUserId || (community as any).ownerId === currentUserId;
+  const creator = (community as any).creator ?? (community as any).owner ?? (community as any).createdBy;
+  const isCreator = !!currentUserId && [
+    (community as any).creatorId,
+    (community as any).ownerId,
+    (community as any).createdById,
+    creator?.id,
+  ].includes(currentUserId);
   const showJoinAction = isApproved && memberRole !== 'ADMIN' && memberRole !== 'OWNER' && memberRole !== 'MODERATOR' && !isCreator;
 
   // Responsive horizontal padding: 16px on small screens, 20px on wider

@@ -10,21 +10,23 @@ import { useTheme } from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { confirmAction } from '../../store/confirmStore';
-import { useMyBusinessesQuery, useDeleteBusinessMutation, useArchiveBusinessMutation, Business, BusinessStatus } from '../../api/business';
+import { useMyBusinessesQuery, useDeleteBusinessMutation, useArchiveBusinessMutation, useUnarchiveBusinessMutation, Business, BusinessStatus } from '../../api/business';
 
 const STATUS_CONFIG: Record<BusinessStatus, { label: string; color: string; icon: string }> = {
   APPROVED: { label: 'Approved',         color: '#16A34A', icon: 'checkmark-circle' },
   PENDING:  { label: 'Pending Approval', color: '#D97706', icon: 'time' },
   REJECTED: { label: 'Rejected',         color: '#DC2626', icon: 'close-circle' },
   DRAFT:    { label: 'Draft',            color: '#6B7280', icon: 'ellipsis-horizontal-circle' },
-  WITHDRAWN:{ label: 'Withdrawn',        color: '#6B7280', icon: 'ban' },
+  WITHDRAWN:{ label: 'Archived',         color: '#6B7280', icon: 'archive' },
+  ARCHIVED: { label: 'Archived',         color: '#6B7280', icon: 'archive' },
 };
 
-function BusinessStatusCard({ business, onView, onEdit, onArchive, onDelete, colors, isDark }: {
+function BusinessStatusCard({ business, onView, onEdit, onArchive, onUnarchive, onDelete, colors, isDark }: {
   business: Business;
   onView: () => void;
   onEdit: () => void;
   onArchive: () => void;
+  onUnarchive: () => void;
   onDelete: () => void;
   colors: any;
   isDark: boolean;
@@ -107,7 +109,12 @@ function BusinessStatusCard({ business, onView, onEdit, onArchive, onDelete, col
             </Text>
           </TouchableOpacity>
         )}
-        {business.status !== 'WITHDRAWN' && (
+        {(business.status === 'WITHDRAWN' || business.status === 'ARCHIVED') ? (
+          <TouchableOpacity style={[styles.footerBtn, { backgroundColor: isDark ? 'rgba(45,106,45,0.15)' : colors.primaryContainer }]} onPress={onUnarchive}>
+            <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
+            <Text style={[styles.footerBtnText, { color: colors.primary }]}>Unarchive</Text>
+          </TouchableOpacity>
+        ) : (
           <TouchableOpacity style={[styles.footerBtn, { backgroundColor: isDark ? 'rgba(217,119,6,0.12)' : '#FFFBEB' }]} onPress={onArchive}>
             <Ionicons name="archive-outline" size={15} color="#D97706" />
             <Text style={[styles.footerBtnText, { color: '#D97706' }]}>Archive</Text>
@@ -131,6 +138,7 @@ export default function MyBusinessesScreen() {
 
   const { data: businesses = [], isLoading, refetch } = useMyBusinessesQuery();
   const archiveMutation = useArchiveBusinessMutation();
+  const unarchiveMutation = useUnarchiveBusinessMutation();
   const deleteMutation = useDeleteBusinessMutation();
 
   const handleArchive = useCallback(async (business: Business) => {
@@ -149,6 +157,23 @@ export default function MyBusinessesScreen() {
       showToast('Failed to archive business.', 'error');
     }
   }, [archiveMutation, showToast]);
+
+  const handleUnarchive = useCallback(async (business: Business) => {
+    const confirmed = await confirmAction({
+      title: 'Unarchive Business?',
+      message: `"${business.businessName}" will be returned to your submissions for review and publication.`,
+      confirmText: 'Unarchive',
+      isDestructive: false,
+      icon: 'arrow-undo-outline',
+    });
+    if (!confirmed) return;
+    try {
+      await unarchiveMutation.mutateAsync(business.id);
+      showToast('Business unarchived.', 'success');
+    } catch {
+      showToast('Failed to unarchive business.', 'error');
+    }
+  }, [unarchiveMutation, showToast]);
 
   const handleDelete = useCallback(async (business: Business) => {
     const confirmed = await confirmAction({
@@ -221,6 +246,7 @@ export default function MyBusinessesScreen() {
               onView={() => router.push(`/business/${item.id}` as any)}
               onEdit={() => router.push(`/business/submit?id=${item.id}&from=my-businesses` as any)}
               onArchive={() => handleArchive(item)}
+              onUnarchive={() => handleUnarchive(item)}
               onDelete={() => handleDelete(item)}
             />
           )}

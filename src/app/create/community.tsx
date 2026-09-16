@@ -86,7 +86,7 @@ export default function CreateCommunity() {
   const [cropTarget, setCropTarget] = useState<'banner' | 'avatar'>('banner');
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; description?: string; category?: string }>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<string | null>(null);
 
   // Rules
   const [rules, setRules] = useState<{ title: string; description: string }[]>([]);
@@ -230,13 +230,11 @@ export default function CreateCommunity() {
         );
       }
 
-      // New communities are pending moderation. Posting here used to turn a
-      // successful creation into a confusing failure state.
-
       await queryClient.invalidateQueries({ queryKey: communityKeys.list() });
       await queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
       await queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'my-requests'] });
-      setSubmitted(true);
+      const created = res.data?.data ?? res.data;
+      setSubmissionStatus(String(created?.status ?? created?.approvalStatus ?? 'PENDING').toUpperCase());
     } catch (err: any) {
       console.log('[create-community] error:', JSON.stringify(err?.response?.data));
       const data = err?.response?.data;
@@ -250,15 +248,19 @@ export default function CreateCommunity() {
     }
   };
 
-  if (submitted) {
+  const isLiveImmediately = ['APPROVED', 'ACTIVE', 'LIVE', 'PUBLISHED'].includes(submissionStatus ?? '');
+
+  if (submissionStatus) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 32 }]}>
-        <Ionicons name="time-outline" size={64} color={colors.primary} style={{ marginBottom: 24 }} />
+        <Ionicons name={isLiveImmediately ? 'checkmark-circle-outline' : 'time-outline'} size={64} color={isLiveImmediately ? '#16A34A' : colors.primary} style={{ marginBottom: 24 }} />
         <Text style={[styles.headerTitle, { color: colors.text, fontSize: 20, textAlign: 'center', marginBottom: 16 }]}>
-          Request Submitted!
+          {isLiveImmediately ? 'Community Is Live!' : 'Request Submitted!'}
         </Text>
         <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 32 }}>
-          Your community creation request has been submitted successfully and is awaiting admin approval. You can track its status in Communities. Posts drafted here are not published until the community is approved.
+          {isLiveImmediately
+            ? 'Your community was approved automatically and is now live for members to discover and join.'
+            : 'Your community creation request has been submitted successfully and is awaiting admin approval. You can track its status in Communities. Posts drafted here are not published until the community is approved.'}
         </Text>
         <TouchableOpacity
           onPress={goBack}

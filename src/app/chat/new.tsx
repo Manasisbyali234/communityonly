@@ -33,10 +33,20 @@ export default function NewChatScreen() {
   const users = connectionsList
     .map((cn: any) => cn.user ?? cn)
     .filter((u: any) => u?.id && u.id !== currentUser?.id);
+  const connectedUserIds = new Set(users.map((user: any) => user.id));
 
   // Auto-resolve participant from query param if provided
   useEffect(() => {
     if (!participantId || hasResolvedParticipant.current) return;
+
+    // Never open an old direct conversation from a link unless that member is
+    // still an accepted connection.  This must happen before looking up an
+    // existing conversation because that path otherwise bypasses creation.
+    if (!isLoading && !connectedUserIds.has(participantId)) {
+      hasResolvedParticipant.current = true;
+      return;
+    }
+    if (isLoading) return;
 
     const existing = conversations.find((conversation) =>
       conversation.participants?.some((participant) => participant.userId === participantId)
@@ -53,13 +63,19 @@ export default function NewChatScreen() {
       {
         onSuccess: (conversation) => router.replace(`/chat/${conversation.id}` as any),
         onError: (error: any) => {
+          const message = error?.response?.data?.message ?? error?.message;
+          if (message) {
+            // The picker only lists connections, but a request can be revoked
+            // between rendering and tapping a deep link.
+            console.warn('[NewChat] conversation blocked:', message);
+          }
           if (error?.response?.status !== 429) {
             hasResolvedParticipant.current = false;
           }
         },
       }
     );
-  }, [participantId, conversations, router, startConversation]);
+  }, [participantId, conversations, router, startConversation, isLoading, connectionsList]);
 
   const filteredUsers = users.filter((user: any) => {
     if (!searchText.trim()) return true;

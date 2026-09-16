@@ -282,7 +282,7 @@ export default function CreateEvent() {
   const [bannerUri, setBannerUri] = useState<string | null>(null);
   const [cropUri, setCropUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<string | null>(null);
   const createEvent = useCreateEventMutation();
   const updateEvent = useUpdateEventMutation();
   const { data: existingEvent, isLoading: loadingExisting } = useEventDetailQuery(editId);
@@ -340,9 +340,12 @@ export default function CreateEvent() {
       formData.append('file', { uri, name: filename, type: mimeType } as any);
     }
 
-    const res = await apiClient.post('/media/upload-event-image', formData, { timeout: 60000 });
-    const uploadedUrl = res.data.data.url as string;
-    console.log('[uploadBanner] upload response url:', uploadedUrl);
+    // /media/upload is the upload contract shared by the event and community
+    // forms.  The old event-only route is not available on every deployment,
+    // which caused the event to be saved without its selected image.
+    const res = await apiClient.post('/media/upload', formData, { timeout: 60000 });
+    const uploadedUrl = res.data?.data?.url ?? res.data?.url;
+    if (!uploadedUrl || typeof uploadedUrl !== 'string') throw new Error('The image upload did not return a URL.');
     return uploadedUrl;
   };
 
@@ -400,8 +403,8 @@ export default function CreateEvent() {
         router.replace(`/events/${editId}` as any);
         return;
       }
-      await createEvent.mutateAsync(payload);
-      setSubmitted(true);
+      const created = await createEvent.mutateAsync(payload);
+      setSubmissionStatus(String((created as any)?.status ?? 'PENDING_APPROVAL').toUpperCase());
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Unknown error';
       const errors = err?.response?.data?.errors;
@@ -410,16 +413,19 @@ export default function CreateEvent() {
     }
   };
 
-  // ── Pending Approval Screen ──────────────────────────────────────────────
-  if (!isEdit && submitted) {
+  const isLiveImmediately = ['APPROVED', 'ACTIVE', 'LIVE', 'PUBLISHED'].includes(submissionStatus ?? '');
+
+  if (!isEdit && submissionStatus) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 32, paddingTop: insets.top }]}>
-        <View style={[styles.pendingIconWrap, { backgroundColor: '#FFF8E1' }]}>
-          <Ionicons name="time-outline" size={56} color="#F59E0B" />
+        <View style={[styles.pendingIconWrap, { backgroundColor: isLiveImmediately ? '#ECFDF3' : '#FFF8E1' }]}>
+          <Ionicons name={isLiveImmediately ? 'checkmark-circle-outline' : 'time-outline'} size={56} color={isLiveImmediately ? '#16A34A' : '#F59E0B'} />
         </View>
-        <Text style={[styles.pendingTitle, { color: colors.text }]}>Event Submitted!</Text>
+        <Text style={[styles.pendingTitle, { color: colors.text }]}>{isLiveImmediately ? 'Event Is Live!' : 'Event Submitted!'}</Text>
         <Text style={[styles.pendingMessage, { color: colors.textSecondary }]}>
-          Your event has been submitted successfully and is awaiting admin approval. It will be published once an administrator approves it.
+          {isLiveImmediately
+            ? 'Your event was approved automatically and is now visible to the community.'
+            : 'Your event has been submitted successfully and is awaiting admin approval. It will be published once an administrator approves it.'}
         </Text>
         <Button
           title="Back to Home"

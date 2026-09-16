@@ -34,9 +34,18 @@ export default function ChatListScreen() {
   const [activeTab, setActiveTab] = useState<ChatTab>('all');
 
   // Real conversations from backend
+  // A historical conversation must not remain a way to bypass the accepted
+  // connection requirement.  Keep only direct conversations with a current
+  // connection; conversations without a participant are retained for system
+  // and group chat compatibility.
   const conversations = useMemo(() => {
-    return serverChats;
-  }, [serverChats]);
+    const connectedUserIds = new Set(
+      (myConnections || []).map((connection: any) => (connection.user ?? connection)?.id).filter(Boolean)
+    );
+    return serverChats.filter((conversation) =>
+      !conversation.participant?.id || connectedUserIds.has(conversation.participant.id)
+    );
+  }, [serverChats, myConnections]);
 
   // Real unread calculation
   const totalUnread = useMemo(() => {

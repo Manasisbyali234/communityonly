@@ -8,6 +8,31 @@ import Avatar from '../../../../components/common/Avatar';
 import Skeleton from '../../../../components/feedback/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../../store/authStore';
+import { useConnectionStatusQuery } from '../../../../api/connections';
+
+function MemberRow({ item, currentUserId, colors, typography, roundness, router }: any) {
+  const { data: connectionStatus } = useConnectionStatusQuery(item.id, currentUserId);
+  const canMessage = connectionStatus === 'ACCEPTED';
+
+  return (
+    <View style={[styles.memberRow, { borderBottomColor: colors.borderSecondary }]}>
+      <Avatar url={item.avatarUrl} name={item.displayName} size={40} />
+      <View style={styles.memberInfo}>
+        <Text style={[styles.displayName, { color: colors.text, fontSize: typography.sizes.md }]}>{item.displayName}</Text>
+        <Text style={[styles.username, { color: colors.textSecondary, fontSize: typography.sizes.xs }]}>@{item.username}</Text>
+      </View>
+      {item.id !== currentUserId && canMessage && (
+        <TouchableOpacity
+          onPress={() => router.push(`/chat/new?participantId=${item.id}` as any)}
+          style={[styles.messageBtn, { backgroundColor: colors.inputBg, borderRadius: roundness.sm }]}
+          accessibilityLabel={`Message ${item.displayName}`}
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.text} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
 
 export default function CommunityMembers() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,25 +54,7 @@ export default function CommunityMembers() {
   });
 
   const renderMemberRow = ({ item }: { item: any }) => (
-    <View style={[styles.memberRow, { borderBottomColor: colors.borderSecondary }]}>
-      <Avatar url={item.avatarUrl} name={item.displayName} size={40} />
-      <View style={styles.memberInfo}>
-        <Text style={[styles.displayName, { color: colors.text, fontSize: typography.sizes.md }]}>
-          {item.displayName}
-        </Text>
-        <Text style={[styles.username, { color: colors.textSecondary, fontSize: typography.sizes.xs }]}>
-          @{item.username}
-        </Text>
-      </View>
-      {item.id !== currentUserId && (
-      <TouchableOpacity
-        onPress={() => router.push({ pathname: '/chat/[id]', params: { id: `chat_${item.username}` } })}
-        style={[styles.messageBtn, { backgroundColor: colors.inputBg, borderRadius: roundness.sm }]}
-      >
-        <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.text} />
-      </TouchableOpacity>
-      )}
-    </View>
+    <MemberRow item={item} currentUserId={currentUserId} colors={colors} typography={typography} roundness={roundness} router={router} />
   );
 
   return (

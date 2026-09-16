@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from './client';
+import { toProxyUrl } from './media';
 
 export interface Job {
   id: string;
@@ -64,8 +65,19 @@ export interface Employer {
   jobCount: number;
 }
 
-import { toProxyUrl } from './media';
 const toAbsUrl = toProxyUrl;
+
+/** Last dates are inclusive, so a job closes at the end of that date. */
+export function getEffectiveJobStatus(job: Pick<Job, 'status' | 'lastDate'>): Job['status'] {
+  if (job.status === 'DRAFT') return 'DRAFT';
+  if (job.lastDate) {
+    const closingDate = new Date(`${job.lastDate.split('T')[0]}T23:59:59.999`);
+    if (!Number.isNaN(closingDate.getTime()) && closingDate.getTime() < Date.now()) return 'CLOSED';
+  }
+  return job.status === 'CLOSED' ? 'CLOSED' : 'ACTIVE';
+}
+
+const normalizeJob = (job: Job): Job => ({ ...job, status: getEffectiveJobStatus(job) });
 
 export function usePublicEmployersQuery() {
   return useQuery({
@@ -84,7 +96,7 @@ export function useCompanyJobsQuery(companyName: string) {
     queryKey: ['jobs-by-company', companyName],
     queryFn: async () => {
       const res = await apiClient.get('/jobs', { params: { search: companyName } });
-      const all = (res.data?.data ?? res.data) as Job[];
+      const all = ((res.data?.data ?? res.data) as Job[]).map(normalizeJob);
       return all.filter(j => j.companyName.toLowerCase() === companyName.toLowerCase());
     },
     enabled: !!companyName,
@@ -96,7 +108,7 @@ export function useJobsQuery(params?: { search?: string; location?: string; empl
     queryKey: ['jobs', params],
     queryFn: async () => {
       const res = await apiClient.get('/jobs', { params });
-      return (res.data?.data ?? res.data) as Job[];
+      return ((res.data?.data ?? res.data) as Job[]).map(normalizeJob);
     },
   });
 }
@@ -106,7 +118,7 @@ export function useJobQuery(id: string) {
     queryKey: ['job', id],
     queryFn: async () => {
       const res = await apiClient.get(`/jobs/${id}`);
-      return (res.data?.data ?? res.data) as Job;
+      return normalizeJob((res.data?.data ?? res.data) as Job);
     },
     enabled: !!id,
   });

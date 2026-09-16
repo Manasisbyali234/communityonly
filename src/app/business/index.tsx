@@ -184,12 +184,24 @@ export default function BusinessDirectoryScreen() {
     return () => clearTimeout(h);
   }, [search]);
 
-  const { data: businesses = [], isLoading, refetch } = usePublicBusinessesQuery(
-    useMemo(() => ({
-      category: selectedCategory !== 'All' ? selectedCategory : undefined,
-      search: debouncedSearch || undefined,
-    }), [selectedCategory, debouncedSearch])
-  );
+  // Keep filtering in the client as well as presenting filter controls. Some
+  // deployed API versions ignore category/search query parameters, which made
+  // the selected filter appear to do nothing.
+  const { data: allBusinesses = [], isLoading, refetch } = usePublicBusinessesQuery();
+  const businesses = useMemo(() => {
+    const query = debouncedSearch.trim().toLowerCase();
+    return allBusinesses.filter((business) => {
+      const matchesCategory = selectedCategory === 'All' || business.category === selectedCategory;
+      const matchesSearch = !query || [
+        business.businessName,
+        business.ownerName,
+        business.description,
+        business.productsServices,
+        business.location,
+      ].some((value) => value?.toLowerCase().includes(query));
+      return matchesCategory && matchesSearch;
+    });
+  }, [allBusinesses, selectedCategory, debouncedSearch]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

@@ -240,6 +240,15 @@ export default function TabsLayout() {
         />
         <Tabs.Screen
           name="chat"
+          listeners={{
+            // Use an explicit navigation target so tapping the tab always
+            // opens the chat route even when the navigator has retained a
+            // nested screen in its history.
+            tabPress: (event) => {
+              event.preventDefault();
+              router.navigate('/(tabs)/chat' as any);
+            },
+          }}
           options={{
             href: isApproved ? undefined : null,
             tabBarIcon: ({ focused }) => (

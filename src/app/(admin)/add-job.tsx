@@ -9,6 +9,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import AdminShell from '../../components/admin/AdminShell';
 import { C, SearchBar } from '../../components/admin/AdminUI';
 import { adminApiClient } from '../../api/adminClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const showAlert = (title: string, message: string, buttons?: { text: string; onPress?: () => void }[]) => {
   if (Platform.OS === 'web') {
@@ -33,8 +34,20 @@ const EMPTY_FORM = {
   jobTitle: '', description: '', employmentType: 'FULL_TIME',
   workMode: 'WORK_FROM_OFFICE', salaryLPA: '', address: '', location: '',
   experience: '', education: '', requiredSkills: [] as string[],
-  vacancyCount: '1', lastDate: '', hrContact: '', hrEmail: '', status: 'ACTIVE',
+  vacancyCount: '1', lastDate: '', hrContact: '', hrEmail: '',
 };
+
+const LAST_EMPLOYER_KEY = '@gowda-community:last-job-employer';
+
+function statusForLastDate(lastDate: string, intent: 'DRAFT' | 'PUBLISH') {
+  if (intent === 'DRAFT') return 'DRAFT';
+  // A last date remains open for the whole selected day; it closes the day after.
+  if (lastDate) {
+    const closingDate = new Date(`${lastDate}T23:59:59.999`);
+    if (!Number.isNaN(closingDate.getTime()) && closingDate.getTime() < Date.now()) return 'CLOSED';
+  }
+  return 'ACTIVE';
+}
 
 export default function AdminAddJob() {
   const router = useRouter();
@@ -50,6 +63,7 @@ export default function AdminAddJob() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [lastEmployerId, setLastEmployerId] = useState<string | null | undefined>(undefined);
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
@@ -60,6 +74,14 @@ export default function AdminAddJob() {
       .catch(() => {});
   }, []);
 
+  // Remember the company used most recently so consecutive postings do not
+  // require the employer picker again. An explicit route parameter still wins.
+  useEffect(() => {
+    AsyncStorage.getItem(LAST_EMPLOYER_KEY)
+      .then(setLastEmployerId)
+      .catch(() => setLastEmployerId(null));
+  }, []);
+
   // Preselect employer if coming from employers page
   useEffect(() => {
     if (preselectedEmployerId && employers.length > 0) {
@@ -67,6 +89,14 @@ export default function AdminAddJob() {
       if (emp) setSelectedEmployer(emp);
     }
   }, [preselectedEmployerId, employers]);
+
+  useEffect(() => {
+    if (isEdit || preselectedEmployerId || selectedEmployer || employers.length === 0 || lastEmployerId === undefined) return;
+    const remembered = lastEmployerId ? employers.find((employer: any) => employer.id === lastEmployerId) : undefined;
+    // Auto-select the remembered employer; choosing the only registered
+    // company is also unambiguous for first-time posting.
+    if (remembered ?? employers.length === 1) setSelectedEmployer(remembered ?? employers[0]);
+  }, [isEdit, preselectedEmployerId, selectedEmployer, employers, lastEmployerId]);
 
   // Load job for edit
   useEffect(() => {
@@ -88,7 +118,6 @@ export default function AdminAddJob() {
         lastDate: j.lastDate ? j.lastDate.split('T')[0] : '',
         hrContact: j.hrContact ?? '',
         hrEmail: j.hrEmail ?? '',
-        status: j.status ?? 'ACTIVE',
       });
       // If job has an employerId, find and set it
       if (j.employerId) {
@@ -113,7 +142,7 @@ export default function AdminAddJob() {
   const removeSkill = (sk: string) =>
     setForm(f => ({ ...f, requiredSkills: f.requiredSkills.filter(x => x !== sk) }));
 
-  const submit = async (status: 'ACTIVE' | 'DRAFT') => {
+  const submit = async (intent: 'DRAFT' | 'PUBLISH') => {
     if (!selectedEmployer) {
       showAlert('Validation', 'Please select an employer / company');
       return;
@@ -127,7 +156,7 @@ export default function AdminAddJob() {
       const payload = {
         ...form,
         employerId: selectedEmployer.id,
-        status,
+        status: statusForLastDate(form.lastDate, intent),
         vacancyCount: Number(form.vacancyCount) || 1,
       };
       if (isEdit) {
@@ -135,6 +164,7 @@ export default function AdminAddJob() {
       } else {
         await adminApiClient.post('/jobs', payload);
       }
+      await AsyncStorage.setItem(LAST_EMPLOYER_KEY, selectedEmployer.id);
       showAlert('Success', isEdit ? 'Job updated!' : 'Job posted!', [
         { text: 'OK', onPress: () => router.push('/(admin)/jobs' as any) },
       ]);
@@ -344,22 +374,15 @@ export default function AdminAddJob() {
           </View>
         </View>
 
-        <Field label="Status">
-          <View style={s.chips}>
-            {['ACTIVE', 'CLOSED'].map(st => (
-              <TouchableOpacity key={st} style={[s.chip, form.status === st && s.chipActive]}
-                onPress={() => set('status', st)}>
-                <Text style={[s.chipText, form.status === st && s.chipTextActive]}>{st}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Field>
+        <Text style={s.statusHint}>
+          Job status is managed automatically: it stays active until the last application date, then closes automatically.
+        </Text>
 
         <View style={s.btnRow}>
           <TouchableOpacity style={s.draftBtn} onPress={() => submit('DRAFT')} disabled={saving}>
             <Text style={s.draftBtnText}>Save Draft</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.postBtn} onPress={() => submit('ACTIVE')} disabled={saving}>
+          <TouchableOpacity style={s.postBtn} onPress={() => submit('PUBLISH')} disabled={saving}>
             {saving ? <ActivityIndicator size="small" color="#fff" /> : (
               <>
                 <Feather name="briefcase" size={15} color="#fff" />
@@ -437,6 +460,7 @@ function Field({ label, children, required, optional }: {
 const s = StyleSheet.create({
   card: { backgroundColor: C.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
   label: { fontSize: 12, fontWeight: '700', color: C.textSecond, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 },
+  statusHint: { color: C.textMuted, fontSize: 12, lineHeight: 18, marginTop: -2, marginBottom: 16 },
   input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: C.textPrimary, backgroundColor: C.bg },
   textarea: { minHeight: 100 },
   twoCol: { flexDirection: 'row' },
