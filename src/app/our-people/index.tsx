@@ -227,9 +227,9 @@ export default function OurPeopleScreen() {
           <Ionicons name="arrow-back" size={19} color={G} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: TEXT }]}>Our People</Text>
+          <Text style={[styles.headerTitle, { color: TEXT }]}>News & Updates</Text>
           <Text style={[styles.headerSub, { color: TEXT3 }]}>
-            Inspiring journeys & contributions from our community
+            Community news, stories & updates
           </Text>
         </View>
       </View>

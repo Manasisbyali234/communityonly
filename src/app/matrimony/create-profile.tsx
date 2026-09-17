@@ -21,7 +21,7 @@ import {
   FAMILY_TYPE_OPTIONS, FAMILY_VALUE_OPTIONS, FATHER_STATUS_OPTIONS, MOTHER_STATUS_OPTIONS,
   SIBLING_COUNT_OPTIONS, PHOTO_VISIBILITY_OPTIONS,
 } from '../../api/matrimony';
-import { useTheme } from '../../theme';
+import { useMatrimonyTheme } from './theme';
 import { useConfirmStore } from '../../store/confirmStore';
 
 const STEPS = ['Personal', 'Astrology', 'Career', 'Family', 'Photos & Consent'];
@@ -271,7 +271,7 @@ function ApprovalBanner({ status, rejectionReason, colors }: { status: string | 
   if (!status) return null;
   const config = {
     PENDING:  { bg: '#FEF9C3', border: '#EAB308', icon: 'time-outline' as const,            text: '#92400E', label: 'Awaiting Admin Approval', sub: 'Your profile is under review.' },
-    APPROVED: { bg: '#DCFCE7', border: '#22C55E', icon: 'checkmark-circle-outline' as const, text: '#166534', label: 'Profile Approved ✓',        sub: 'Your profile is live.' },
+    APPROVED: { bg: colors.primaryContainer, border: colors.primary, icon: 'checkmark-circle-outline' as const, text: colors.onPrimaryContainer, label: 'Profile Approved ✓', sub: 'Your profile is live.' },
     REJECTED: { bg: '#FEE2E2', border: '#EF4444', icon: 'close-circle-outline' as const,    text: '#991B1B', label: 'Profile Rejected',           sub: rejectionReason ?? 'Please update and resubmit.' },
   }[status];
   if (!config) return null;
@@ -287,7 +287,7 @@ function ApprovalBanner({ status, rejectionReason, colors }: { status: string | 
 }
 
 export default function CreateMatrimonyProfile() {
-  const { colors } = useTheme();
+  const { colors } = useMatrimonyTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { data: myProfile, isLoading: profileLoading } = useMyMatrimonyProfileQuery();

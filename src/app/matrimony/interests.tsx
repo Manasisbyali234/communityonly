@@ -12,14 +12,14 @@ import {
   useMyMatrimonyProfileQuery, ProfileInterest,
   useMatrimonyLikeMatchesQuery,
 } from '../../api/matrimony';
-import { useTheme } from '../../theme';
+import { useMatrimonyTheme } from './theme';
 import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 
 export default function MatrimonyInterestsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors } = useMatrimonyTheme();
   const { data: myProfile } = useMyMatrimonyProfileQuery();
   const { data: interests = [], isLoading } = useMatrimonyInterestsQuery(!!myProfile?.id);
   const { data: likeMatches = [] } = useMatrimonyLikeMatchesQuery(!!myProfile?.id);
@@ -121,7 +121,7 @@ export default function MatrimonyInterestsScreen() {
         <View style={styles.actions}>
           {interest.status === 'ACCEPTED' && convId ? (
             <TouchableOpacity
-              style={[styles.iconBtn, { backgroundColor: '#7B3FA0' }]}
+              style={[styles.iconBtn, { backgroundColor: colors.primaryDark }]}
               onPress={() => router.push(`/matrimony/chat/${convId}` as any)}
             >
               <Ionicons name="chatbubble" size={16} color="#fff" />

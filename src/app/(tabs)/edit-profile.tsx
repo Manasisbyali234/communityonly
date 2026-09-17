@@ -36,6 +36,7 @@ import Avatar from '../../components/common/Avatar';
 import { pickImage, uploadProfilePhoto, uploadCoverPhoto, PickedImage } from '../../utils/imagePicker';
 import ImageCropModal, { CropResult } from '../../components/common/ImageCropModal';
 import { useUserApprovalStore, resolveUserApproval } from '../../store/userApprovalStore';
+import FamilyNamePicker from '../../components/common/FamilyNamePicker';
 
 const BASE = API_BASE_URL.replace('/api/v1', '');
 const toAbsUrl = (url?: string | null) =>
@@ -564,16 +565,9 @@ export default function EditProfile() {
                   control={control}
                   name="familyName"
                   render={({ field: { onChange, onBlur, value } }) => (
-                    <Input
-                      label="Family Name / Okka *"
-                      placeholder="e.g. Mundodi / Kodendera"
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      leftIcon="people-outline"
-                      error={errors.familyName?.message}
-                      containerStyle={styles.fieldItem}
-                    />
+                    <View style={styles.fieldItem}>
+                      <FamilyNamePicker value={value} onChangeText={onChange} onBlur={onBlur} error={errors.familyName?.message} required />
+                    </View>
                   )}
                 />
 

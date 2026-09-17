@@ -59,22 +59,21 @@ export function useUserJoinedEventsQuery(userId: string) {
   });
 }
 
-export function useEventsQuery() {
+export function useEventsQuery(enabled = true) {
   const localEvents = useEventStore((s) => s.localEvents);
   const removeEvent = useEventStore((s) => s.removeEvent);
 
   const query = useQuery<Event[]>({
     queryKey: eventKeys.list(),
-    // Event approval happens outside this view, so do not retain an old list.
-    staleTime: 0,
-    refetchInterval: 60_000,
+    enabled,
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
     gcTime: 60 * 60 * 1000,     // 1 hour — keep cached data alive across navigations
     queryFn: async () => {
       try {
         const res = await apiClient.get<ApiResponse<PaginatedResponse<Event>>>('/events');
         const data = res.data.data.data;
         const normalized = (data ?? []).map(normalizeEvent);
-        console.log('[useEventsQuery] events coverUrls:', normalized.map((e: Event) => ({ id: e.id, coverUrl: e.coverUrl })));
         return normalized;
       } catch {
         return [];
@@ -100,14 +99,14 @@ export function useEventsQuery() {
   return { ...query, data: merged };
 }
 
-export function useMyEventsQuery() {
+export function useMyEventsQuery(enabled = true) {
   const userId = useAuthStore((s) => s.user?.id);
 
   return useQuery<Event[]>({
     queryKey: eventKeys.myEvents(userId ?? ''),
-    enabled: !!userId,
-    staleTime: 0,
-    refetchInterval: 60_000,
+    enabled: !!userId && enabled,
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     queryFn: async () => {
       try {
@@ -284,6 +283,7 @@ export function useCreateEventMutation() {
     mutationFn: async (payload: {
       title: string;
       description?: string;
+      category?: string;
       location?: string;
       startsAt: string;
       endsAt?: string;
@@ -305,6 +305,7 @@ export function useCreateEventMutation() {
 export type EventInput = {
   title: string;
   description?: string;
+  category?: string;
   location?: string;
   startsAt: string;
   endsAt?: string;

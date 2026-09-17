@@ -13,7 +13,7 @@ const normalizeStory = (s: CommunityStory): CommunityStory => ({
   additionalImages: s.additionalImages?.map((u) => toProxyUrl(u) ?? u),
 });
 const invalidate = (qc: ReturnType<typeof useQueryClient>) => { qc.invalidateQueries({ queryKey: ['community-stories'] }); qc.invalidateQueries({ queryKey: ['admin-stories'] }); };
-export function usePublicStoriesQuery(filters?: StoryFilters) { return useQuery({ queryKey: ['community-stories', 'public', filters], queryFn: async () => unwrap<CommunityStory[]>(await apiClient.get('/community-stories', { params: filters })).map(normalizeStory) }); }
+export function usePublicStoriesQuery(filters?: StoryFilters, enabled = true) { return useQuery({ queryKey: ['community-stories', 'public', filters], enabled, queryFn: async () => unwrap<CommunityStory[]>(await apiClient.get('/community-stories', { params: filters })).map(normalizeStory) }); }
 export function useFeaturedStoriesQuery() { return usePublicStoriesQuery({ featuredOnly: true }); }
 export function useStoryQuery(id: string) { return useQuery({ queryKey: ['community-story', id], queryFn: async () => normalizeStory(unwrap<CommunityStory>(await apiClient.get(`/community-stories/${id}`))), enabled: !!id }); }
 export function useAdminStoriesQuery(statusTab?: StoryStatus | 'ALL') { return useQuery({ queryKey: ['admin-stories', statusTab], queryFn: async () => unwrap<CommunityStory[]>(await apiClient.get('/community-stories/admin', { params: statusTab && statusTab !== 'ALL' ? { status: statusTab } : {} })).map(normalizeStory) }); }

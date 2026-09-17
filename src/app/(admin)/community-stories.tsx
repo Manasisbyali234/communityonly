@@ -254,7 +254,7 @@ export default function AdminCommunityStories() {
 
   return (
     <View style={{ flex: 1 }}>
-    <AdminShell title="Our People Stories">
+    <AdminShell title="News & Updates">
       <View style={s.container}>
         {/* KPI Metrics Strip */}
         <View style={s.statsGrid}>
@@ -624,7 +624,7 @@ export default function AdminCommunityStories() {
               {/* Feature toggle */}
               <View style={s.switchRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.switchTitle}>Feature in "Our People" Showcase</Text>
+                  <Text style={s.switchTitle}>Feature in "News & Updates" Showcase</Text>
                   <Text style={s.switchSub}>Show as hero banner at the top.</Text>
                 </View>
                 <Switch value={form.isFeatured} onValueChange={(v) => setForm((p) => ({ ...p, isFeatured: v }))} trackColor={{ false: '#E2E8F0', true: '#86EFAC' }} thumbColor={form.isFeatured ? '#16A34A' : '#F8FAFC'} />

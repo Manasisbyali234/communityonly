@@ -12,7 +12,7 @@ export interface HelpRequest { id: string; userId: string; requesterName: string
 export interface HelpFilters { category?: string; urgency?: HelpUrgency; search?: string; }
 const unwrap = <T,>(r: any) => (r.data?.data ?? r.data) as T;
 const invalidate = (qc: ReturnType<typeof useQueryClient>) => { qc.invalidateQueries({ queryKey: ['help-requests'] }); qc.invalidateQueries({ queryKey: ['admin-help-requests'] }); };
-export function usePublicHelpRequestsQuery(filters?: HelpFilters) { return useQuery({ queryKey: ['help-requests', 'public', filters], queryFn: async () => unwrap<HelpRequest[]>(await apiClient.get('/help-requests', { params: filters })) }); }
+export function usePublicHelpRequestsQuery(filters?: HelpFilters, enabled = true) { return useQuery({ queryKey: ['help-requests', 'public', filters], enabled, queryFn: async () => unwrap<HelpRequest[]>(await apiClient.get('/help-requests', { params: filters })) }); }
 export function useHelpRequestQuery(id: string) { return useQuery({ queryKey: ['help-request', id], queryFn: async () => unwrap<HelpRequest>(await apiClient.get(`/help-requests/${id}`)), enabled: !!id }); }
 export function useMyHelpRequestsQuery() { return useQuery({ queryKey: ['help-requests', 'mine'], queryFn: async () => unwrap<HelpRequest[]>(await apiClient.get('/help-requests/mine')) }); }
 export type HelpRequestInput = { category: HelpCategory; title: string; description: string; location: string; urgency: HelpUrgency; contactPreference: ContactPreference; userName?: string; userLocation?: string; userPhone?: string };

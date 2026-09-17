@@ -20,12 +20,12 @@ export const userKeys = {
   search: (query: string) => [...userKeys.all, 'search', query] as const,
 };
 
-export function useSuggestedUsersQuery(limit: number = 20) {
+export function useSuggestedUsersQuery(limit: number = 20, enabled = true) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const token = useAuthStore((s) => s.token);
   return useQuery<User[]>({
     queryKey: userKeys.suggested(),
-    enabled: isAuthenticated && !!token,
+    enabled: isAuthenticated && !!token && enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes — avoid refetch on every mount
     retry: 1,
     queryFn: async () => {

@@ -14,7 +14,7 @@ import {
   MARITAL_STATUS_LABELS, EDUCATION_LABELS, MatrimonyProfile,
   useMatrimonyLikeMatchesQuery, MatrimonyLikeMatch, RAASHI_OPTIONS,
 } from '../../api/matrimony';
-import { useTheme } from '../../theme';
+import { useMatrimonyTheme } from './theme';
 
 const H_PAD = 14;
 
@@ -194,7 +194,7 @@ type TabKey = 'discover' | 'matches' | 'liked';
 export default function MatrimonyScreen() {
   const { width: screenW } = useWindowDimensions();
   const cardW = Math.min(screenW - H_PAD * 2, 480);
-  const { colors } = useTheme();
+  const { colors } = useMatrimonyTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -307,7 +307,7 @@ export default function MatrimonyScreen() {
           >
             <Ionicons name="close" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Mana Sangama 💍</Text>
+          <Text style={styles.headerTitle}>Sangathi 💍</Text>
         </View>
         <View style={styles.gateContainer}>
           <View style={[styles.gateIconWrap, { backgroundColor: colors.primaryContainer }]}>
@@ -381,7 +381,7 @@ export default function MatrimonyScreen() {
           <Ionicons name="close" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Mana Sangama 💍</Text>
+          <Text style={styles.headerTitle}>Sangathi 💍</Text>
           <Text style={styles.headerSub}>
             {loading ? 'Loading...' : `${list.length} profiles found`}
           </Text>

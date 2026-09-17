@@ -100,7 +100,7 @@ export default function StoryDetailScreen() {
         <TouchableOpacity onPress={handleBack} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: colors.text }]} numberOfLines={1}>Our People</Text>
+        <Text style={[styles.navTitle, { color: colors.text }]} numberOfLines={1}>News & Updates</Text>
         <TouchableOpacity onPress={handleShare} style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
           <Ionicons name="share-social-outline" size={19} color={colors.text} />
         </TouchableOpacity>

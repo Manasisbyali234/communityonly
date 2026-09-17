@@ -20,22 +20,22 @@ import { apiClient } from '../../../api/client';
 import { useQuery } from '@tanstack/react-query';
 
 const WA = {
-  bg: '#ECE5DD',
-  headerBg: '#7B3FA0', // matrimony purple instead of WhatsApp green
-  outgoingBg: '#5B2D8E',
+  bg: '#FFF5F8',
+  headerBg: '#9D174D',
+  outgoingBg: '#BE185D',
   incomingBg: '#FFFFFF',
-  inputBarBg: '#F0F2F5',
-  sendBtn: '#7B3FA0',
+  inputBarBg: '#FFF1F6',
+  sendBtn: '#BE185D',
   headerText: '#FFFFFF',
   outgoingText: '#FFFFFF',
   incomingText: '#111B21',
   timestampOut: 'rgba(255,255,255,0.72)',
   timestampIn: '#667781',
-  dateSeparatorBg: '#F3E8FF',
-  dateSeparatorText: '#5B2D8E',
+  dateSeparatorBg: '#FCE7F3',
+  dateSeparatorText: '#9D174D',
   inputBg: '#FFFFFF',
   tickColor: 'rgba(255,255,255,0.72)',
-  readTickColor: '#C084FC',
+  readTickColor: '#F9A8D4',
 };
 
 function formatTime(dateStr: string) {

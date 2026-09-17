@@ -103,7 +103,7 @@ const TABS: TabDefinition[] = [
   },
   {
     id: 'stories',
-    label: 'Our People',
+    label: 'News & Updates',
     icon: 'book-outline',
     activeIcon: 'book',
     color: '#FB923C', // Soft Light Apricot Orange
@@ -169,11 +169,10 @@ function EventSkeleton() {
 }
 
 // ── Connect Button (per-member, own hook scope) ───────────────────────────────
-function ConnectButton({ item, currentUserId }: { item: any; currentUserId?: string }) {
+function ConnectButton({ item, status, statusLoading }: { item: any; status: string; statusLoading: boolean }) {
   const { colors } = useTheme();
   const showToast = useToastStore((s) => s.showToast);
   const MEMBER_COLOR = '#2563EB';
-  const { data: status = 'NONE', isLoading: statusLoading } = useConnectionStatusQuery(item.id, currentUserId);
   const sendRequest = useSendConnectionRequestMutation();
 
   const handleConnect = () => {
@@ -203,7 +202,7 @@ function ConnectButton({ item, currentUserId }: { item: any; currentUserId?: str
 }
 
 function MemberCard({ item, currentUser, colors, isDark, TEXT, TEXT2, TEXT3, SURF, BORDER, SAFFRON, router }: any) {
-  const { data: status = 'NONE' } = useConnectionStatusQuery(item.id, currentUser?.id);
+  const { data: status = 'NONE', isLoading: statusLoading } = useConnectionStatusQuery(item.id, currentUser?.id);
   return (
     <TouchableOpacity
       style={[styles.memberCard, { backgroundColor: SURF, borderColor: BORDER }]}
@@ -252,7 +251,7 @@ function MemberCard({ item, currentUser, colors, isDark, TEXT, TEXT2, TEXT3, SUR
         )}
       </View>
       <View style={styles.memberActions}>
-        <ConnectButton item={item} currentUserId={currentUser?.id} />
+        <ConnectButton item={item} status={status} statusLoading={statusLoading} />
         {status === 'ACCEPTED' && (
           <TouchableOpacity
             style={[styles.msgBtn, { backgroundColor: colors.elevation1 }]}
@@ -315,12 +314,12 @@ export default function ExploreScreen() {
 
   const searchRef = useRef<TextInput>(null);
 
-  const { data: posts = [], isLoading: postsLoading, refetch: refetchPosts } = usePostsQuery();
-  const { data: communities = [], isLoading: commsLoading, refetch: refetchComms } = useCommunitiesQuery();
-  const { data: myCommRequests = [], refetch: refetchCommRequests } = useMyCommunitiesRequestsQuery();
+  const { data: posts = [], isLoading: postsLoading, refetch: refetchPosts } = usePostsQuery(activeTab === 'feed');
+  const { data: communities = [], isLoading: commsLoading, refetch: refetchComms } = useCommunitiesQuery(activeTab === 'communities');
+  const { data: myCommRequests = [], refetch: refetchCommRequests } = useMyCommunitiesRequestsQuery(activeTab === 'communities');
   const joinMutation = useJoinCommunityMutation();
 
-  const { data: suggestedMembers = [], isLoading: suggestedLoading, error: suggestedError, refetch: refetchMembers } = useSuggestedUsersQuery();
+  const { data: suggestedMembers = [], isLoading: suggestedLoading, error: suggestedError, refetch: refetchMembers } = useSuggestedUsersQuery(20, activeTab === 'members');
   const { data: searchedMembers = [], isLoading: searchLoading, error: searchError } = useSearchUsersQuery(debouncedSearch);
   const members = debouncedSearch ? searchedMembers : suggestedMembers;
   const membersLoading = debouncedSearch ? searchLoading : suggestedLoading;
@@ -335,8 +334,8 @@ export default function ExploreScreen() {
   }, []);
 
   const { isListening, error: voiceError, start: startVoice } = useVoiceSearch(handleVoiceResult);
-  const { data: events = [], isLoading: eventsLoading, refetch: refetchEvents } = useEventsQuery();
-  const { data: myCreatedEvents = [], isLoading: myEventsLoading, refetch: refetchMyEvents } = useMyEventsQuery();
+  const { data: events = [], isLoading: eventsLoading, refetch: refetchEvents } = useEventsQuery(activeTab === 'events');
+  const { data: myCreatedEvents = [], isLoading: myEventsLoading, refetch: refetchMyEvents } = useMyEventsQuery(activeTab === 'events');
   const toggleInterest = useToggleInterestMutation();
   const toggleLike = useToggleLikeMutation();
   const shareEvent = useShareEventMutation();
@@ -345,15 +344,9 @@ export default function ExploreScreen() {
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>();
   const [shareSheetEvent, setShareSheetEvent] = useState<{ id: string; title: string } | null>(null);
 
-  const { data: publicBusinesses = [], isLoading: bizLoading, refetch: refetchBiz } = usePublicBusinessesQuery(
-    activeTab === 'business' ? {} : undefined
-  );
-  const { data: helpRequests = [], isLoading: helpLoading, refetch: refetchHelp } = usePublicHelpRequestsQuery(
-    activeTab === 'help' ? {} : undefined
-  );
-  const { data: exploreStories = [], isLoading: storiesLoading, refetch: refetchStories } = usePublicStoriesQuery(
-    activeTab === 'stories' ? {} : undefined
-  );
+  const { data: publicBusinesses = [], isLoading: bizLoading, refetch: refetchBiz } = usePublicBusinessesQuery({}, activeTab === 'business');
+  const { data: helpRequests = [], isLoading: helpLoading, refetch: refetchHelp } = usePublicHelpRequestsQuery({}, activeTab === 'help');
+  const { data: exploreStories = [], isLoading: storiesLoading, refetch: refetchStories } = usePublicStoriesQuery({}, activeTab === 'stories');
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -1185,10 +1178,10 @@ export default function ExploreScreen() {
           >
             {renderSearchHeader()}
 
-            {/* Our People Promo banner */}
+            {/* News & Updates promo banner */}
             <View style={[styles.bizBanner, { backgroundColor: '#FB923C' }]}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.bizBannerTitle}>🌟 Our People</Text>
+                <Text style={styles.bizBannerTitle}>🌟 News & Updates</Text>
                 <Text style={styles.bizBannerSub}>Inspiring journeys & contributions from our community</Text>
               </View>
               <TouchableOpacity

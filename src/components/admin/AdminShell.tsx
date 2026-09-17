@@ -50,7 +50,7 @@ const NAV_MAIN: { label: string; icon: FeatherIconName; key: string }[] = [
   { label: 'Matrimony',          icon: 'heart',        key: 'matrimony' },
   { label: 'Business',           icon: 'shopping-bag', key: 'business' },
   { label: 'Community Help',     icon: 'life-buoy',    key: 'community-help' },
-  { label: 'Our People Stories', icon: 'book-open',    key: 'community-stories' },
+  { label: 'News & Updates',     icon: 'book-open',    key: 'community-stories' },
 ];
 
 const NAV_BOTTOM: typeof NAV_MAIN = [];

@@ -104,7 +104,7 @@ const QUICK_ACTIONS = [
   },
   {
     id: 'our-people',
-    label: 'Our People',
+    label: 'News & Updates',
     image: require('../../../assets/images/quick-actions/our-people.png'),
     bg: '#FFFBEB',
     border: '#FDE68A',
@@ -397,7 +397,7 @@ export default function HomeFeed() {
     );
   };
 
-  // ── Communities & Our People (Tabbed Section) ───────────────────────────
+  // ── Communities & News & Updates (Tabbed Section) ───────────────────────
   const renderCommunitiesAndOurPeopleTabs = () => {
     const latestCommunities = communities.slice(0, 5);
     const topStories = (publicStories || []).slice(0, 4);
@@ -460,7 +460,7 @@ export default function HomeFeed() {
               </TouchableOpacity>
             )}
 
-            {/* Our People Tab */}
+            {/* News & Updates Tab */}
             {topStories.length > 0 && (
               <TouchableOpacity
                 onPress={() => setFeaturedTab('our-people')}
@@ -483,7 +483,7 @@ export default function HomeFeed() {
                       featuredTab === 'our-people' && styles.tabToggleTextActive,
                     ]}
                   >
-                    Our People
+                    News & Updates
                   </Text>
                   <View
                     style={[
@@ -632,7 +632,7 @@ export default function HomeFeed() {
           </ScrollView>
         )}
 
-        {/* Tab 2: Our People Content */}
+        {/* Tab 2: News & Updates Content */}
         {featuredTab === 'our-people' && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ourPeopleScroll}>
             {topStories.map((story) => (
@@ -1261,7 +1261,7 @@ const styles = StyleSheet.create({
   },
   feedTitle: { fontSize: 19, fontWeight: '800', letterSpacing: -0.4 },
 
-  // ── Our People ──────────────────────────────────────────────────────────
+  // ── News & Updates ──────────────────────────────────────────────────────
   ourPeopleSection: { marginBottom: 20 },
   ourPeopleSub: { fontSize: 12.5, marginTop: -8, marginBottom: 12 },
   ourPeopleScroll: { gap: 12, paddingRight: 16 },

@@ -392,6 +392,7 @@ export default function CreateEvent() {
     const payload = {
       title: title.trim(),
       ...(description.trim() ? { description: description.trim() } : {}),
+      ...(category.trim() ? { category: category.trim() } : {}),
       ...(venue.trim() ? { location: venue.trim() } : {}),
       startsAt,
       ...(coverUrl ? { coverUrl } : {}),
@@ -406,10 +407,12 @@ export default function CreateEvent() {
       const created = await createEvent.mutateAsync(payload);
       setSubmissionStatus(String((created as any)?.status ?? 'PENDING_APPROVAL').toUpperCase());
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Unknown error';
-      const errors = err?.response?.data?.errors;
-      console.error('[CreateEvent] submit error:', err?.response?.status, msg, errors);
-      showToast(`Failed: ${msg}`, 'error');
+      const responseData = err?.response?.data;
+      const msg = responseData?.message ?? responseData?.error ?? err?.message ?? 'Unable to create the event.';
+      const fieldErrors = Array.isArray(responseData?.errors)
+        ? responseData.errors.map((item: any) => item.message ?? item.msg ?? String(item)).filter(Boolean).join(', ')
+        : '';
+      showToast(fieldErrors ? `${msg}: ${fieldErrors}` : msg, 'error');
     }
   };
 

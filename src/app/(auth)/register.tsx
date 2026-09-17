@@ -26,6 +26,7 @@ import { pickImage, PickedImage, appendPickedFile } from '../../utils/imagePicke
 import { useUserApprovalStore } from '../../store/userApprovalStore';
 import { useAuthStore } from '../../store/authStore';
 import { apiClient } from '../../api/client';
+import FamilyNamePicker from '../../components/common/FamilyNamePicker';
 
 const KARNATAKA_DISTRICTS = [
   'Dakshina Kannada',
@@ -360,32 +361,13 @@ export default function RegisterScreen() {
 
             {/* Family Name */}
             <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: C.text }]}>Family Name / Okka *</Text>
               <Controller
                 control={control}
                 name="familyName"
-                render={({ field: { onChange, value } }) => (
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      {
-                        backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
-                        borderColor: errors.familyName ? C.error : C.border,
-                      },
-                    ]}
-                  >
-                    <Ionicons name="people-outline" size={18} color={C.primary} style={styles.inputLeftIcon} />
-                    <TextInput
-                      style={[styles.inputWithIcon, { color: C.text }]}
-                      placeholder="e.g. Mundodi / Kodendera / Chekkera"
-                      placeholderTextColor={C.textMuted}
-                      value={value}
-                      onChangeText={onChange}
-                    />
-                  </View>
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <FamilyNamePicker value={value} onChangeText={onChange} onBlur={onBlur} error={errors.familyName?.message} required />
                 )}
               />
-              {errors.familyName && <Text style={[styles.errorText, { color: C.error }]}>{errors.familyName.message}</Text>}
             </View>
 
             {/* DOB & Gender Row */}

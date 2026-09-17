@@ -34,6 +34,7 @@ import { useUserJobApplicationsQuery } from '../../api/jobs';
 import Avatar from '../../components/common/Avatar';
 import Button from '../../components/common/Button';
 import EventParticipantsSheet from '../../components/feed/EventParticipantsSheet';
+import { FAMILY_NAMES } from '../../constants/familyNames';
 
 type ProfileTab = 'about' | 'posts' | 'communities' | 'events' | 'family' | 'updates';
 
@@ -166,7 +167,10 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
       .then((res) => {
         const raw = res.data?.data ?? res.data ?? [];
         const data = Array.isArray(raw) ? raw : (raw.users ?? raw.data ?? []);
-        setMembers(data.filter((m: any) => m.id !== userId));
+        const normalizedFamilyName = familyName.trim().toLocaleLowerCase();
+        setMembers(data.filter((m: any) =>
+          m.id !== userId && m.familyName?.trim().toLocaleLowerCase() === normalizedFamilyName
+        ));
       })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));
@@ -184,13 +188,13 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
           const fn = u.familyName?.trim();
           if (fn) counts[fn] = (counts[fn] || 0) + 1;
         });
-        const sorted = Object.entries(counts)
+        const communitySuggestions = Object.entries(counts)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 12)
           .map(([name]) => name);
-        setSuggestions(sorted);
+        setSuggestions([...new Set([...communitySuggestions, ...FAMILY_NAMES])].slice(0, 12));
       })
-      .catch(() => setSuggestions([]))
+      .catch(() => setSuggestions(FAMILY_NAMES.slice(0, 12)))
       .finally(() => setSuggestionsLoading(false));
   }, [familyName]);
 

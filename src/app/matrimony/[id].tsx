@@ -27,7 +27,7 @@ import {
   MARITAL_STATUS_LABELS,
   EDUCATION_LABELS,
 } from '../../api/matrimony';
-import { useTheme } from '../../theme';
+import { useMatrimonyTheme } from './theme';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { apiClient } from '../../api/client';
@@ -43,7 +43,7 @@ const QUICK_MESSAGES = [
 
 export default function MatrimonyProfileDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark } = useMatrimonyTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
@@ -228,7 +228,7 @@ export default function MatrimonyProfileDetail() {
         scrollEventThrottle={16}
       >
         {/* ── Hero Photo Carousel ─────────────────────────────────────── */}
-        <View style={[styles.heroContainer, { width: windowWidth, height: heroHeight, backgroundColor: isDark ? '#1a1a2e' : '#F3F4F6' }]}>
+        <View style={[styles.heroContainer, { width: windowWidth, height: heroHeight, backgroundColor: colors.elevation2 }]}>
           {photos.length > 0 ? (
             <FlatList
               ref={heroRef}
@@ -565,7 +565,7 @@ export default function MatrimonyProfileDetail() {
             </TouchableOpacity>
 
             {profile.hasExpressedInterest ? (
-              <View style={[styles.actionBtnSent, { backgroundColor: isDark ? '#1F2937' : '#F0FDF4', borderColor: G, flex: 1 }]}>
+              <View style={[styles.actionBtnSent, { backgroundColor: colors.primaryContainer, borderColor: G, flex: 1 }]}>
                 <Ionicons name="checkmark-circle" size={18} color={G} />
                 <Text style={[styles.actionBtnSentText, { color: G }]}>Interest Sent</Text>
               </View>
@@ -742,7 +742,7 @@ export default function MatrimonyProfileDetail() {
 
 // ── Reusable Component for Info Rows ─────────────────────────────────────────
 function DetailGridRow({ icon, label, value }: { icon: string; label: string; value?: string | null }) {
-  const { colors } = useTheme();
+  const { colors } = useMatrimonyTheme();
   return (
     <View style={[styles.detailRow, { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
@@ -1080,7 +1080,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 20,
     ...Platform.select({
-      ios: { shadowColor: '#2D6A2D', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6 },
+      ios: { shadowColor: '#75163D', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6 },
       android: { elevation: 3 },
     }),
   },

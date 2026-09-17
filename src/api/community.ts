@@ -40,12 +40,12 @@ export const communityKeys = {
 };
 
 // Fetch list of all communities
-export function useCommunitiesQuery() {
+export function useCommunitiesQuery(enabled = true) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Community[]>({
     queryKey: communityKeys.list(),
-    enabled: isAuthenticated,
-    staleTime: 0,
+    enabled: isAuthenticated && enabled,
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<PaginatedResponse<Community>>>('/communities');
       return (res.data.data.data ?? []).map((c: any) => ({
@@ -197,12 +197,12 @@ export function useRejectMemberMutation() {
 }
 
 // Fetch current user's pending/rejected community creation requests
-export function useMyCommunitiesRequestsQuery() {
+export function useMyCommunitiesRequestsQuery(enabled = true) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<any[]>({
     queryKey: [...communityKeys.all, 'my-requests'],
-    enabled: isAuthenticated,
-    staleTime: 0,
+    enabled: isAuthenticated && enabled,
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<any[]>>('/communities/my/requests');
       return res.data.data ?? [];

@@ -58,7 +58,7 @@ const QUICK_NAV = [
   { label: 'Pending Profiles',    sub: 'Approve new user signups',    icon: 'user-check',    route: '/(admin)/pending-profiles',  color: '#D97706', bg: '#FEF3C7' },
   { label: 'Business Directory',  sub: 'Approve & manage businesses', icon: 'shopping-bag',  route: '/(admin)/business',          color: '#16A34A', bg: '#DCFCE7' },
   { label: 'Community Help',      sub: 'Review urgent help requests', icon: 'life-buoy',     route: '/(admin)/community-help',    color: '#DC2626', bg: '#FEE2E2' },
-  { label: 'Our People Stories',  sub: 'Publish inspiring journeys', icon: 'book-open',     route: '/(admin)/community-stories', color: '#D97706', bg: '#FEF9C3' },
+  { label: 'News & Updates',      sub: 'Publish community news and updates', icon: 'book-open', route: '/(admin)/community-stories', color: '#D97706', bg: '#FEF9C3' },
   { label: 'Matrimony Profiles',  sub: 'Review verified matches',     icon: 'heart',         route: '/(admin)/matrimony',         color: '#E11D48', bg: '#FFE4E6' },
   { label: 'User Directory',      sub: 'Manage member roles',         icon: 'users',         route: '/(admin)/users',             color: '#7C3AED', bg: '#EDE9FE' },
 ];

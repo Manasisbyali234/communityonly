@@ -20,7 +20,7 @@ const normalizeBusiness = (business: Business): Business => ({
 });
 const invalidate = (qc: ReturnType<typeof useQueryClient>) => { qc.invalidateQueries({ queryKey: ['businesses'] }); qc.invalidateQueries({ queryKey: ['admin-businesses'] }); };
 
-export function usePublicBusinessesQuery(filters?: BusinessFilters) { return useQuery({ queryKey: ['businesses', 'public', filters], queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses', { params: filters })).map(normalizeBusiness) }); }
+export function usePublicBusinessesQuery(filters?: BusinessFilters, enabled = true) { return useQuery({ queryKey: ['businesses', 'public', filters], enabled, queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses', { params: filters })).map(normalizeBusiness) }); }
 export function useBusinessQuery(id: string) { return useQuery({ queryKey: ['business', id], queryFn: async () => normalizeBusiness(unwrap<Business>(await apiClient.get(`/businesses/${id}`))), enabled: !!id }); }
 export function useMyBusinessesQuery() { return useQuery({ queryKey: ['businesses', 'mine'], queryFn: async () => unwrap<Business[]>(await apiClient.get('/businesses/mine')).map(normalizeBusiness) }); }
 export function useBusinessReviewsQuery(businessId: string) { return useQuery({ queryKey: ['business-reviews', businessId], queryFn: async () => (normalizeBusiness(unwrap<Business>(await apiClient.get(`/businesses/${businessId}`))).reviews ?? []) as BusinessReview[], enabled: !!businessId }); }

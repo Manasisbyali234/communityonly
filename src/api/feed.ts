@@ -52,15 +52,6 @@ export function useUserQuery(userId: string) {
 function normalizePost(p: any): Post {
   const rawUrls: string[] = p.mediaUrls ?? [];
   const absUrls = rawUrls.map((u: string) => toAbs(u) ?? u);
-  if (rawUrls.length > 0 || p.mediaUrl || p.videoUrl) {
-    console.log('[normalizePost] id:', p.id,
-      '| raw mediaUrls:', rawUrls,
-      '| raw mediaUrl:', p.mediaUrl,
-      '| raw videoUrl:', p.videoUrl,
-      '| absUrls:', absUrls,
-      '| resolved mediaUrl:', toAbs(p.mediaUrl) ?? absUrls[0],
-    );
-  }
   return {
     ...p,
     author: {
@@ -87,20 +78,22 @@ function normalizePost(p: any): Post {
   };
 }
 
-export function usePostsQuery() {
+export function usePostsQuery(enabled = true) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Post[]>({
     queryKey: feedKeys.posts(),
-    enabled: isAuthenticated,
-    staleTime: 0,
-    gcTime: 0,
+    enabled: isAuthenticated && enabled,
+    // Keep a recently loaded feed while users navigate between tabs. Mutations
+    // already invalidate this key, so new posts and reactions remain current.
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const [feedRes, trendingRes] = await Promise.all([
-        apiClient.get<ApiResponse<PaginatedResponse<Post>>>('/posts/feed'),
-        apiClient.get<ApiResponse<PaginatedResponse<Post>>>('/posts/trending'),
-      ]);
+      const feedRes = await apiClient.get<ApiResponse<PaginatedResponse<Post>>>('/posts/feed');
       const feedPosts: any[] = feedRes.data.data.data ?? [];
       if (feedPosts.length > 0) return feedPosts.map(normalizePost);
+      // Trending is only a fallback. Starting it after the feed response avoids
+      // making a populated feed wait for an otherwise unused request.
+      const trendingRes = await apiClient.get<ApiResponse<PaginatedResponse<Post>>>('/posts/trending');
       return (trendingRes.data.data.data ?? []).map(normalizePost);
     },
   });
