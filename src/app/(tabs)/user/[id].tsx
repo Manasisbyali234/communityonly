@@ -30,7 +30,7 @@ import { resolveUserApproval } from '../../../store/userApprovalStore';
 import { confirmAction } from '../../../store/confirmStore';
 import { useUserQuery, useUserPostsQuery } from '../../../api/feed';
 import { useUserJoinedEventsQuery } from '../../../api/event';
-import { useConnectionStatusQuery, useSendConnectionRequestMutation, useConnectionCountQuery } from '../../../api/connections';
+import { useConnectionStatusQuery, useSendConnectionRequestMutation, useConnectionCountQuery, useAcceptConnectionMutation, usePendingRequestsQuery } from '../../../api/connections';
 import { useCommunitiesQuery } from '../../../api/community';
 import { shareUrl } from '../../../utils/shareUtils';
 
@@ -111,6 +111,10 @@ export default function UserProfileScreen() {
   const { data: connStatus = 'NONE' } = useConnectionStatusQuery(id, currentUser?.id);
   const { data: connCount = 0 } = useConnectionCountQuery(id);
   const sendRequest = useSendConnectionRequestMutation();
+  const acceptRequest = useAcceptConnectionMutation();
+  // Fetch pending received requests so we can get the requestId when PENDING_RECEIVED
+  const { data: pendingRequests = [] } = usePendingRequestsQuery();
+  const incomingRequest = pendingRequests.find((r) => r.senderId === id);
 
   React.useEffect(() => {
     if (!isApproved) {
@@ -260,26 +264,60 @@ export default function UserProfileScreen() {
             </View>
             <View style={s.mastheadActions}>
               {!isOwnProfile && (
-                <TouchableOpacity
-                  style={[s.connectBtn, { overflow: 'hidden' }]}
-                  onPress={handleConnect}
-                  disabled={connStatus !== 'NONE' || sendRequest.isPending}
-                  activeOpacity={0.85}
-                >
-                  <LinearGradient
-                    colors={connStatus === 'ACCEPTED' ? [colors.surfaceVariant, colors.surfaceVariant] : [G, G + 'CC']}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <Ionicons
-                    name={connStatus === 'ACCEPTED' ? 'checkmark-circle' : connStatus === 'PENDING_SENT' ? 'time-outline' : 'person-add'}
-                    size={15}
-                    color={connStatus === 'ACCEPTED' ? TEXT2 : '#FFF'}
-                  />
-                  <Text style={[s.connectBtnText, { color: connStatus === 'ACCEPTED' ? TEXT2 : '#FFF' }]}>
-                    {connStatus === 'ACCEPTED' ? 'Connected' : connStatus === 'PENDING_SENT' ? 'Pending' : 'Connect'}
-                  </Text>
-                </TouchableOpacity>
+                <>
+                  {connStatus === 'PENDING_RECEIVED' && incomingRequest ? (
+                    // This user sent YOU a request — show Accept/Decline inline
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity
+                        style={[s.connectBtn, { overflow: 'hidden', minWidth: 90 }]}
+                        onPress={() =>
+                          acceptRequest.mutate(incomingRequest.id, {
+                            onSuccess: () => showToast('Connection accepted!', 'success'),
+                            onError: (e: any) => showToast(e?.response?.data?.message || 'Failed to accept', 'error'),
+                          })
+                        }
+                        disabled={acceptRequest.isPending}
+                        activeOpacity={0.85}
+                      >
+                        <LinearGradient
+                          colors={[G, G + 'CC']}
+                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                          style={StyleSheet.absoluteFill}
+                        />
+                        <Ionicons name="checkmark-circle" size={15} color="#FFF" />
+                        <Text style={[s.connectBtnText, { color: '#FFF' }]}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[s.iconBtn, { backgroundColor: 'rgba(239,68,68,0.1)', borderColor: '#FCA5A5' }]}
+                        onPress={() => showToast('Go to Notifications to decline this request.', 'info')}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="close" size={17} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[s.connectBtn, { overflow: 'hidden' }]}
+                      onPress={handleConnect}
+                      disabled={connStatus !== 'NONE' || sendRequest.isPending}
+                      activeOpacity={0.85}
+                    >
+                      <LinearGradient
+                        colors={connStatus === 'ACCEPTED' ? [colors.surfaceVariant, colors.surfaceVariant] : [G, G + 'CC']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      <Ionicons
+                        name={connStatus === 'ACCEPTED' ? 'checkmark-circle' : connStatus === 'PENDING_SENT' ? 'time-outline' : 'person-add'}
+                        size={15}
+                        color={connStatus === 'ACCEPTED' ? TEXT2 : '#FFF'}
+                      />
+                      <Text style={[s.connectBtnText, { color: connStatus === 'ACCEPTED' ? TEXT2 : '#FFF' }]}>
+                        {connStatus === 'ACCEPTED' ? 'Connected' : connStatus === 'PENDING_SENT' ? 'Pending' : 'Connect'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
               {connStatus === 'ACCEPTED' && (
                 <TouchableOpacity

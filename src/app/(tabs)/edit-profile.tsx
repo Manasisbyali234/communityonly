@@ -97,46 +97,7 @@ export default function EditProfile() {
   const TEXT2 = colors.textSecondary;
   const TEXT3 = colors.textMuted;
 
-  // Pre-fill familyName from query param (e.g. tapped a suggestion on profile)
-  useEffect(() => {
-    if (familyNameParam) {
-      setValue('familyName', familyNameParam, { shouldValidate: true });
-      setExpandedSection('basic');
-    }
-  }, [familyNameParam]);
-
-  // Sync latest profile from server on mount and reset the form with fresh values
-  useEffect(() => {
-    apiClient.get('/users/me').then((res) => {
-      const fresh = res.data?.data ?? res.data;
-      if (fresh) {
-        updateProfile(fresh);
-        // Reset the form so all fields show the latest saved values
-        reset({
-          displayName: fresh.displayName || '',
-          familyName: (managed?.familyName || fresh.familyName) || '',
-          bio: fresh.bio || '',
-          avatarUrl: fresh.avatarUrl || '',
-          village: fresh.village || '',
-          occupation: fresh.occupation || '',
-          country: fresh.country || '',
-          state: fresh.state || '',
-          district: fresh.district || '',
-          city: fresh.city || '',
-          nativePlace: fresh.nativePlace || fresh.village || '',
-          currentLocation: fresh.currentLocation || '',
-          profession: fresh.profession || '',
-          company: fresh.company || '',
-          education: fresh.education || '',
-          skills: fresh.skills || '',
-          languages: fresh.languages || '',
-          interests: fresh.interests || '',
-        });
-      }
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  // ── Form — declared BEFORE effects so reset() is always in scope ──────────
   const {
     control,
     handleSubmit,
@@ -167,6 +128,48 @@ export default function EditProfile() {
       interests: user?.interests || '',
     },
   });
+
+  // Pre-fill familyName from query param (e.g. tapped a suggestion on profile)
+  useEffect(() => {
+    if (familyNameParam) {
+      setValue('familyName', familyNameParam, { shouldValidate: true });
+      setExpandedSection('basic');
+    }
+  }, [familyNameParam]);
+
+  // Sync latest profile from server on mount and reset the form with fresh values
+  useEffect(() => {
+    apiClient.get('/users/me').then((res) => {
+      const fresh = res.data?.data ?? res.data;
+      if (!fresh) return;
+
+      // Update the auth store so cover/avatar are current across the app
+      updateProfile(fresh);
+
+      // Reset all form fields to the latest server values
+      reset({
+        displayName: fresh.displayName || '',
+        familyName: (managed?.familyName || fresh.familyName) || '',
+        bio: fresh.bio || '',
+        avatarUrl: fresh.avatarUrl || '',
+        village: fresh.village || '',
+        occupation: fresh.occupation || '',
+        country: fresh.country || '',
+        state: fresh.state || '',
+        district: fresh.district || '',
+        city: fresh.city || '',
+        nativePlace: fresh.nativePlace || fresh.village || '',
+        currentLocation: fresh.currentLocation || '',
+        profession: fresh.profession || '',
+        company: fresh.company || '',
+        education: fresh.education || '',
+        skills: fresh.skills || '',
+        languages: fresh.languages || '',
+        interests: fresh.interests || '',
+      });
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const bioValue = watch('bio') || '';
   const currentLanguages = watch('languages') || '';
