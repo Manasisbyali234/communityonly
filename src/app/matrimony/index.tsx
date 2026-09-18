@@ -202,6 +202,8 @@ export default function MatrimonyScreen() {
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
+  const [ageRangeIdx, setAgeRangeIdx] = useState(0);
+  const [occupationInput, setOccupationInput] = useState('');
 
   const { data: myProfile, isLoading: myProfileLoading, isError: myProfileError } = useMyMatrimonyProfileQuery();
 
@@ -248,13 +250,19 @@ export default function MatrimonyScreen() {
   const [cityInput, setCityInput] = useState('');
   const [showCityInput, setShowCityInput] = useState(false);
 
+  // Debounce search → query so the API receives the search term
+  useEffect(() => {
+    const h = setTimeout(() => setQuery(search.trim()), 350);
+    return () => clearTimeout(h);
+  }, [search]);
+
   const combinedFilters = useMemo(() => ({
     ...smartFilters,
     ...filters,
     search: query || undefined,
   }), [smartFilters, filters, query]);
   const { data: profiles = [], isLoading } = useMatrimonyProfilesQuery(combinedFilters, isApproved);
-  const { data: matches = [], isLoading: matchesLoading } = useMatrimonyMatchesQuery(isApproved);
+  const { data: matches = [], isLoading: matchesLoading } = useMatrimonyMatchesQuery(undefined, isApproved);
   const { data: likeMatches = [], isLoading: likeMatchesLoading } = useMatrimonyLikeMatchesQuery(isApproved);
 
   const applyAgeRange = (idx: number) => {}; // kept for compat, unused
@@ -439,12 +447,13 @@ export default function MatrimonyScreen() {
             style={[styles.searchInput, { color: colors.text }]}
             value={search}
             onChangeText={setSearch}
+            onSubmitEditing={() => setQuery(search.trim())}
             placeholder="Search by name, city, caste..."
             placeholderTextColor={colors.textMuted}
             returnKeyType="search"
           />
           {search ? (
-            <TouchableOpacity onPress={() => setSearch('')}>
+            <TouchableOpacity onPress={() => { setSearch(''); setQuery(''); }}>
               <Ionicons name="close-circle" size={17} color={colors.textMuted} />
             </TouchableOpacity>
           ) : null}
@@ -456,6 +465,80 @@ export default function MatrimonyScreen() {
           <Ionicons name="location-outline" size={18} color={showCityInput ? '#fff' : colors.primary} />
         </TouchableOpacity>
       </View>
+
+      {/* Age range filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={[styles.filterChipsRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+        contentContainerStyle={{ gap: 8, paddingHorizontal: 14, paddingVertical: 8 }}
+      >
+        {AGE_RANGES.map((range, idx) => {
+          const active = ageRangeIdx === idx;
+          return (
+            <TouchableOpacity
+              key={idx}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: active ? colors.primary : colors.elevation1,
+                  borderColor: active ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => {
+                setAgeRangeIdx(idx);
+                setFilters(f => ({ ...f, minAge: range.min, maxAge: range.max }));
+              }}
+            >
+              <Text style={[styles.filterChipText, { color: active ? '#fff' : colors.textSecondary }]}>
+                {range.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+        {/* Marital status chips */}
+        {(['NEVER_MARRIED', 'DIVORCED', 'WIDOWED'] as const).map((ms) => {
+          const active = filters.maritalStatus === ms;
+          return (
+            <TouchableOpacity
+              key={ms}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: active ? colors.primary : colors.elevation1,
+                  borderColor: active ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setFilters(f => ({ ...f, maritalStatus: active ? undefined : ms }))}
+            >
+              <Text style={[styles.filterChipText, { color: active ? '#fff' : colors.textSecondary }]}>
+                {MARITAL_STATUS_LABELS[ms]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+        {/* Education chips */}
+        {(['BACHELORS', 'MASTERS', 'PHD'] as const).map((edu) => {
+          const active = filters.education === edu;
+          return (
+            <TouchableOpacity
+              key={edu}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: active ? colors.primary : colors.elevation1,
+                  borderColor: active ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setFilters(f => ({ ...f, education: active ? undefined : edu }))}
+            >
+              <Text style={[styles.filterChipText, { color: active ? '#fff' : colors.textSecondary }]}>
+                {EDUCATION_LABELS[edu]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       {/* City filter input */}
       {showCityInput && (
@@ -587,7 +670,7 @@ export default function MatrimonyScreen() {
           <Text style={[styles.emptySub, { color: colors.textSecondary }]}>Try adjusting your filters or search.</Text>
           <TouchableOpacity
             style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-            onPress={() => { setSearch(''); setFilters({}); setAgeRangeIdx(0); setCityInput(''); setOccupationInput(''); }}
+            onPress={() => { setSearch(''); setQuery(''); setFilters({}); setAgeRangeIdx(0); setCityInput(''); setOccupationInput(''); setShowCityInput(false); }}
           >
             <Text style={styles.emptyBtnText}>Reset Filters</Text>
           </TouchableOpacity>
@@ -651,6 +734,12 @@ const styles = StyleSheet.create({
     width: 42, height: 42, borderRadius: 10,
     borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
+  filterChipsRow: { borderBottomWidth: StyleSheet.hairlineWidth, maxHeight: 50 },
+  filterChip: {
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  filterChipText: { fontSize: 12, fontWeight: '600' },
 
 
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1 },

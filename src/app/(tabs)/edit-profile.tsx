@@ -105,19 +105,44 @@ export default function EditProfile() {
     }
   }, [familyNameParam]);
 
-  // Sync latest profile from server on mount
+  // Sync latest profile from server on mount and reset the form with fresh values
   useEffect(() => {
     apiClient.get('/users/me').then((res) => {
       const fresh = res.data?.data ?? res.data;
-      if (fresh) updateProfile(fresh);
+      if (fresh) {
+        updateProfile(fresh);
+        // Reset the form so all fields show the latest saved values
+        reset({
+          displayName: fresh.displayName || '',
+          familyName: (managed?.familyName || fresh.familyName) || '',
+          bio: fresh.bio || '',
+          avatarUrl: fresh.avatarUrl || '',
+          village: fresh.village || '',
+          occupation: fresh.occupation || '',
+          country: fresh.country || '',
+          state: fresh.state || '',
+          district: fresh.district || '',
+          city: fresh.city || '',
+          nativePlace: fresh.nativePlace || fresh.village || '',
+          currentLocation: fresh.currentLocation || '',
+          profession: fresh.profession || '',
+          company: fresh.company || '',
+          education: fresh.education || '',
+          skills: fresh.skills || '',
+          languages: fresh.languages || '',
+          interests: fresh.interests || '',
+        });
+      }
     }).catch(() => {});
-  }, [updateProfile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const {
     control,
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -373,6 +398,26 @@ export default function EditProfile() {
       }
 
       showToast('Profile updated successfully', 'success');
+      reset({
+        displayName: data.displayName,
+        familyName: data.familyName || '',
+        bio: data.bio || '',
+        avatarUrl: avatarUrl || '',
+        village: data.village || '',
+        occupation: data.occupation || '',
+        country: data.country || '',
+        state: data.state || '',
+        district: data.district || '',
+        city: data.city || '',
+        nativePlace: data.nativePlace || '',
+        currentLocation: data.currentLocation || '',
+        profession: data.profession || '',
+        company: data.company || '',
+        education: data.education || '',
+        skills: data.skills || '',
+        languages: data.languages || '',
+        interests: data.interests || '',
+      });
       if (from === 'settings' || from === '/(tabs)/settings') {
         router.replace('/(tabs)/settings' as any);
       } else {

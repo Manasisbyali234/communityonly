@@ -467,45 +467,48 @@ export default function HelpRequestDetailScreen() {
 
       {/* Offer Help Modal */}
       <Modal visible={showOfferModal} transparent animationType="slide" onRequestClose={() => setShowOfferModal(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <Pressable style={styles.modalOverlay} onPress={() => setShowOfferModal(false)}>
-          <Pressable style={[styles.sheet, { backgroundColor: colors.cardBg, paddingBottom: insets.bottom + 16 }]} onPress={(e) => e.stopPropagation()}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>Offer Help ❤️</Text>
-            <Text style={[styles.sheetSub, { color: colors.textSecondary }]}>
-              Leave a short message for {request.requesterName}. Your contact details will be shared with them.
-            </Text>
-
-            <TextInput
-              style={[
-                styles.sheetInput,
-                { color: colors.text, backgroundColor: colors.inputBg, borderColor: colors.border },
-              ]}
-              placeholder="e.g. I am available in Bangalore today and have O+ blood..."
-              placeholderTextColor={colors.textMuted}
-              value={offerMsg}
-              onChangeText={setOfferMsg}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-
-            <TouchableOpacity
-              style={[styles.sheetSubmitBtn, { backgroundColor: colors.primary }]}
-              onPress={handleSubmitOffer}
-              disabled={offerHelpMutation.isPending}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, justifyContent: 'flex-end' }}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setShowOfferModal(false)}>
+            <Pressable
+              style={[styles.sheet, { backgroundColor: colors.cardBg, paddingBottom: Math.max(insets.bottom, 20) + 8 }]}
+              onPress={(e) => e.stopPropagation()}
             >
-              {offerHelpMutation.isPending ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={styles.sheetSubmitBtnText}>Confirm Offer</Text>
-              )}
-            </TouchableOpacity>
+              <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+              <Text style={[styles.sheetTitle, { color: colors.text }]}>Offer Help ❤️</Text>
+              <Text style={[styles.sheetSub, { color: colors.textSecondary }]}>
+                Leave a short message for {request.requesterName}. Your contact details will be shared with them.
+              </Text>
+              <TextInput
+                style={[
+                  styles.sheetInput,
+                  { color: colors.text, backgroundColor: colors.inputBg, borderColor: colors.border },
+                ]}
+                placeholder="e.g. I am available in Bangalore today and have O+ blood..."
+                placeholderTextColor={colors.textMuted}
+                value={offerMsg}
+                onChangeText={setOfferMsg}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              <TouchableOpacity
+                style={[styles.sheetSubmitBtn, { backgroundColor: colors.primary }]}
+                onPress={handleSubmitOffer}
+                disabled={offerHelpMutation.isPending}
+              >
+                {offerHelpMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.sheetSubmitBtnText}>Confirm Offer</Text>
+                )}
+              </TouchableOpacity>
+            </Pressable>
           </Pressable>
-        </Pressable>
         </KeyboardAvoidingView>
       </Modal>
-
       {/* Report Modal */}
       <Modal visible={showReportModal} transparent animationType="fade" onRequestClose={() => setShowReportModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowReportModal(false)}>
@@ -695,7 +698,7 @@ const styles = StyleSheet.create({
   resolvedNoteText: { color: '#059669', fontSize: 14, fontWeight: '600' },
 
   // Sheet
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   sheet: { borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingTop: 14, gap: 10 },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
   sheetTitle: { fontSize: 18, fontWeight: '800' },

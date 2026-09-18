@@ -159,10 +159,16 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
     }
   };
 
-  // Sync like state from server whenever the post prop updates
+  // Ref to suppress server-sync while a like mutation is in-flight (prevents flicker)
+  const likePendingRef = useRef(false);
+
+  // Sync like state from server whenever the post prop updates,
+  // but only when no mutation is in-flight so optimistic state isn't rolled back.
   useEffect(() => {
-    setIsLiked(post.isLiked ?? false);
-    setLikesCount(post.likesCount ?? 0);
+    if (!likePendingRef.current) {
+      setIsLiked(post.isLiked ?? false);
+      setLikesCount(post.likesCount ?? 0);
+    }
   }, [post.isLiked, post.likesCount]);
 
   useEffect(() => {
@@ -198,7 +204,10 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
       if (!isLiked && !likeMutation.isPending) {
         setIsLiked(true);
         setLikesCount(c => c + 1);
-        likeMutation.mutate({ postId: post.id, wasLiked: false });
+        likePendingRef.current = true;
+        likeMutation.mutate({ postId: post.id, wasLiked: false }, {
+          onSettled: () => { likePendingRef.current = false; },
+        });
       }
       triggerDoubleTapHeart();
     }
@@ -210,7 +219,10 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
     const wasLiked = isLiked;
     setIsLiked(!wasLiked);
     setLikesCount(c => !wasLiked ? c + 1 : Math.max(0, c - 1));
-    likeMutation.mutate({ postId: post.id, wasLiked });
+    likePendingRef.current = true;
+    likeMutation.mutate({ postId: post.id, wasLiked }, {
+      onSettled: () => { likePendingRef.current = false; },
+    });
   };
 
   const handleComment = () => onCommentPress(post.id);
