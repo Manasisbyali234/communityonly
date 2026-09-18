@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Platform,
 } from 'react-native';
@@ -140,6 +140,7 @@ export default function MyBusinessesScreen() {
   const archiveMutation = useArchiveBusinessMutation();
   const unarchiveMutation = useUnarchiveBusinessMutation();
   const deleteMutation = useDeleteBusinessMutation();
+  const [selectedStatus, setSelectedStatus] = useState<BusinessStatus | null>(null);
 
   const handleArchive = useCallback(async (business: Business) => {
     const confirmed = await confirmAction({
@@ -205,7 +206,9 @@ export default function MyBusinessesScreen() {
         <View style={{ flex: 1 }}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>My Businesses</Text>
           <Text style={[styles.headerSub, { color: colors.textMuted }]}>
-            {businesses.length} submission{businesses.length !== 1 ? 's' : ''}
+            {selectedStatus
+              ? `${businesses.filter((b) => b.status === selectedStatus).length} of ${businesses.length} submission${businesses.length !== 1 ? 's' : ''}`
+              : `${businesses.length} submission${businesses.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
         <TouchableOpacity
@@ -217,15 +220,21 @@ export default function MyBusinessesScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Legend */}
+      {/* Status Filter Chips */}
       <View style={[styles.legend, { backgroundColor: colors.cardBg, borderBottomColor: colors.border }]}>
         {(['APPROVED', 'PENDING', 'REJECTED', 'WITHDRAWN'] as BusinessStatus[]).map((s) => {
           const cfg = STATUS_CONFIG[s];
+          const active = selectedStatus === s;
           return (
-            <View key={s} style={styles.legendItem}>
+            <TouchableOpacity
+              key={s}
+              style={[styles.legendItem, active && { backgroundColor: cfg.color + '22', borderRadius: 8, paddingHorizontal: 6 }]}
+              onPress={() => setSelectedStatus(active ? null : s)}
+              activeOpacity={0.7}
+            >
               <Ionicons name={cfg.icon as any} size={12} color={cfg.color} />
-              <Text style={[styles.legendText, { color: colors.textSecondary }]}>{cfg.label}</Text>
-            </View>
+              <Text style={[styles.legendText, { color: active ? cfg.color : colors.textSecondary, fontWeight: active ? '700' : '500' }]}>{cfg.label}</Text>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -236,7 +245,7 @@ export default function MyBusinessesScreen() {
         </View>
       ) : (
         <FlatList
-          data={businesses}
+          data={selectedStatus ? businesses.filter((b) => b.status === selectedStatus) : businesses}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <BusinessStatusCard

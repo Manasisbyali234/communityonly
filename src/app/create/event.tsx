@@ -24,9 +24,10 @@ import { useToastStore } from '../../store/toastStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useAuthStore } from '../../store/authStore';
 import { useCreateEventMutation, useEventDetailQuery, useUpdateEventMutation } from '../../api/event';
-import { apiClient } from '../../api/client';
+import { apiClient, API_BASE_URL } from '../../api/client';
 import Button from '../../components/common/Button';
 import ImageCropModal, { CropResult } from '../../components/common/ImageCropModal';
+import { appendPickedFile } from '../../utils/imagePicker';
 
 function InputField({ label, value, onChangeText, placeholder, multiline = false, icon = null, colors, keyboardType }: any) {
   return (
@@ -327,26 +328,23 @@ export default function CreateEvent() {
 
   const uploadBanner = async (uri: string): Promise<string> => {
     const formData = new FormData();
-
-    if (Platform.OS === 'web') {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const ext = blob.type.split('/')[1] ?? 'jpg';
-      formData.append('file', new File([blob], `banner.${ext}`, { type: blob.type }));
-    } else {
-      const filename = uri.split('/').pop() ?? 'banner.jpg';
-      const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-      formData.append('file', { uri, name: filename, type: mimeType } as any);
-    }
+    const filename = uri.split('/').pop() ?? 'event-banner.jpg';
+    const extension = filename.split('.').pop()?.toLowerCase();
+    const mimeType = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+    await appendPickedFile(formData, { localUri: uri, filename, mimeType });
 
     // /media/upload is the upload contract shared by the event and community
     // forms.  The old event-only route is not available on every deployment,
     // which caused the event to be saved without its selected image.
     const res = await apiClient.post('/media/upload', formData, { timeout: 60000 });
-    const uploadedUrl = res.data?.data?.url ?? res.data?.url;
+    const uploadedUrl = res.data?.data?.url ?? res.data?.url ?? res.data?.data?.file?.url;
     if (!uploadedUrl || typeof uploadedUrl !== 'string') throw new Error('The image upload did not return a URL.');
-    return uploadedUrl;
+    // Events validate coverUrl as a URL. The upload service often returns a
+    // relative media-proxy path, which works for rendering but is rejected by
+    // that validation when the event is saved.
+    return uploadedUrl.startsWith('/')
+      ? `${API_BASE_URL.replace('/api/v1', '')}${uploadedUrl}`
+      : uploadedUrl;
   };
 
   const handleSubmit = async () => {
@@ -538,6 +536,16 @@ export default function CreateEvent() {
           onPress={handleSubmit}
         />
       </View>
+
+      {/* ── BANNER CROP MODAL ──────────────────────────────────── */}
+      <ImageCropModal
+        visible={!!cropUri}
+        imageUri={cropUri}
+        aspect={[16, 9]}
+        onDone={handleCropDone}
+        onCancel={() => setCropUri(null)}
+        accentColor={colors.primary}
+      />
     </KeyboardAvoidingView>
   );
 }

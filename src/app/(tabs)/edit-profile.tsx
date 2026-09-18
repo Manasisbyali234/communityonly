@@ -476,6 +476,17 @@ export default function EditProfile() {
                 <Ionicons name="camera" size={15} color="#FFF" />
               </TouchableOpacity>
             </View>
+            {/* Cover change hint — centred tap-target so users find it easily */}
+            {!currentCoverUri && (
+              <TouchableOpacity
+                onPress={handlePickCover}
+                activeOpacity={0.7}
+                style={{ position: 'absolute', alignSelf: 'center', top: '30%', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}
+              >
+                <Ionicons name="camera-outline" size={18} color="#FFF" />
+                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>Change Cover Photo</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Masthead row */}

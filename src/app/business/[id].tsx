@@ -16,6 +16,7 @@ import {
   useArchiveBusinessMutation, useBusinessQuery, useBusinessReviewsQuery, useSubmitReviewMutation, BusinessReview,
 } from '../../api/business';
 import { useStartConversationMutation } from '../../api/chat';
+import { useSendConnectionRequestMutation } from '../../api/connections';
 import { shareUrl } from '../../utils/shareUtils';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -102,6 +103,8 @@ export default function BusinessDetailScreen() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  const [showConnectPrompt, setShowConnectPrompt] = useState(false);
+  const sendConnection = useSendConnectionRequestMutation();
 
   const catColor = business ? (CATEGORY_COLORS[business.category] ?? colors.primary) : colors.primary;
 
@@ -148,7 +151,13 @@ export default function BusinessDetailScreen() {
       const conversation = await startConversation.mutateAsync({ participantId: business.userId });
       router.push(`/chat/${conversation.id}` as any);
     } catch (error: any) {
-      showToast(error?.response?.data?.message ?? error?.message ?? 'Could not open a chat with this business. Please try again.', 'error');
+      const msg = error?.response?.data?.message ?? error?.message ?? '';
+      const isConnectionError = msg.toLowerCase().includes('connect') || error?.response?.status === 403;
+      if (isConnectionError) {
+        setShowConnectPrompt(true);
+      } else {
+        showToast(msg || 'Could not open a chat with this business. Please try again.', 'error');
+      }
     }
   };
 
@@ -678,6 +687,30 @@ export default function BusinessDetailScreen() {
               </>
             )}
           </TouchableOpacity>
+          {showConnectPrompt && business && (
+            <View style={[styles.connectPromptBox, { backgroundColor: isDark ? 'rgba(37,99,235,0.12)' : '#EFF6FF', borderColor: '#BFDBFE' }]}>
+              <Ionicons name="information-circle-outline" size={18} color="#2563EB" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.connectPromptTitle, { color: TEXT }]}>Connection required to chat</Text>
+                <Text style={[styles.connectPromptSub, { color: TEXT3 }]}>Send a connection request to the business owner first.</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.connectPromptBtn, { backgroundColor: '#2563EB' }]}
+                onPress={() => {
+                  setShowConnectPrompt(false);
+                  sendConnection.mutate(business.userId, {
+                    onSuccess: () => showToast('Connection request sent!', 'success'),
+                    onError: (e: any) => showToast(e?.response?.data?.message || 'Failed to send request', 'error'),
+                  });
+                }}
+                disabled={sendConnection.isPending}
+              >
+                {sendConnection.isPending
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Connect</Text>}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
 
@@ -870,6 +903,10 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 14, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
+  connectPromptBox: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginTop: 10 },
+  connectPromptTitle: { fontSize: 13, fontWeight: '700', marginBottom: 2 },
+  connectPromptSub: { fontSize: 12, lineHeight: 16 },
+  connectPromptBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 },
   primaryCtaBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
     height: 44, borderRadius: 14,

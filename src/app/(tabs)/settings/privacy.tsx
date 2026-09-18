@@ -53,7 +53,11 @@ const PRIVACY_OPTIONS: PrivacyOption[] = [
   },
 ];
 
-const DEFAULT: Settings = { isPrivateAccount: false, whoCanMessage: 'PUBLIC', whoCanSeeFollowers: 'PUBLIC' };
+// Messaging requires a mutual connection — "Everyone" is therefore not a valid
+// option for whoCanMessage and is excluded from that picker.
+const MESSAGE_OPTIONS = PRIVACY_OPTIONS.filter((o) => o.value !== 'PUBLIC');
+
+const DEFAULT: Settings = { isPrivateAccount: false, whoCanMessage: 'FOLLOWERS', whoCanSeeFollowers: 'PUBLIC' };
 
 export default function PrivacyScreen() {
   const { colors: C, typography: T, roundness, isDark } = useTheme();
@@ -154,7 +158,7 @@ export default function PrivacyScreen() {
               setActivePicker({
                 key: 'whoCanMessage',
                 title: 'Who Can Message Me',
-                description: 'Choose who can start direct chats and send messages to you.',
+                description: 'Choose who can send you direct messages. Requires a mutual connection.',
               })
             }
             activeOpacity={0.7}
@@ -246,7 +250,7 @@ export default function PrivacyScreen() {
 
             {/* Options List */}
             <View style={styles.optionsList}>
-              {PRIVACY_OPTIONS.map((opt) => {
+              {(activePicker?.key === 'whoCanMessage' ? MESSAGE_OPTIONS : PRIVACY_OPTIONS).map((opt) => {
                 const currentVal = activePicker ? settings[activePicker.key] : null;
                 const isSelected = currentVal === opt.value;
                 return (

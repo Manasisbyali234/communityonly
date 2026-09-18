@@ -114,17 +114,22 @@ export default function SettingsScreen() {
     {
       title: 'SECURITY & PRIVACY',
       rows: [
-        {
-          id: 'verification-status',
-          icon: 'shield-checkmark-outline' as const,
-          iconBgLight: '#F0FDF4',
-          iconBgDark: 'rgba(22, 163, 74, 0.22)',
-          iconColorLight: '#16A34A',
-          iconColorDark: '#4ADE80',
-          label: 'Approval Status',
-          sub: 'Profile verification & community standing',
-          route: '/(auth)/approval-status?from=settings',
-        },
+        // Only show Approval Status row when the profile is NOT yet approved
+        ...(!isApproved
+          ? [
+              {
+                id: 'verification-status',
+                icon: 'shield-checkmark-outline' as const,
+                iconBgLight: '#F0FDF4',
+                iconBgDark: 'rgba(22, 163, 74, 0.22)',
+                iconColorLight: '#16A34A',
+                iconColorDark: '#4ADE80',
+                label: 'Approval Status',
+                sub: 'Profile verification & community standing',
+                route: '/(auth)/approval-status?from=settings',
+              },
+            ]
+          : []),
         {
           id: 'account',
           icon: 'person-circle-outline' as const,
@@ -280,6 +285,12 @@ export default function SettingsScreen() {
               <Text style={[styles.profileSub, { color: C.textMuted }]} numberOfLines={1}>
                 @{user.username}{user.phone ? ` · ${user.phone}` : user.email ? ` · ${user.email}` : ''}
               </Text>
+              {isApproved && (
+                <View style={[styles.approvedBadge, { backgroundColor: isDark ? 'rgba(22, 163, 74, 0.18)' : '#F0FDF4' }]}>
+                  <Ionicons name="shield-checkmark" size={11} color="#16A34A" />
+                  <Text style={[styles.approvedBadgeText, { color: '#16A34A' }]}>Approved Member</Text>
+                </View>
+              )}
             </View>
 
             <View style={[styles.editPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : C.surfaceVariant }]}>
@@ -552,6 +563,20 @@ const styles = StyleSheet.create({
   editPillText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  approvedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  approvedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   sectionContainer: {
     marginTop: 22,

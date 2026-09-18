@@ -44,7 +44,9 @@ export default function CommunityDetails() {
   const router = useRouter();
 
   const handleBack = () => {
-    if (router.canGoBack()) {
+    if (from === 'discover' || from === 'explore') {
+      router.replace('/(tabs)/explore?tab=communities' as any);
+    } else if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/(tabs)/explore?tab=communities' as any);

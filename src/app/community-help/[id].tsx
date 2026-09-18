@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity,
-  ActivityIndicator, Linking, Platform, Modal, Pressable, TextInput, useWindowDimensions,
+  ActivityIndicator, Linking, Platform, Modal, Pressable, TextInput, useWindowDimensions, KeyboardAvoidingView,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -151,9 +151,10 @@ export default function HelpRequestDetailScreen() {
         details: reportDetails.trim() || undefined,
       });
       setShowReportModal(false);
+      setReportDetails('');
       showToast('Report submitted for admin review.', 'success');
     } catch {
-      showToast('Failed to submit report.', 'error');
+      showToast('Failed to submit report. Please try again.', 'error');
     }
   };
 
@@ -466,6 +467,7 @@ export default function HelpRequestDetailScreen() {
 
       {/* Offer Help Modal */}
       <Modal visible={showOfferModal} transparent animationType="slide" onRequestClose={() => setShowOfferModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowOfferModal(false)}>
           <Pressable style={[styles.sheet, { backgroundColor: colors.cardBg, paddingBottom: insets.bottom + 16 }]} onPress={(e) => e.stopPropagation()}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
@@ -501,6 +503,7 @@ export default function HelpRequestDetailScreen() {
             </TouchableOpacity>
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Report Modal */}

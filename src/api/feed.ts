@@ -86,7 +86,7 @@ export function usePostsQuery(enabled = true) {
     // Keep a recently loaded feed while users navigate between tabs. Mutations
     // already invalidate this key, so new posts and reactions remain current.
     staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
       const feedRes = await apiClient.get<ApiResponse<PaginatedResponse<Post>>>('/posts/feed');
       const feedPosts: any[] = feedRes.data.data.data ?? [];
@@ -236,8 +236,10 @@ export function useLikePostMutation() {
       if (ctx?.prevPost !== undefined) queryClient.setQueryData(feedKeys.post(postId), ctx.prevPost);
     },
     onSettled: (_, __, { postId }) => {
+      // Only invalidate the single post — invalidating the whole feed list
+      // triggers a full refetch that races the server commit and can flash
+      // the old like state back. The list cache was already updated optimistically.
       queryClient.invalidateQueries({ queryKey: feedKeys.post(postId) });
-      queryClient.invalidateQueries({ queryKey: feedKeys.posts() });
     },
   });
 }

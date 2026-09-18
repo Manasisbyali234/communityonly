@@ -13,6 +13,7 @@ import {
   Animated,
   useWindowDimensions,
   ActivityIndicator,
+  LayoutChangeEvent,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,12 +64,16 @@ export default function MatrimonyProfileDetail() {
   const [deleteReasonOther, setDeleteReasonOther] = useState('');
   const [deletingProfile, setDeletingProfile] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [heroWidth, setHeroWidth] = useState(windowWidth);
   const heroRef = useRef<FlatList>(null);
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const [scrollY] = useState(() => new Animated.Value(0));
 
   const isWide = windowWidth >= 768;
   const contentWidth = isWide ? Math.min(windowWidth, 680) : windowWidth;
-  const heroHeight = isWide ? 420 : Math.min(340, Math.round(windowWidth * 0.85));
+  const heroPageWidth = Math.max(1, heroWidth);
+  const heroHeight = isWide ? 420 : Math.min(340, Math.round(heroPageWidth * 0.85));
+  // Keep profile metadata below the floating navigation controls on every device.
+  const heroBadgeTop = insets.top + 56;
 
   const G = colors.primary;
   const BG = colors.background;
@@ -149,6 +154,13 @@ export default function MatrimonyProfileDetail() {
     showToast(ok ? 'Profile link copied!' : 'Could not share profile', ok ? 'success' : 'error');
   }, [profile, showToast]);
 
+  const handleHeroLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextWidth = Math.round(event.nativeEvent.layout.width);
+    if (nextWidth > 0) {
+      setHeroWidth((currentWidth) => currentWidth === nextWidth ? currentWidth : nextWidth);
+    }
+  }, []);
+
   const navBgOpacity = scrollY.interpolate({
     inputRange: [heroHeight - 120, heroHeight - 50],
     outputRange: [0, 1],
@@ -157,15 +169,15 @@ export default function MatrimonyProfileDetail() {
 
   if (isLoading) {
     return (
-      <View style={[styles.root, { backgroundColor: BG, paddingTop: insets.top }]}>
-        <View style={[styles.navBar, { borderBottomColor: BORDER }]}>
+      <View style={[styles.root, { backgroundColor: BG }]}>
+        <View style={[styles.navBar, { top: insets.top + 8, height: 40, borderBottomColor: BORDER }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.floatingNavBtn}>
             <Ionicons name="arrow-back" size={22} color={TEXT} />
           </TouchableOpacity>
           <Text style={[styles.navTitle, { color: TEXT }]}>Profile Details</Text>
           <View style={{ width: 40 }} />
         </View>
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+        <ScrollView contentContainerStyle={{ paddingTop: insets.top + 64, paddingHorizontal: 16, paddingBottom: Math.max(16, insets.bottom + 16), gap: 16 }}>
           <Skeleton width="100%" height={320} borderRadius={20} />
           <Skeleton width="60%" height={26} borderRadius={8} />
           <Skeleton width="40%" height={16} borderRadius={6} />
@@ -178,7 +190,7 @@ export default function MatrimonyProfileDetail() {
 
   if (!profile || isError) {
     return (
-      <View style={[styles.root, styles.center, { backgroundColor: BG, paddingTop: insets.top }]}>
+      <View style={[styles.root, styles.center, { backgroundColor: BG, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
         <Ionicons name="heart-dislike-outline" size={64} color={TEXT3} />
         <Text style={[styles.notFoundTitle, { color: TEXT }]}>Profile Not Found</Text>
         <Text style={[styles.notFoundSub, { color: TEXT3 }]}>This matrimony profile may have been removed or deactivated.</Text>
@@ -198,7 +210,7 @@ export default function MatrimonyProfileDetail() {
   return (
     <View style={[styles.root, { backgroundColor: BG }]}>
       {/* ── Top Floating Navigation Bar ───────────────────────────────── */}
-      <Animated.View style={[styles.navBar, { paddingTop: insets.top + 6, height: insets.top + 54 }]}>
+      <Animated.View style={[styles.navBar, { top: insets.top + 8, height: 40 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: SURF, opacity: navBgOpacity, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER }]} />
         <TouchableOpacity
           onPress={() => router.replace('/matrimony' as any)}
@@ -228,7 +240,10 @@ export default function MatrimonyProfileDetail() {
         scrollEventThrottle={16}
       >
         {/* ── Hero Photo Carousel ─────────────────────────────────────── */}
-        <View style={[styles.heroContainer, { width: windowWidth, height: heroHeight, backgroundColor: colors.elevation2 }]}>
+        <View
+          style={[styles.heroContainer, { width: isWide ? contentWidth : '100%', height: heroHeight, backgroundColor: colors.elevation2, alignSelf: isWide ? 'center' : undefined }]}
+          onLayout={handleHeroLayout}
+        >
           {photos.length > 0 ? (
             <FlatList
               ref={heroRef}
@@ -237,12 +252,12 @@ export default function MatrimonyProfileDetail() {
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item, i) => `${item}-${i}`}
-              getItemLayout={(_data, index) => ({ length: contentWidth, offset: contentWidth * index, index })}
-              onMomentumScrollEnd={(e) => setActiveIdx(Math.round(e.nativeEvent.contentOffset.x / contentWidth))}
+              getItemLayout={(_data, index) => ({ length: heroPageWidth, offset: heroPageWidth * index, index })}
+              onMomentumScrollEnd={(e) => setActiveIdx(Math.round(e.nativeEvent.contentOffset.x / heroPageWidth))}
               renderItem={({ item }) => (
                 <ExpoImage
                   source={{ uri: item }}
-                  style={{ width: contentWidth, height: heroHeight }}
+                  style={{ width: heroPageWidth, height: heroHeight }}
                   contentFit="cover"
                   transition={300}
                 />
@@ -298,7 +313,7 @@ export default function MatrimonyProfileDetail() {
 
           {/* Photo Counter Pill top-right */}
           {photos.length > 1 && (
-            <View style={[styles.photoCountPill, { top: insets.top + 10 }]}>
+            <View style={[styles.photoCountPill, { top: heroBadgeTop }]}>
               <Ionicons name="camera-outline" size={13} color="#FFF" />
               <Text style={styles.photoCountText}>{activeIdx + 1}/{photos.length}</Text>
             </View>
@@ -309,7 +324,7 @@ export default function MatrimonyProfileDetail() {
             <LinearGradient
               colors={[G, G + 'CC']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={[styles.matchScoreBadge, { top: insets.top + 10 }]}
+              style={[styles.matchScoreBadge, { top: heroBadgeTop }]}
             >
               <Ionicons name="sparkles" size={12} color="#FFF" />
               <Text style={styles.matchScoreText}>{profile.matchScore}% Match</Text>
@@ -327,7 +342,7 @@ export default function MatrimonyProfileDetail() {
                   activeOpacity={0.8}
                   onPress={() => {
                     setActiveIdx(i);
-                    heroRef.current?.scrollToOffset({ offset: contentWidth * i, animated: true });
+                    heroRef.current?.scrollToOffset({ offset: heroPageWidth * i, animated: true });
                   }}
                 >
                   <ExpoImage

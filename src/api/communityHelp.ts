@@ -34,7 +34,7 @@ export function useResolveHelpRequestMutation() {
     },
   });
 }
-export function useReportHelpRequestMutation() { return useMutation({ mutationFn: async (data: { requestId: string; reason: string; details?: string }) => { throw new Error('Request reporting endpoint is not available yet'); } }); }
+export function useReportHelpRequestMutation() { return useMutation({ mutationFn: async (data: { requestId: string; reason: string; details?: string }) => { await apiClient.post(`/help-requests/${data.requestId}/report`, { reason: data.reason, details: data.details }); } }); }
 export function useAdminHelpRequestsQuery(statusTab?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REPORTED' | 'RESOLVED') { return useQuery({ queryKey: ['admin-help-requests', statusTab], queryFn: async () => unwrap<HelpRequest[]>(await apiClient.get('/help-requests/admin', { params: statusTab && statusTab !== 'REPORTED' ? { status: statusTab } : {} })) }); }
 export function useAdminApproveHelpMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async (id: string) => unwrap(await apiClient.patch(`/help-requests/${id}/moderate`, { status: 'APPROVED' })), onSuccess: () => invalidate(qc) }); }
 export function useAdminRejectHelpMutation() { const qc = useQueryClient(); return useMutation({ mutationFn: async ({ id, reason }: { id: string; reason: string }) => unwrap(await apiClient.patch(`/help-requests/${id}/moderate`, { status: 'REJECTED', reason })), onSuccess: () => invalidate(qc) }); }

@@ -207,9 +207,6 @@ export default function ViewStoryScreen() {
             <View style={styles.ownerActions}>
               {story.authorId === currentUserId && (
                 <>
-                  <TouchableOpacity style={styles.iconBtn} onPress={() => router.push(`/story/add?storyId=${story.id}` as any)} accessibilityLabel="Edit story">
-                    <Ionicons name="pencil" size={20} color="#FFF" />
-                  </TouchableOpacity>
                   <TouchableOpacity style={styles.iconBtn} onPress={confirmDelete} accessibilityLabel="Delete story">
                     <Ionicons name="trash-outline" size={22} color="#FFF" />
                   </TouchableOpacity>

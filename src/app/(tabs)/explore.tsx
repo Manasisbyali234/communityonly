@@ -169,11 +169,14 @@ function EventSkeleton() {
 }
 
 // ── Connect Button (per-member, own hook scope) ───────────────────────────────
-function ConnectButton({ item, status, statusLoading }: { item: any; status: string; statusLoading: boolean }) {
+function ConnectButton({ item, status, statusLoading, isSelf }: { item: any; status: string; statusLoading: boolean; isSelf?: boolean }) {
   const { colors } = useTheme();
   const showToast = useToastStore((s) => s.showToast);
   const MEMBER_COLOR = '#2563EB';
   const sendRequest = useSendConnectionRequestMutation();
+
+  // Don't show a Connect button for the logged-in user's own card
+  if (isSelf) return null;
 
   const handleConnect = () => {
     if (status !== 'NONE') return;
@@ -181,11 +184,9 @@ function ConnectButton({ item, status, statusLoading }: { item: any; status: str
       onError: (e: any) => showToast(e?.response?.data?.message || 'Failed to send request', 'error'),
     });
   };
-
   const iconName = status === 'ACCEPTED' ? 'checkmark-circle' : status === 'PENDING_SENT' ? 'time-outline' : 'person-add-outline';
   const bgColor = status === 'ACCEPTED' ? 'rgba(37, 99, 235, 0.15)' : status === 'PENDING_SENT' ? colors.elevation1 : 'rgba(37, 99, 235, 0.12)';
   const iconColor = status === 'PENDING_SENT' ? colors.textMuted : MEMBER_COLOR;
-
   return (
     <TouchableOpacity
       style={[styles.msgBtn, { backgroundColor: bgColor }]}
@@ -199,9 +200,8 @@ function ConnectButton({ item, status, statusLoading }: { item: any; status: str
       )}
     </TouchableOpacity>
   );
-}
-
-function MemberCard({ item, currentUser, colors, isDark, TEXT, TEXT2, TEXT3, SURF, BORDER, SAFFRON, router }: any) {
+}function MemberCard({ item, currentUser, colors, isDark, TEXT, TEXT2, TEXT3, SURF, BORDER, SAFFRON, router }: any) {
+  const isSelf = !!currentUser?.id && item.id === currentUser.id;
   const { data: status = 'NONE', isLoading: statusLoading } = useConnectionStatusQuery(item.id, currentUser?.id);
   return (
     <TouchableOpacity
@@ -251,7 +251,7 @@ function MemberCard({ item, currentUser, colors, isDark, TEXT, TEXT2, TEXT3, SUR
         )}
       </View>
       <View style={styles.memberActions}>
-        <ConnectButton item={item} status={status} statusLoading={statusLoading} />
+        <ConnectButton item={item} status={status} statusLoading={statusLoading} isSelf={isSelf} />
         {status === 'ACCEPTED' && (
           <TouchableOpacity
             style={[styles.msgBtn, { backgroundColor: colors.elevation1 }]}
@@ -458,6 +458,22 @@ export default function ExploreScreen() {
       e.organizer?.toLowerCase().includes(q) ||
       e.creatorName?.toLowerCase().includes(q)
     );
+  });
+  // Client-side search filtering for business, help and stories tabs
+  const filteredBusinesses = publicBusinesses.filter((b: any) => {
+    if (!debouncedSearch) return true;
+    const q = debouncedSearch.toLowerCase();
+    return [b.businessName, b.ownerName, b.description, b.productsServices, b.category, b.location].some((v) => v?.toLowerCase().includes(q));
+  });
+  const filteredHelp = helpRequests.filter((h: any) => {
+    if (!debouncedSearch) return true;
+    const q = debouncedSearch.toLowerCase();
+    return [h.title, h.description, h.category, h.location, h.requesterName].some((v) => v?.toLowerCase().includes(q));
+  });
+  const filteredStories = exploreStories.filter((s: any) => {
+    if (!debouncedSearch) return true;
+    const q = debouncedSearch.toLowerCase();
+    return [s.title, s.personName, s.profession, s.location, s.category].some((v) => v?.toLowerCase().includes(q));
   });
 
   // ── Search overlay (shows when focused + no text typed yet) ───────────────
@@ -1000,11 +1016,11 @@ export default function ExploreScreen() {
               <View style={{ alignItems: 'center', paddingVertical: 32 }}>
                 <ActivityIndicator size="large" color="#0891B2" />
               </View>
-            ) : publicBusinesses.length === 0 ? (
+            ) : filteredBusinesses.length === 0 ? (
               renderEmpty('storefront-outline', 'No Businesses Yet', 'Be the first to add your business to the community directory!')
             ) : (
               <>
-                {publicBusinesses.slice(0, 6).map((b) => (
+                {filteredBusinesses.slice(0, 6).map((b) => (
                   <TouchableOpacity
                     key={b.id}
                     style={[styles.bizCard, { backgroundColor: SURF, borderColor: BORDER }]}
@@ -1105,11 +1121,11 @@ export default function ExploreScreen() {
               <View style={{ alignItems: 'center', paddingVertical: 32 }}>
                 <ActivityIndicator size="large" color="#FA5252" />
               </View>
-            ) : helpRequests.length === 0 ? (
+            ) : filteredHelp.length === 0 ? (
               renderEmpty('heart-outline', 'No Active Help Requests', 'Post a help request to get support from community members.')
             ) : (
               <>
-                {helpRequests.slice(0, 6).map((req) => {
+                {filteredHelp.slice(0, 6).map((req) => {
                   const cat = HELP_CATEGORIES.find((c) => c.id === req.category);
                   const isUrgent = req.urgency === 'URGENT';
                   return (
@@ -1196,11 +1212,11 @@ export default function ExploreScreen() {
               <View style={{ alignItems: 'center', paddingVertical: 32 }}>
                 <ActivityIndicator size="large" color="#FB923C" />
               </View>
-            ) : exploreStories.length === 0 ? (
+            ) : filteredStories.length === 0 ? (
               renderEmpty('book-outline', 'No Stories Found', 'Inspiring community stories will appear here.')
             ) : (
               <>
-                {exploreStories.slice(0, 6).map((st) => {
+                {filteredStories.slice(0, 6).map((st) => {
                   const cat = STORY_CATEGORIES.find((c) => c.id === st.category);
                   return (
                     <TouchableOpacity
@@ -1314,9 +1330,9 @@ export default function ExploreScreen() {
           )}
           {activeTab === 'feed' && `${filteredPosts.length} posts`}
           {activeTab === 'events' && `${filteredEvents.length} events`}
-          {activeTab === 'business' && `${publicBusinesses.length} businesses`}
-          {activeTab === 'help' && `${helpRequests.length} requests`}
-          {activeTab === 'stories' && `${exploreStories.length} stories`}
+          {activeTab === 'business' && `${filteredBusinesses.length} businesses`}
+          {activeTab === 'help' && `${filteredHelp.length} requests`}
+          {activeTab === 'stories' && `${filteredStories.length} stories`}
         </Text>
         {debouncedSearch ? (
           <Text style={[styles.searchingFor, { color: TAB_COLOR }]}>for "{debouncedSearch}"</Text>

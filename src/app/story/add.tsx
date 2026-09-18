@@ -681,7 +681,7 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
     <KeyboardAvoidingView
       ref={containerRef}
       style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       onLayout={e => setContainerSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
@@ -845,7 +845,7 @@ function PreviewScreen({ media, onRetake }: { media: MediaItem; onRetake: () => 
               multiline
               maxLength={120}
             />
-            <TouchableOpacity style={s.textAddBtn} onPress={addText}>
+            <TouchableOpacity style={s.textAddBtn} onPressIn={addText}>
               <Ionicons name="checkmark" size={22} color="#FFF" />
             </TouchableOpacity>
           </View>
@@ -1086,9 +1086,9 @@ const s = StyleSheet.create({
   emojiItem: { padding: 6 },
 
   textPanel: {
-    position: 'absolute', bottom: Platform.OS === 'ios' ? 140 : 120,
-    left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.82)',
-    paddingTop: 12, paddingBottom: 8, zIndex: 25,
+    position: 'absolute', bottom: 0,
+    left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.92)',
+    paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 8 : 8, zIndex: 25,
   },
   colorDot: { width: 28, height: 28, borderRadius: 14 },
   textSizeRow: {

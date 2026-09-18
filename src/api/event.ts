@@ -152,7 +152,17 @@ export function useToggleLikeMutation() {
       const res = await apiClient.post<ApiResponse<{ liked: boolean; likesCount: number }>>(`/events/${eventId}/like`);
       return res.data.data;
     },
+    onMutate: async (eventId: string) => {
+      // Optimistic update on the detail cache so the UI responds instantly
+      await queryClient.cancelQueries({ queryKey: eventKeys.detail(eventId) });
+      const prev = queryClient.getQueryData<Event | null>(eventKeys.detail(eventId));
+      queryClient.setQueryData<Event | null>(eventKeys.detail(eventId), (old) =>
+        old ? { ...old, isLiked: !old.isLiked, likesCount: old.isLiked ? Math.max(0, (old.likesCount ?? 1) - 1) : (old.likesCount ?? 0) + 1 } : old
+      );
+      return { prev };
+    },
     onSuccess: (data, eventId) => {
+      // Confirm with server values on both list and detail caches
       queryClient.setQueryData<Event[]>(eventKeys.list(), (old) =>
         old?.map((e) =>
           e.id === eventId
@@ -160,6 +170,14 @@ export function useToggleLikeMutation() {
             : e
         ) ?? []
       );
+      queryClient.setQueryData<Event | null>(eventKeys.detail(eventId), (old) =>
+        old ? { ...old, isLiked: data.liked, likesCount: data.likesCount } : old
+      );
+    },
+    onError: (_err, eventId, ctx: any) => {
+      if (ctx?.prev !== undefined) {
+        queryClient.setQueryData(eventKeys.detail(eventId), ctx.prev);
+      }
     },
   });
 }
