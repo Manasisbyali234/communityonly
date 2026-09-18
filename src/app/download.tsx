@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '../theme';
 
 const APK_URL = 'https://community-api.metromindz.com/uploads/app-release.apk';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mmdevteam.communityapp';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.metromindz.arebhashegowdacommunity';
 const APP_STORE_URL = 'https://apps.apple.com/app/id<YOUR_APP_ID>';
 
 export default function DownloadScreen() {

@@ -1,4 +1,4 @@
-package com.mmdevteam.communityapp
+package com.metromindz.arebhashegowdacommunity
 
 import android.app.Application
 import android.content.res.Configuration

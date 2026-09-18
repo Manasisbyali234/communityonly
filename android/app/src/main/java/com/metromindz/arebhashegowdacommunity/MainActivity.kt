@@ -1,4 +1,4 @@
-package com.mmdevteam.communityapp
+package com.metromindz.arebhashegowdacommunity
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
