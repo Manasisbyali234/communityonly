@@ -207,10 +207,12 @@ export default function EditProfile() {
 
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
-  // Crop modal state
-  const [cropUri, setCropUri] = useState<string | null>(null);
-  const [cropAspect, setCropAspect] = useState<[number, number]>([1, 1]);
-  const [cropTarget, setCropTarget] = useState<'avatar' | 'cover'>('avatar');
+  // Crop modal state — single object so all values update atomically
+  const [cropContext, setCropContext] = useState<{
+    uri: string | null;
+    aspect: [number, number];
+    target: 'avatar' | 'cover';
+  }>({ uri: null, aspect: [1, 1], target: 'avatar' });
 
   const handlePickFromGallery = async () => {
     setShowPhotoOptions(false);
@@ -218,9 +220,7 @@ export default function EditProfile() {
     try {
       const picked = await pickImage();
       if (picked) {
-        setCropUri(picked.localUri);
-        setCropAspect([1, 1]);
-        setCropTarget('avatar');
+        setCropContext({ uri: picked.localUri, aspect: [1, 1], target: 'avatar' });
       }
     } catch {
       setPhotoError('Failed to select photo. Please try a valid image.');
@@ -243,11 +243,7 @@ export default function EditProfile() {
       const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.9 });
       if (!result.canceled && result.assets?.[0]) {
         const asset = result.assets[0];
-        const mime = asset.mimeType ?? 'image/jpeg';
-        const name = asset.fileName ?? `avatar_${Date.now()}.jpg`;
-        setCropUri(asset.uri);
-        setCropAspect([1, 1]);
-        setCropTarget('avatar');
+        setCropContext({ uri: asset.uri, aspect: [1, 1], target: 'avatar' });
       }
     } catch {
       setPhotoError('Failed to open camera. Please check camera permissions in settings.');
@@ -258,25 +254,23 @@ export default function EditProfile() {
     try {
       const picked = await pickImage();
       if (picked) {
-        setCropUri(picked.localUri);
-        setCropAspect([16, 5]);
-        setCropTarget('cover');
         setCoverRemoved(false);
+        setCropContext({ uri: picked.localUri, aspect: [16, 5], target: 'cover' });
       }
     } catch (_) {}
   };
 
   const handleCropDone = (result: CropResult) => {
     const mime = 'image/jpeg';
-    const filename = `${cropTarget}_${Date.now()}.jpg`;
-    if (cropTarget === 'avatar') {
+    const filename = `${cropContext.target}_${Date.now()}.jpg`;
+    if (cropContext.target === 'avatar') {
       setLocalAvatarUri(result.uri);
       setPickedImage({ localUri: result.uri, filename, mimeType: mime });
     } else {
       setLocalCoverUri(result.uri);
       setPickedCover({ localUri: result.uri, filename, mimeType: mime });
     }
-    setCropUri(null);
+    setCropContext(c => ({ ...c, uri: null }));
   };
 
   const handleRemoveCover = () => {
@@ -970,12 +964,12 @@ export default function EditProfile() {
       </Modal>
       {/* ── Crop Modal ─────────────────────────────────────────────────── */}
       <ImageCropModal
-        visible={!!cropUri}
-        imageUri={cropUri}
-        aspect={cropAspect}
+        visible={!!cropContext.uri}
+        imageUri={cropContext.uri}
+        aspect={cropContext.aspect}
         accentColor={G}
         onDone={handleCropDone}
-        onCancel={() => setCropUri(null)}
+        onCancel={() => setCropContext(c => ({ ...c, uri: null }))}
       />
     </KeyboardAvoidingView>
   );
