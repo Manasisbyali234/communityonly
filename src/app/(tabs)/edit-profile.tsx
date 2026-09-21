@@ -255,12 +255,20 @@ export default function EditProfile() {
 
   const handlePickCover = async () => {
     try {
-      const picked = await pickImage();
+      // A banner must remain the image the member selected. Cropping is an
+      // explicit follow-up action, never an implicit part of selection.
+      const picked = await pickImage({ preserveOriginal: true });
       if (picked) {
         setCoverRemoved(false);
-        setCropContext({ uri: picked.localUri, aspect: [16, 5], target: 'cover' });
+        setLocalCoverUri(picked.localUri);
+        setPickedCover(picked);
       }
     } catch (_) {}
+  };
+
+  const handleCropCover = () => {
+    if (!pickedCover) return;
+    setCropContext({ uri: pickedCover.localUri, aspect: [16, 5], target: 'cover' });
   };
 
   const handleCropDone = (result: CropResult) => {
@@ -328,17 +336,16 @@ export default function EditProfile() {
         }
       }
 
-      // The cover endpoint persists a successfully cropped image itself. Do not
-      // send its client-expanded URL back in this request: keeping the server's
-      // relative proxy URL ensures it remains valid on every client and avoids a
-      // second, competing cover-image update.
-      let coverImage: null | undefined = undefined;
+      // Persist the returned URL on the profile as well as uploading the file.
+      // Some API deployments store the upload but do not attach it to /users/me.
+      let coverImage: string | null | undefined = undefined;
       if (pickedCover) {
         const uploaded = await uploadCoverPhoto(pickedCover);
         if (!uploaded) {
           showToast('Banner upload failed. Please try again.', 'error');
           return;
         }
+        coverImage = uploaded;
       } else if (coverRemoved) {
         coverImage = null;
       }
@@ -437,7 +444,7 @@ export default function EditProfile() {
 
   if (!user) return null;
 
-  const currentCoverUri = localCoverUri || (!coverRemoved ? toAbsUrl(user.coverImage) : null);
+  const currentCoverUri = localCoverUri || (!coverRemoved ? toAbsUrl(user.coverImage || user.bannerUrl) : null);
 
   // Completion score
   const fields = [user?.displayName, user?.bio, user?.village, user?.occupation, user?.country, user?.district, user?.city, user?.profession, user?.education, user?.skills];
@@ -506,7 +513,7 @@ export default function EditProfile() {
           {/* Cover */}
           <View style={{ height: 180 }}>
             {currentCoverUri ? (
-              <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
+              <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="contain" />
             ) : (
               <LinearGradient
                 colors={isDark ? [colors.primaryDark, colors.primary, colors.primary] : [colors.primaryDark, colors.primary, colors.primaryLight]}
@@ -520,6 +527,12 @@ export default function EditProfile() {
               {currentCoverUri && (
                 <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
                   <Ionicons name="trash-outline" size={15} color="#FFF" />
+                </TouchableOpacity>
+              )}
+              {pickedCover && (
+                <TouchableOpacity onPress={handleCropCover} activeOpacity={0.8} style={[styles.coverBannerBtn, { backgroundColor: 'rgba(0,0,0,0.62)' }]}>
+                  <Ionicons name="crop-outline" size={15} color="#FFF" />
+                  <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Crop</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverBannerBtn, { backgroundColor: 'rgba(0,0,0,0.62)' }]}>

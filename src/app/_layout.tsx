@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet, StatusBar, Platform, AppState } fr
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 import { useUserApprovalStore, resolveUserApproval } from '../store/userApprovalStore';
 import { useTheme } from '../theme';
@@ -19,6 +20,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Survives Android recreating the app while the native camera activity is open.
+const SIGNUP_CAMERA_PENDING_KEY = 'signup-camera-pending';
 
 // Capture the intended URL on web before any redirect happens — only for non-admin paths
 const intendedPath = Platform.OS === 'web' && typeof window !== 'undefined'
@@ -54,6 +58,7 @@ function RootLayoutContent() {
   const isLoggedIn = isAuthenticated || !!user;
   const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
   const [tokensInitialized, setTokensInitialized] = useState(false);
+  const [hasPendingSignupCamera, setHasPendingSignupCamera] = useState<boolean | null>(null);
   const lastRedirect = useRef<string | null>(null);
   const appState = useRef(AppState.currentState);
 
@@ -92,6 +97,16 @@ function RootLayoutContent() {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+    void AsyncStorage.getItem(SIGNUP_CAMERA_PENDING_KEY).then((value) => {
+      if (mounted) setHasPendingSignupCamera(value === 'true');
+    }).catch(() => {
+      if (mounted) setHasPendingSignupCamera(false);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
     if (isLoggedIn && tokensInitialized && token) {
       void initSocket();
     }
@@ -110,7 +125,7 @@ function RootLayoutContent() {
   }, [isLoggedIn, tokensInitialized, token]);
 
   useEffect(() => {
-    if (isLoading || !tokensInitialized) return;
+    if (isLoading || !tokensInitialized || hasPendingSignupCamera === null) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inAdminGroup = segments[0] === '(admin)';
@@ -130,7 +145,11 @@ function RootLayoutContent() {
       if (lastRedirect.current && lastRedirect.current !== '/(auth)/login' && lastRedirect.current !== '/(auth)/onboarding') {
         lastRedirect.current = null;
       }
-      if (!inAuthGroup) {
+      // If Android recreated the app after handing control to the camera, the
+      // pending ImagePicker result belongs to signup. Restore that route first.
+      if (hasPendingSignupCamera && !inAuthGroup) {
+        navigate('/(auth)/register');
+      } else if (!inAuthGroup) {
         navigate(!isOnboarded ? '/(auth)/onboarding' : '/(auth)/login');
       }
     } else if (isAdmin) {
@@ -169,7 +188,7 @@ function RootLayoutContent() {
         }
       }
     }
-  }, [isLoggedIn, isOnboarded, isLoading, tokensInitialized, segments]);
+  }, [isLoggedIn, isOnboarded, isLoading, tokensInitialized, hasPendingSignupCamera, segments]);
 
   if (!tokensInitialized) {
     return (

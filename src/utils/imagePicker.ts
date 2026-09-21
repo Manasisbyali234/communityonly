@@ -40,11 +40,15 @@ export interface PickedImage {
   filename: string;
   mimeType: string;
   size?: number;
+  /** Keep the selected file intact instead of applying the app's upload compression. */
+  preserveOriginal?: boolean;
 }
 
 export interface PickImageOptions {
   aspect?: [number, number];
   onPermissionDenied?: () => void;
+  /** Use for banners and other media that must not be resized before upload. */
+  preserveOriginal?: boolean;
 }
 
 async function jpegBlobToWebp(blob: Blob): Promise<Blob> {
@@ -105,7 +109,7 @@ export async function appendPickedFile(formData: FormData, picked: PickedImage):
 
   let filename = picked.filename;
   let mimeType = picked.mimeType || blob.type || 'application/octet-stream';
-  if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+  if (!picked.preserveOriginal && (mimeType === 'image/jpeg' || mimeType === 'image/jpg')) {
     blob = await jpegBlobToWebp(blob);
     assertWithinMediaUploadLimit(blob.size);
     filename = filename.replace(/\.(jpe?g)$/i, '.webp') || `${filename}.webp`;
@@ -113,6 +117,39 @@ export async function appendPickedFile(formData: FormData, picked: PickedImage):
   }
 
   formData.append('file', new File([blob], filename, { type: mimeType }));
+}
+
+/**
+ * Converts an Expo ImagePicker asset into the app's upload shape. Keeping this
+ * in one place also lets Android's recovered camera result follow the exact
+ * same validation and compression rules as a normal picker result.
+ */
+export async function toPickedImage(
+  asset: ImagePicker.ImagePickerAsset,
+  options?: PickImageOptions,
+): Promise<PickedImage> {
+  assertWithinMediaUploadLimit(asset.fileSize);
+  const filename = asset.fileName || asset.uri.split('/').pop() || 'photo.jpg';
+  const extension = /\.(\w+)$/.exec(filename)?.[1]?.toLowerCase();
+  const rawMime = asset.mimeType || (extension ? `image/${extension.replace('jpg', 'jpeg')}` : 'image/jpeg');
+
+  if (options?.preserveOriginal) {
+    return {
+      localUri: asset.uri,
+      filename,
+      mimeType: rawMime,
+      size: asset.fileSize,
+      preserveOriginal: true,
+    };
+  }
+
+  const { uri: compressedUri, mimeType } = await compressImage(asset.uri, rawMime);
+  return {
+    localUri: compressedUri,
+    filename: mimeType === 'image/webp' ? filename.replace(/\.(jpg|jpeg)$/i, '.webp') : filename,
+    mimeType,
+    size: asset.fileSize,
+  };
 }
 
 export async function pickImage(options?: PickImageOptions): Promise<PickedImage | null> {
@@ -125,21 +162,11 @@ export async function pickImage(options?: PickImageOptions): Promise<PickedImage
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: false,
-    quality: 0.9,
+    quality: options?.preserveOriginal ? 1 : 0.9,
   });
 
   if (result.canceled) return null;
-
-  const asset = result.assets[0];
-  assertWithinMediaUploadLimit(asset.fileSize);
-  const filename = asset.uri.split('/').pop() ?? 'photo.jpg';
-  const match = /\.(\w+)$/.exec(filename);
-  const rawMime = match ? `image/${match[1].toLowerCase().replace('jpg', 'jpeg')}` : 'image/jpeg';
-  const { uri: compressedUri, mimeType } = await compressImage(asset.uri, rawMime);
-  const finalFilename = mimeType === 'image/webp'
-    ? filename.replace(/\.(jpg|jpeg)$/i, '.webp')
-    : filename;
-  return { localUri: compressedUri, filename: finalFilename, mimeType, size: asset.fileSize };
+  return toPickedImage(result.assets[0], options);
 }
 
 export async function takePhoto(options?: PickImageOptions): Promise<PickedImage | null> {
@@ -152,21 +179,11 @@ export async function takePhoto(options?: PickImageOptions): Promise<PickedImage
   const result = await ImagePicker.launchCameraAsync({
     mediaTypes: ['images'],
     allowsEditing: false,
-    quality: 0.9,
+    quality: options?.preserveOriginal ? 1 : 0.9,
   });
 
   if (result.canceled) return null;
-
-  const asset = result.assets[0];
-  assertWithinMediaUploadLimit(asset.fileSize);
-  const filename = asset.uri.split('/').pop() ?? 'photo.jpg';
-  const match = /\.(\w+)$/.exec(filename);
-  const rawMime = match ? `image/${match[1].toLowerCase().replace('jpg', 'jpeg')}` : 'image/jpeg';
-  const { uri: compressedUri, mimeType } = await compressImage(asset.uri, rawMime);
-  const finalFilename = mimeType === 'image/webp'
-    ? filename.replace(/\.(jpg|jpeg)$/i, '.webp')
-    : filename;
-  return { localUri: compressedUri, filename: finalFilename, mimeType, size: asset.fileSize };
+  return toPickedImage(result.assets[0], options);
 }
 
 export async function uploadImage(picked: PickedImage): Promise<string | null> {

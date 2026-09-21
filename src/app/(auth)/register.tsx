@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -19,10 +19,11 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../theme';
 import { useToastStore } from '../../store/toastStore';
 import * as ImagePicker from 'expo-image-picker';
-import { pickImage, PickedImage, appendPickedFile } from '../../utils/imagePicker';
+import { pickImage, PickedImage, appendPickedFile, toPickedImage } from '../../utils/imagePicker';
 import { useUserApprovalStore } from '../../store/userApprovalStore';
 import { useAuthStore } from '../../store/authStore';
 import { apiClient } from '../../api/client';
@@ -44,6 +45,7 @@ const KARNATAKA_DISTRICTS = [
 ];
 
 const GENDERS: Array<'Male' | 'Female' | 'Other'> = ['Male', 'Female', 'Other'];
+const SIGNUP_CAMERA_PENDING_KEY = 'signup-camera-pending';
 
 const registerSchema = z
   .object({
@@ -154,6 +156,30 @@ export default function RegisterScreen() {
 
   const [showPhotoSourceSheet, setShowPhotoSourceSheet] = useState(false);
 
+  // Android can destroy MainActivity while the system camera is open. Expo
+  // retains the result for recovery, so restore it before the auth guard can
+  // treat the resumed signup as an abandoned flow.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let disposed = false;
+
+    void ImagePicker.getPendingResultAsync().then(async (result) => {
+      if (result) {
+        if (!disposed && 'canceled' in result && !result.canceled && result.assets?.[0]) {
+          try {
+            const photo = await toPickedImage(result.assets[0], { preserveOriginal: true });
+            if (!disposed) setProfilePhoto(photo);
+          } catch {
+            if (!disposed) showToast('Could not restore the captured photo. Please try again.', 'error');
+          }
+        }
+        void AsyncStorage.removeItem(SIGNUP_CAMERA_PENDING_KEY);
+      }
+    });
+
+    return () => { disposed = true; };
+  }, [showToast]);
+
   const handlePickPhoto = () => setShowPhotoSourceSheet(true);
 
   const handlePickFromGallery = async () => {
@@ -172,10 +198,21 @@ export default function RegisterScreen() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') { showToast('Camera permission required', 'error'); return; }
-      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.85 });
-      if (!result.canceled && result.assets?.[0]) setProfilePhoto({ localUri: result.assets[0].uri, filename: 'avatar.jpg', mimeType: 'image/jpeg' });
+      await AsyncStorage.setItem(SIGNUP_CAMERA_PENDING_KEY, 'true');
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        setProfilePhoto(await toPickedImage(result.assets[0], { preserveOriginal: true }));
+      }
     } catch {
       showToast('Could not open camera', 'error');
+    } finally {
+      // No-op if Android destroyed the activity; the new app instance clears it
+      // after recovering the pending result above.
+      void AsyncStorage.removeItem(SIGNUP_CAMERA_PENDING_KEY);
     }
   };
 

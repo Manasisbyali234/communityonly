@@ -482,7 +482,7 @@ export default function ProfileScreen() {
         {/* ── Cover ──────────────────────────────────────────────────── */}
         <View style={{ height: coverHeight, position: 'relative' }}>
           {user?.coverImage || user?.bannerUrl ? (
-            <Image source={{ uri: user.coverImage || user.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+            <Image source={{ uri: user.coverImage || user.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="contain" transition={200} />
           ) : (
             <LinearGradient
               colors={isDark

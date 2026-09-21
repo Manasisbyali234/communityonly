@@ -59,6 +59,8 @@ const ICON_MAP: Record<string, IconCfg> = {
   EVENT_REMINDER:              { name: 'calendar',         color: '#0284C7', bg: '#E0F2FE' },
   CONNECTION_REQUEST:          { name: 'people',           color: '#2563EB', bg: '#DBEAFE' },
   CONNECTION_ACCEPTED:         { name: 'checkmark-circle', color: '#16A34A', bg: '#DCFCE7' },
+  CONNECTION_REJECTED:         { name: 'close-circle',     color: '#DC2626', bg: '#FEE2E2' },
+  CONNECTION_DECLINED:         { name: 'close-circle',     color: '#DC2626', bg: '#FEE2E2' },
   // Matrimony
   MATRIMONY_INTEREST:          { name: 'heart',            color: '#EC4899', bg: '#FCE7F3' },
   MATRIMONY_INTEREST_ACCEPTED: { name: 'checkmark-circle', color: '#16A34A', bg: '#DCFCE7' },
@@ -316,6 +318,8 @@ export default function NotificationsScreen() {
       }
       case 'FOLLOW':
       case 'CONNECTION_ACCEPTED':
+      case 'CONNECTION_REJECTED':
+      case 'CONNECTION_DECLINED':
         if (actorId) router.push(`/(tabs)/user/${actorId}?from=notifications` as any);
         break;
       case 'MESSAGE': {
