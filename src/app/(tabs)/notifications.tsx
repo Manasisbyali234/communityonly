@@ -83,10 +83,12 @@ const formatTime = (createdAt: string) => {
 function ConnectionRequestCard({
   request,
   onViewProfile,
+  onRequestUpdated,
   showToast,
 }: {
   request: ConnectionRequest;
   onViewProfile: (userId: string) => void;
+  onRequestUpdated: () => Promise<unknown>;
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 }) {
   const { colors } = useTheme();
@@ -105,7 +107,10 @@ function ConnectionRequestCard({
         showToast(`You’re now connected with ${senderName}.`, 'success');
       },
       onError: (e: any) => showToast(e?.response?.data?.message || 'Could not approve this request.', 'error'),
-      onSettled: () => setAction(null),
+      onSettled: () => {
+        setAction(null);
+        void onRequestUpdated();
+      },
     });
   };
 
@@ -117,7 +122,10 @@ function ConnectionRequestCard({
         showToast('Connection request declined.', 'info');
       },
       onError: (e: any) => showToast(e?.response?.data?.message || 'Could not decline this request.', 'error'),
-      onSettled: () => setAction(null),
+      onSettled: () => {
+        setAction(null);
+        void onRequestUpdated();
+      },
     });
   };
 
@@ -264,6 +272,7 @@ export default function NotificationsScreen() {
             key={request.id}
             request={request}
             onViewProfile={(userId) => router.push(`/(tabs)/user/${userId}?from=notifications` as any)}
+            onRequestUpdated={refetchPendingRequests}
             showToast={showToast}
           />
         ))}

@@ -328,11 +328,16 @@ export default function EditProfile() {
         }
       }
 
-      let coverImage: string | null | undefined = undefined;
+      // The cover endpoint persists a successfully cropped image itself. Do not
+      // send its client-expanded URL back in this request: keeping the server's
+      // relative proxy URL ensures it remains valid on every client and avoids a
+      // second, competing cover-image update.
+      let coverImage: null | undefined = undefined;
       if (pickedCover) {
         const uploaded = await uploadCoverPhoto(pickedCover);
-        if (uploaded) {
-          coverImage = toAbsUrl(uploaded);
+        if (!uploaded) {
+          showToast('Banner upload failed. Please try again.', 'error');
+          return;
         }
       } else if (coverRemoved) {
         coverImage = null;
@@ -364,6 +369,9 @@ export default function EditProfile() {
       if (avatarUrl) updated.avatarUrl = avatarUrl;
       if (coverImage !== undefined) updated.coverImage = coverImage;
       updateProfile(updated);
+      setLocalCoverUri(null);
+      setPickedCover(null);
+      setCoverRemoved(false);
 
       if (isRejectedOrPending) {
         if (user?.id) {
