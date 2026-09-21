@@ -18,7 +18,12 @@ import {
   useMarkReadMutation,
   useNotificationSocket,
 } from '../../api/chat';
-import { useAcceptConnectionMutation, useRejectConnectionMutation } from '../../api/connections';
+import {
+  ConnectionRequest,
+  useAcceptConnectionMutation,
+  usePendingRequestsQuery,
+  useRejectConnectionMutation,
+} from '../../api/connections';
 import { useApproveMemberMutation, useRejectMemberMutation } from '../../api/community';
 import Avatar from '../../components/common/Avatar';
 import Button from '../../components/common/Button';
@@ -75,6 +80,97 @@ const formatTime = (createdAt: string) => {
   return new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
+function ConnectionRequestCard({
+  request,
+  onViewProfile,
+  showToast,
+}: {
+  request: ConnectionRequest;
+  onViewProfile: (userId: string) => void;
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+}) {
+  const { colors } = useTheme();
+  const acceptRequest = useAcceptConnectionMutation();
+  const rejectRequest = useRejectConnectionMutation();
+  const [action, setAction] = useState<'approve' | 'decline' | null>(null);
+  const [resolved, setResolved] = useState<'approved' | 'declined' | null>(null);
+  const sender = request.sender;
+  const senderName = sender?.displayName || sender?.username || 'Community member';
+
+  const handleApprove = () => {
+    setAction('approve');
+    acceptRequest.mutate(request.id, {
+      onSuccess: () => {
+        setResolved('approved');
+        showToast(`You’re now connected with ${senderName}.`, 'success');
+      },
+      onError: (e: any) => showToast(e?.response?.data?.message || 'Could not approve this request.', 'error'),
+      onSettled: () => setAction(null),
+    });
+  };
+
+  const handleDecline = () => {
+    setAction('decline');
+    rejectRequest.mutate(request.id, {
+      onSuccess: () => {
+        setResolved('declined');
+        showToast('Connection request declined.', 'info');
+      },
+      onError: (e: any) => showToast(e?.response?.data?.message || 'Could not decline this request.', 'error'),
+      onSettled: () => setAction(null),
+    });
+  };
+
+  return (
+    <View style={[styles.requestCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <TouchableOpacity
+        style={styles.requestIdentity}
+        activeOpacity={0.75}
+        onPress={() => sender?.id && onViewProfile(sender.id)}
+        disabled={!sender?.id}
+        accessibilityRole="button"
+        accessibilityLabel={`View ${senderName}'s profile`}
+      >
+        <Avatar url={sender?.avatarUrl} name={senderName} size={46} />
+        <View style={styles.requestCopy}>
+          <Text style={[styles.requestName, { color: colors.text }]} numberOfLines={1}>{senderName}</Text>
+          <Text style={[styles.requestMessage, { color: colors.textSecondary }]} numberOfLines={2}>Wants to connect with you</Text>
+          <Text style={[styles.timestamp, { color: colors.textMuted }]}>{formatTime(request.createdAt)}</Text>
+        </View>
+      </TouchableOpacity>
+      {resolved ? (
+        <View style={[styles.requestResolved, { backgroundColor: resolved === 'approved' ? colors.primaryContainer : colors.errorContainer }]}>
+          <Ionicons name={resolved === 'approved' ? 'checkmark-circle' : 'close-circle'} size={15} color={resolved === 'approved' ? colors.primaryDark : colors.error} />
+          <Text style={[styles.requestResolvedText, { color: resolved === 'approved' ? colors.primaryDark : colors.error }]}>
+            {resolved === 'approved' ? 'Connection approved' : 'Request declined'}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.requestActions}>
+          <Button
+            title="Approve"
+            variant="primary"
+            size="sm"
+            loading={action === 'approve'}
+            disabled={action !== null}
+            onPress={handleApprove}
+            accessibilityLabel={`Approve connection request from ${senderName}`}
+          />
+          <Button
+            title="Decline"
+            variant="destructive-subtle"
+            size="sm"
+            loading={action === 'decline'}
+            disabled={action !== null}
+            onPress={handleDecline}
+            accessibilityLabel={`Decline connection request from ${senderName}`}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -86,6 +182,12 @@ export default function NotificationsScreen() {
   const tappedRef = useRef<Set<string>>(new Set());
 
   const { data: notifications = [], isLoading } = useNotificationsQuery();
+  const {
+    data: pendingConnectionRequests = [],
+    isLoading: pendingRequestsLoading,
+    isError: pendingRequestsError,
+    refetch: refetchPendingRequests,
+  } = usePendingRequestsQuery();
   const markAllRead = useMarkAllReadMutation();
   const markRead = useMarkReadMutation();
   const acceptConn = useAcceptConnectionMutation();
@@ -110,11 +212,70 @@ export default function NotificationsScreen() {
     }
     if (activeFilter === 'REQUESTS') {
       return notifications.filter((n: any) =>
-        n.type === 'CONNECTION_REQUEST' || (n.type === 'COMMUNITY_JOIN' && n.entityId && n.actorId)
+        n.type === 'COMMUNITY_JOIN' && n.entityId && n.actorId
       );
     }
-    return notifications;
+    // Connection requests have a dedicated, API-backed section below. This
+    // avoids duplicate action cards and does not rely on a notification's
+    // entityId being the request id.
+    return notifications.filter((n: any) => n.type !== 'CONNECTION_REQUEST');
   }, [notifications, activeFilter]);
+
+  const renderConnectionRequests = useCallback(() => {
+    if (pendingRequestsLoading) {
+      return (
+        <View style={[styles.requestsState, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.requestsStateText, { color: colors.textSecondary }]}>Checking connection requests…</Text>
+        </View>
+      );
+    }
+
+    if (pendingRequestsError) {
+      return (
+        <View style={[styles.requestsState, { borderColor: colors.error + '55', backgroundColor: colors.surface }]}>
+          <Ionicons name="alert-circle-outline" size={19} color={colors.error} />
+          <View style={styles.requestsErrorCopy}>
+            <Text style={[styles.requestsStateText, { color: colors.text }]}>Couldn’t load connection requests.</Text>
+            <TouchableOpacity onPress={() => refetchPendingRequests()} accessibilityRole="button" accessibilityLabel="Retry loading connection requests">
+              <Text style={[styles.retryText, { color: colors.primary }]}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (pendingConnectionRequests.length === 0) return null;
+
+    return (
+      <View style={styles.requestsSection}>
+        <View style={styles.requestsHeading}>
+          <View>
+            <Text style={[styles.requestsTitle, { color: colors.text }]}>Connection requests</Text>
+            <Text style={[styles.requestsSubtitle, { color: colors.textMuted }]}>Review people who want to connect with you.</Text>
+          </View>
+          <View style={[styles.requestsCount, { backgroundColor: colors.primaryContainer }]}>
+            <Text style={[styles.requestsCountText, { color: colors.onPrimaryContainer }]}>{pendingConnectionRequests.length}</Text>
+          </View>
+        </View>
+
+        {pendingConnectionRequests.map((request: ConnectionRequest) => (
+          <ConnectionRequestCard
+            key={request.id}
+            request={request}
+            onViewProfile={(userId) => router.push(`/(tabs)/user/${userId}?from=notifications` as any)}
+            showToast={showToast}
+          />
+        ))}
+        {activeFilter === 'REQUESTS' && filteredNotifications.length > 0 && (
+          <View style={[styles.communityRequestsHeading, { borderTopColor: colors.border }]}>
+            <Text style={[styles.requestsTitle, { color: colors.text }]}>Community join requests</Text>
+            <Text style={[styles.requestsSubtitle, { color: colors.textMuted }]}>Review membership requests for your communities.</Text>
+          </View>
+        )}
+      </View>
+    );
+  }, [activeFilter, colors, filteredNotifications.length, pendingConnectionRequests, pendingRequestsError, pendingRequestsLoading, refetchPendingRequests, router, showToast]);
 
   const handleNotificationPress = useCallback((item: any) => {
     if (NON_CLICKABLE_TYPES.has(item.type)) {
@@ -476,7 +637,9 @@ export default function NotificationsScreen() {
                   { color: active ? '#FFF' : colors.textSecondary, fontWeight: active ? '700' : '600' },
                 ]}
               >
-                {tab.label}
+                {tab.id === 'REQUESTS' && pendingConnectionRequests.length > 0
+                  ? `${tab.label} (${pendingConnectionRequests.length})`
+                  : tab.label}
               </Text>
             </TouchableOpacity>
           );
@@ -509,6 +672,7 @@ export default function NotificationsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={activeFilter === 'UNREAD' ? null : renderConnectionRequests}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <View
@@ -610,6 +774,104 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 40,
     gap: 8,
+  },
+  requestsSection: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  requestsHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    marginBottom: 2,
+  },
+  requestsTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.25,
+  },
+  requestsSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  requestsCount: {
+    minWidth: 25,
+    height: 25,
+    paddingHorizontal: 7,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestsCountText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  requestCard: {
+    padding: 13,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+  },
+  requestIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  requestCopy: {
+    flex: 1,
+    marginLeft: 11,
+  },
+  requestName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  requestMessage: {
+    fontSize: 12.5,
+    marginTop: 2,
+  },
+  requestActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  requestResolved: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    marginTop: 12,
+  },
+  requestResolvedText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  communityRequestsHeading: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 18,
+    marginTop: 10,
+  },
+  requestsState: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+  },
+  requestsStateText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  requestsErrorCopy: {
+    flex: 1,
+  },
+  retryText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    marginTop: 4,
   },
   rowContainer: {
     borderRadius: 16,

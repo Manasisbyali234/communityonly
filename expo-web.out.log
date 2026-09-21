@@ -1,0 +1,33 @@
+Starting project at D:\frontend_community
+Using src/app as the root directory for Expo Router.
+Starting Metro Bundler
+
+ ERROR  An unknown error occurred while installing React Native DevTools. Details:
+
+spawn EPERM
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+| (node:7952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:7952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:7952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+Web Bundled 80421ms node_modules\expo-router\entry.js (1824 modules)
+λ Bundled 80618ms node_modules\expo\node_modules\@expo\cli\node_modules\@expo\router-server\node\render.js (2032 modules)
+Web Bundled 5809ms node_modules\expo-router\entry.js (1830 modules)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"} 
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  Require cycle: src/store/authStore.ts -> src/api/media.ts -> src/api/client.ts -> src/store/authStore.ts
+
+Require cycles are allowed, but can result in uninitialized values. Consider refactoring to remove the need for a cycle.
+Web  WARN  Require cycle: src/store/authStore.ts -> src/api/media.ts -> src/store/authStore.ts
+
+Require cycles are allowed, but can result in uninitialized values. Consider refactoring to remove the need for a cycle.
+Web  WARN  [Reanimated] Reduced motion setting is enabled on this device. This warning is visible only in the development mode. Some animations will be disabled by default. You can override the behavior for individual animations, see https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#reduced-motion-setting-is-enabled-on-this-device.
+Web  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+Web  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+Web  WARN  Route "./matrimony/theme.ts" is missing the required default export. Ensure a React component is exported as default.

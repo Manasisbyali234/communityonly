@@ -40,6 +40,21 @@ type ProfileTab = 'about' | 'posts' | 'communities' | 'events' | 'family' | 'upd
 
 const COVER_HEIGHT = 260;
 
+/** The API has returned user lists both directly and inside pagination wrappers. */
+function extractUsers(payload: unknown): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+
+  const value = payload as Record<string, unknown>;
+  for (const key of ['users', 'items', 'results', 'data']) {
+    const users = extractUsers(value[key]);
+    if (users.length) return users;
+  }
+  return [];
+}
+
+const normaliseFamilyName = (name?: string | null) => name?.trim().toLocaleLowerCase() ?? '';
+
 const TABS: { id: ProfileTab; label: string; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'about',       label: 'About',       icon: 'person-outline',    activeIcon: 'person' },
   { id: 'posts',       label: 'Posts',        icon: 'grid-outline',      activeIcon: 'grid' },
@@ -162,40 +177,48 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
 
   useEffect(() => {
     if (!familyName) return;
+    let isCurrent = true;
     setLoading(true);
-    apiClient.get('/users', { params: { familyName, limit: 50 } })
-      .then((res) => {
-        const raw = res.data?.data ?? res.data ?? [];
-        const data = Array.isArray(raw) ? raw : (raw.users ?? raw.data ?? []);
-        const normalizedFamilyName = familyName.trim().toLocaleLowerCase();
-        setMembers(data.filter((m: any) =>
-          m.id !== userId && m.familyName?.trim().toLocaleLowerCase() === normalizedFamilyName
-        ));
+    // The deployed API exposes member lookup through /search/users; /users is
+    // not a public route and returns 404.
+    apiClient.get('/search/users', { params: { q: familyName, limit: 50 } })
+      .then((response) => {
+        if (!isCurrent) return;
+
+        const normalisedName = normaliseFamilyName(familyName);
+        const seen = new Set<string>();
+        const matches = extractUsers(response.data)
+          .filter((member: any) => {
+            const id = member.id ?? member._id;
+            const memberFamilyName = member.familyName ?? member.okka ?? member.family?.name;
+            const isMatch = id && id !== userId && normaliseFamilyName(memberFamilyName) === normalisedName;
+            if (!isMatch || seen.has(String(id))) return false;
+            seen.add(String(id));
+            return true;
+          })
+          .map((member: any) => {
+            const id = member.id ?? member._id;
+            return { ...member, id };
+          });
+        setMembers(matches);
       })
-      .catch(() => setMembers([]))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (isCurrent) setMembers([]);
+      })
+      .finally(() => {
+        if (isCurrent) setLoading(false);
+      });
+
+    return () => { isCurrent = false; };
   }, [familyName, userId]);
 
   // Fetch popular family names when no family name is set
   useEffect(() => {
     if (familyName) return;
-    setSuggestionsLoading(true);
-    apiClient.get('/users', { params: { limit: 100 } })
-      .then((res) => {
-        const data: any[] = res.data?.data ?? res.data ?? [];
-        const counts: Record<string, number> = {};
-        data.forEach((u: any) => {
-          const fn = u.familyName?.trim();
-          if (fn) counts[fn] = (counts[fn] || 0) + 1;
-        });
-        const communitySuggestions = Object.entries(counts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 12)
-          .map(([name]) => name);
-        setSuggestions([...new Set([...communitySuggestions, ...FAMILY_NAMES])].slice(0, 12));
-      })
-      .catch(() => setSuggestions(FAMILY_NAMES.slice(0, 12)))
-      .finally(() => setSuggestionsLoading(false));
+    // There is no public endpoint that lists all users. Avoid a failing
+    // request here and show the curated Okka names instead.
+    setSuggestions(FAMILY_NAMES.slice(0, 12));
+    setSuggestionsLoading(false);
   }, [familyName]);
 
   const handleInvite = async () => {
@@ -209,8 +232,10 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
       title={familyName ? `${familyName} Family` : 'Family Directory'}
       icon="people"
       color={G}
-      action={handleInvite}
-      actionLabel="Invite"
+      // Keep sharing available even when registered family members are
+      // suggested below, so members can invite relatives who have not joined.
+      action={familyName ? handleInvite : undefined}
+      actionLabel={familyName ? 'Invite' : undefined}
     >
       {!familyName && (
         <View style={s.emptyState}>
@@ -226,7 +251,7 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
           ) : suggestions.length > 0 ? (
             <View style={{ width: '100%', marginTop: 16 }}>
               <Text style={[{ fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 8, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.4 }]}>
-                Popular Family Names in Community
+                Family Names / Okka
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
                 {suggestions.map((name) => (
@@ -272,7 +297,10 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
           </TouchableOpacity>
         </View>
       )}
-      {familyName && !loading && members.map((member: any, i: number) => (
+      {familyName && !loading && members.length > 0 && (
+        <View>
+          <Text style={[s.suggestedFamilyLabel, { color: colors.textMuted }]}>Suggested family members</Text>
+      {members.map((member: any, i: number) => (
         <TouchableOpacity
           key={member.id}
           style={[s.memberRow, i < members.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
@@ -289,6 +317,8 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
       ))}
+        </View>
+      )}
     </SectionCard>
   );
 }
@@ -300,7 +330,9 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { width: SW } = useWindowDimensions();
   const { user, updateProfile } = useAuthStore();
-  const { isApproved } = resolveUserApproval(user);
+  const { isApproved, managedUser: managed } = resolveUserApproval(user);
+  // Prefer managed.familyName (from userApprovalStore) if user.familyName is not yet populated
+  const resolvedFamilyName = user?.familyName || managed?.familyName;
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('about');
   const [bioExpanded, setBioExpanded] = useState(false);
@@ -525,10 +557,10 @@ export default function ProfileScreen() {
                   <Text style={[s.infoPillText, { color: TEXT2 }]} numberOfLines={1}>{user?.city || user?.district}</Text>
                 </View>
               )}
-              {user?.familyName && (
+              {(user?.familyName || resolvedFamilyName) && (
                 <View style={[s.infoPill, { backgroundColor: colors.primaryDark + '20', borderColor: colors.primaryDark + '40' }]}>
                   <Ionicons name="people" size={11} color={colors.primaryDark} />
-                  <Text style={[s.infoPillText, { color: colors.primaryDark }]} numberOfLines={1}>{user.familyName}</Text>
+                  <Text style={[s.infoPillText, { color: colors.primaryDark }]} numberOfLines={1}>{resolvedFamilyName}</Text>
                 </View>
               )}
             </View>
@@ -865,7 +897,7 @@ export default function ProfileScreen() {
           )}
 
           {/* FAMILY TAB */}
-          {activeTab === 'family' && <FamilyTab familyName={user?.familyName} userId={user?.id} />}
+          {activeTab === 'family' && <FamilyTab familyName={resolvedFamilyName} userId={user?.id} />}
 
           {/* UPDATES TAB */}
           {activeTab === 'updates' && <UpdatesTab />}
@@ -1123,6 +1155,15 @@ const s = StyleSheet.create({
   },
   memberName: { fontSize: 14, fontWeight: '700' },
   memberMeta: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  suggestedFamilyLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 2,
+    textTransform: 'uppercase',
+  },
   inviteBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, marginTop: 12,

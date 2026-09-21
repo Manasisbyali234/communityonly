@@ -108,8 +108,11 @@ export function useRejectConnectionMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (requestId: string) => apiClient.post(`/connections/requests/${requestId}/reject`),
-    onSuccess: (_data, requestId) => {
-      qc.invalidateQueries({ queryKey: ['connections', 'pending'] });
+    onSuccess: () => {
+      // A declined request also changes the relationship status shown on
+      // profile pages. Invalidate all connection-derived views, not only the
+      // recipient's pending-request list.
+      qc.invalidateQueries({ queryKey: ['connections'] });
       qc.invalidateQueries({ queryKey: ['notifications'] });
     },
   });

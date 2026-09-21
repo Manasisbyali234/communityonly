@@ -223,9 +223,6 @@ export function useNotificationSocket() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
-
     const handleNew = (notification: any) => {
       // Normalize postId same as REST query
       const normalized = {
@@ -259,8 +256,18 @@ export function useNotificationSocket() {
       }
     };
 
-    socket.on('notification:new', handleNew);
-    return () => { socket.off('notification:new', handleNew); };
+    const subscribe = (socket: ReturnType<typeof getSocket>) => {
+      if (!socket) return;
+      socket.off('notification:new', handleNew);
+      socket.on('notification:new', handleNew);
+    };
+
+    subscribe(getSocket());
+    const unsubscribe = onSocketReady(subscribe);
+    return () => {
+      unsubscribe();
+      getSocket()?.off('notification:new', handleNew);
+    };
   }, [queryClient]);
 }
 

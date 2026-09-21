@@ -157,6 +157,19 @@ export interface MatrimonyProfile {
   createdAt: string;
 }
 
+export const CAREER_OPTIONS = [
+  'Agriculture / Farming',
+  'Business / Entrepreneur',
+  'Doctor / Healthcare',
+  'Engineer / Technology',
+  'Government / Public Sector',
+  'Private Sector / Corporate',
+  'Self Employed',
+  'Teacher / Education',
+  'Student',
+  'Other',
+];
+
 export interface MatrimonyFilters {
   gender?: Gender;
   minAge?: number;
@@ -167,6 +180,8 @@ export interface MatrimonyFilters {
   education?: EducationLevel;
   city?: string;
   raashi?: string;
+  bali?: string;
+  occupation?: string;
   search?: string;
 }
 

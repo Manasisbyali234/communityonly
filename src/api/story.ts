@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { apiClient, API_BASE_URL } from './client';
 import { ApiResponse } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { getApiBaseUrl } from './config';
+import { getSocket, onSocketReady } from './socket';
 
 const getBase = () => getApiBaseUrl().replace('/api/v1', '');
 const toAbsStory = (url?: string): string => {
@@ -58,6 +60,31 @@ export function useStoryByIdQuery(id: string) {
 
 export function useStoriesFeedQuery() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const queryClient = useQueryClient();
+
+  // The home tab stays mounted while a member navigates the app. Keep its
+  // stories row current when another approved member publishes a story.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const refreshFeed = () => {
+      queryClient.invalidateQueries({ queryKey: storyKeys.feed() });
+      queryClient.refetchQueries({ queryKey: storyKeys.feed(), type: 'active' });
+    };
+    const subscribe = (socket: ReturnType<typeof getSocket>) => {
+      if (!socket) return;
+      socket.off('story:created', refreshFeed);
+      socket.on('story:created', refreshFeed);
+    };
+
+    subscribe(getSocket());
+    const unsubscribe = onSocketReady(subscribe);
+    return () => {
+      unsubscribe();
+      getSocket()?.off('story:created', refreshFeed);
+    };
+  }, [isAuthenticated, queryClient]);
+
   return useQuery<StoryGroup[]>({
     queryKey: storyKeys.feed(),
     enabled: isAuthenticated,

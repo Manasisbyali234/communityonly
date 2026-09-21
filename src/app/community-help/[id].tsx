@@ -465,13 +465,16 @@ export default function HelpRequestDetailScreen() {
           </View>
         </ScrollView>
 
-      {/* Offer Help Modal */}
+      {/* Offer Help Modal — bottom sheet */}
       <Modal visible={showOfferModal} transparent animationType="slide" onRequestClose={() => setShowOfferModal(false)}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1, justifyContent: 'flex-end' }}
+          style={{ flex: 1 }}
         >
-          <Pressable style={styles.modalOverlay} onPress={() => setShowOfferModal(false)}>
+          <Pressable
+            style={[styles.modalOverlay, { justifyContent: 'flex-end' }]}
+            onPress={() => setShowOfferModal(false)}
+          >
             <Pressable
               style={[styles.sheet, { backgroundColor: colors.cardBg, paddingBottom: Math.max(insets.bottom, 20) + 8 }]}
               onPress={(e) => e.stopPropagation()}
@@ -511,8 +514,8 @@ export default function HelpRequestDetailScreen() {
       </Modal>
       {/* Report Modal */}
       <Modal visible={showReportModal} transparent animationType="fade" onRequestClose={() => setShowReportModal(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setShowReportModal(false)}>
-          <Pressable style={[styles.sheet, { backgroundColor: colors.cardBg }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable style={[styles.modalOverlay, { justifyContent: 'center', paddingHorizontal: 20 }]} onPress={() => setShowReportModal(false)}>
+          <Pressable style={[styles.dialogSheet, { backgroundColor: colors.cardBg }]} onPress={(e) => e.stopPropagation()}>
             <Text style={[styles.sheetTitle, { color: colors.text }]}>Report Request</Text>
             <Text style={[styles.sheetSub, { color: colors.textSecondary }]}>
               Help us maintain a safe community. Why are you reporting this request?
@@ -700,6 +703,7 @@ const styles = StyleSheet.create({
   // Sheet
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   sheet: { borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingTop: 14, gap: 10 },
+  dialogSheet: { borderRadius: 20, paddingHorizontal: 20, paddingVertical: 24, gap: 10, width: '100%' },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
   sheetTitle: { fontSize: 18, fontWeight: '800' },
   sheetSub: { fontSize: 13, lineHeight: 18, marginBottom: 4 },

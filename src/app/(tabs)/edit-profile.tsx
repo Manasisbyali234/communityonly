@@ -507,15 +507,16 @@ export default function EditProfile() {
               />
             )}
             <LinearGradient colors={['transparent', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.55)']} style={StyleSheet.absoluteFill as any} />
-            {/* Cover action buttons — inside cover, no overflow:hidden blocking them */}
+            {/* Cover action buttons — always visible */}
             <View style={{ position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', gap: 8 }}>
               {currentCoverUri && (
                 <TouchableOpacity onPress={handleRemoveCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(239,68,68,0.85)' }]}>
                   <Ionicons name="trash-outline" size={15} color="#FFF" />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverIconBtn, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+              <TouchableOpacity onPress={handlePickCover} activeOpacity={0.8} style={[styles.coverBannerBtn, { backgroundColor: 'rgba(0,0,0,0.62)' }]}>
                 <Ionicons name="camera" size={15} color="#FFF" />
+                <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Upload Banner</Text>
               </TouchableOpacity>
             </View>
             {/* Cover change hint — centred tap-target so users find it easily */}
@@ -526,9 +527,29 @@ export default function EditProfile() {
                 style={{ position: 'absolute', alignSelf: 'center', top: '30%', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}
               >
                 <Ionicons name="camera-outline" size={18} color="#FFF" />
-                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>Change Cover Photo</Text>
+                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>Upload Banner Photo</Text>
               </TouchableOpacity>
             )}
+          </View>
+
+          {/* Kept in the normal layout flow so banner upload is never hidden by the cover preview. */}
+          <View style={[styles.bannerUploadRow, { backgroundColor: SURF, borderBottomColor: BORDER }]}>
+            <View style={styles.bannerUploadCopy}>
+              <Text style={[styles.bannerUploadTitle, { color: TEXT }]}>Banner photo</Text>
+              <Text style={[styles.bannerUploadHint, { color: TEXT3 }]} numberOfLines={1}>
+                {currentCoverUri ? 'Update or remove your profile banner' : 'Add a photo to your profile banner'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handlePickCover}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={currentCoverUri ? 'Change banner photo' : 'Upload banner photo'}
+              style={[styles.bannerUploadAction, { backgroundColor: G }]}
+            >
+              <Ionicons name="image-outline" size={16} color="#FFF" />
+              <Text style={styles.bannerUploadActionText}>{currentCoverUri ? 'Change' : 'Upload'}</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Masthead row */}
@@ -1045,6 +1066,34 @@ const styles = StyleSheet.create({
     gap: 8,
     zIndex: 10,
   },
+  coverBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 18,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  bannerUploadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  bannerUploadCopy: { flex: 1 },
+  bannerUploadTitle: { fontSize: 13, fontWeight: '700' },
+  bannerUploadHint: { fontSize: 11, fontWeight: '500', marginTop: 2 },
+  bannerUploadAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  bannerUploadActionText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
   coverIconBtn: {
     width: 36,
     height: 36,

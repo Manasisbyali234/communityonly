@@ -13,6 +13,7 @@ import {
   useMyMatrimonyProfileQuery, MatrimonyFilters,
   MARITAL_STATUS_LABELS, EDUCATION_LABELS, MatrimonyProfile,
   useMatrimonyLikeMatchesQuery, MatrimonyLikeMatch, RAASHI_OPTIONS,
+  BALI_OPTIONS, CAREER_OPTIONS,
 } from '../../api/matrimony';
 import { useMatrimonyTheme } from './theme';
 
@@ -249,6 +250,9 @@ export default function MatrimonyScreen() {
   const [filters, setFilters] = useState<MatrimonyFilters>({});
   const [cityInput, setCityInput] = useState('');
   const [showCityInput, setShowCityInput] = useState(false);
+  const [showRaashiFilter, setShowRaashiFilter] = useState(false);
+  const [showBaliFilter, setShowBaliFilter] = useState(false);
+  const [showCareerFilter, setShowCareerFilter] = useState(false);
 
   // Debounce search → query so the API receives the search term
   useEffect(() => {
@@ -275,6 +279,8 @@ export default function MatrimonyScreen() {
       if (filters.maritalStatus && p.maritalStatus !== filters.maritalStatus) return false;
       if (filters.education && p.education !== filters.education) return false;
       if (filters.raashi && p.raashi !== filters.raashi) return false;
+      if (filters.bali && p.bali !== filters.bali) return false;
+      if (filters.occupation && !p.occupation?.toLowerCase().includes(filters.occupation.toLowerCase())) return false;
       if (s && ![
         p.displayName, p.city, p.state, p.occupation, p.caste, p.motherTongue,
       ].some(v => v?.toLowerCase().includes(s))) return false;
@@ -464,6 +470,24 @@ export default function MatrimonyScreen() {
         >
           <Ionicons name="location-outline" size={18} color={showCityInput ? '#fff' : colors.primary} />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterBtn, { backgroundColor: showRaashiFilter ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
+          onPress={() => setShowRaashiFilter(v => !v)}
+        >
+          <Ionicons name="moon-outline" size={18} color={showRaashiFilter ? '#fff' : colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterBtn, { backgroundColor: showBaliFilter ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
+          onPress={() => setShowBaliFilter(v => !v)}
+        >
+          <Ionicons name="leaf-outline" size={18} color={showBaliFilter ? '#fff' : colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterBtn, { backgroundColor: showCareerFilter ? colors.primary : colors.primaryContainer, borderColor: colors.primary }]}
+          onPress={() => setShowCareerFilter(v => !v)}
+        >
+          <Ionicons name="briefcase-outline" size={18} color={showCareerFilter ? '#fff' : colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Age range filter chips */}
@@ -559,6 +583,102 @@ export default function MatrimonyScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+      )}
+
+      {/* Raashi filter chips */}
+      {showRaashiFilter && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.filterChipsRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 14, paddingVertical: 8 }}
+        >
+          {filters.raashi && (
+            <TouchableOpacity
+              style={[styles.filterChip, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+              onPress={() => setFilters(f => ({ ...f, raashi: undefined }))}
+            >
+              <Ionicons name="close" size={12} color="#fff" />
+              <Text style={[styles.filterChipText, { color: '#fff' }]}>Clear Rashi</Text>
+            </TouchableOpacity>
+          )}
+          {RAASHI_OPTIONS.map((r) => {
+            const active = filters.raashi === r;
+            return (
+              <TouchableOpacity
+                key={r}
+                style={[styles.filterChip, { backgroundColor: active ? colors.primary : colors.elevation1, borderColor: active ? colors.primary : colors.border }]}
+                onPress={() => setFilters(f => ({ ...f, raashi: active ? undefined : r }))}
+              >
+                <Text style={[styles.filterChipText, { color: active ? '#fff' : colors.textSecondary }]}>{r}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {/* Bali filter chips */}
+      {showBaliFilter && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.filterChipsRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 14, paddingVertical: 8 }}
+        >
+          {filters.bali && (
+            <TouchableOpacity
+              style={[styles.filterChip, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+              onPress={() => setFilters(f => ({ ...f, bali: undefined }))}
+            >
+              <Ionicons name="close" size={12} color="#fff" />
+              <Text style={[styles.filterChipText, { color: '#fff' }]}>Clear Bali</Text>
+            </TouchableOpacity>
+          )}
+          {BALI_OPTIONS.map((b) => {
+            const active = filters.bali === b;
+            return (
+              <TouchableOpacity
+                key={b}
+                style={[styles.filterChip, { backgroundColor: active ? colors.primary : colors.elevation1, borderColor: active ? colors.primary : colors.border }]}
+                onPress={() => setFilters(f => ({ ...f, bali: active ? undefined : b }))}
+              >
+                <Text style={[styles.filterChipText, { color: active ? '#fff' : colors.textSecondary }]}>{b}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {/* Career / Occupation filter chips */}
+      {showCareerFilter && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.filterChipsRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 14, paddingVertical: 8 }}
+        >
+          {filters.occupation && (
+            <TouchableOpacity
+              style={[styles.filterChip, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+              onPress={() => setFilters(f => ({ ...f, occupation: undefined }))}
+            >
+              <Ionicons name="close" size={12} color="#fff" />
+              <Text style={[styles.filterChipText, { color: '#fff' }]}>Clear Career</Text>
+            </TouchableOpacity>
+          )}
+          {CAREER_OPTIONS.map((c) => {
+            const active = filters.occupation === c;
+            return (
+              <TouchableOpacity
+                key={c}
+                style={[styles.filterChip, { backgroundColor: active ? colors.primary : colors.elevation1, borderColor: active ? colors.primary : colors.border }]}
+                onPress={() => setFilters(f => ({ ...f, occupation: active ? undefined : c }))}
+              >
+                <Text style={[styles.filterChipText, { color: active ? '#fff' : colors.textSecondary }]}>{c}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       )}
 
       {/* Smart suggestion pills — read-only, derived from user's profile */}
@@ -670,7 +790,7 @@ export default function MatrimonyScreen() {
           <Text style={[styles.emptySub, { color: colors.textSecondary }]}>Try adjusting your filters or search.</Text>
           <TouchableOpacity
             style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-            onPress={() => { setSearch(''); setQuery(''); setFilters({}); setAgeRangeIdx(0); setCityInput(''); setOccupationInput(''); setShowCityInput(false); }}
+            onPress={() => { setSearch(''); setQuery(''); setFilters({}); setAgeRangeIdx(0); setCityInput(''); setOccupationInput(''); setShowCityInput(false); setShowRaashiFilter(false); setShowBaliFilter(false); setShowCareerFilter(false); }}
           >
             <Text style={styles.emptyBtnText}>Reset Filters</Text>
           </TouchableOpacity>

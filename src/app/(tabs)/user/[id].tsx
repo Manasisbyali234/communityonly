@@ -30,7 +30,7 @@ import { resolveUserApproval } from '../../../store/userApprovalStore';
 import { confirmAction } from '../../../store/confirmStore';
 import { useUserQuery, useUserPostsQuery } from '../../../api/feed';
 import { useUserJoinedEventsQuery } from '../../../api/event';
-import { useConnectionStatusQuery, useSendConnectionRequestMutation, useConnectionCountQuery, useAcceptConnectionMutation, usePendingRequestsQuery } from '../../../api/connections';
+import { useConnectionStatusQuery, useSendConnectionRequestMutation, useConnectionCountQuery, useAcceptConnectionMutation, usePendingRequestsQuery, useRejectConnectionMutation } from '../../../api/connections';
 import { useCommunitiesQuery } from '../../../api/community';
 import { shareUrl } from '../../../utils/shareUtils';
 
@@ -112,6 +112,7 @@ export default function UserProfileScreen() {
   const { data: connCount = 0 } = useConnectionCountQuery(id);
   const sendRequest = useSendConnectionRequestMutation();
   const acceptRequest = useAcceptConnectionMutation();
+  const rejectRequest = useRejectConnectionMutation();
   // Fetch pending received requests so we can get the requestId when PENDING_RECEIVED
   const { data: pendingRequests = [] } = usePendingRequestsQuery();
   const incomingRequest = pendingRequests.find((r) => r.senderId === id);
@@ -289,7 +290,13 @@ export default function UserProfileScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.iconBtn, { backgroundColor: 'rgba(239,68,68,0.1)', borderColor: '#FCA5A5' }]}
-                        onPress={() => showToast('Go to Notifications to decline this request.', 'info')}
+                        onPress={() =>
+                          rejectRequest.mutate(incomingRequest.id, {
+                            onSuccess: () => showToast('Connection request declined.', 'info'),
+                            onError: (e: any) => showToast(e?.response?.data?.message || 'Failed to decline', 'error'),
+                          })
+                        }
+                        disabled={rejectRequest.isPending || acceptRequest.isPending}
                         activeOpacity={0.8}
                       >
                         <Ionicons name="close" size={17} color="#EF4444" />
@@ -313,7 +320,7 @@ export default function UserProfileScreen() {
                         color={connStatus === 'ACCEPTED' ? TEXT2 : '#FFF'}
                       />
                       <Text style={[s.connectBtnText, { color: connStatus === 'ACCEPTED' ? TEXT2 : '#FFF' }]}>
-                        {connStatus === 'ACCEPTED' ? 'Connected' : connStatus === 'PENDING_SENT' ? 'Pending' : 'Connect'}
+                        {connStatus === 'ACCEPTED' ? 'Connected' : connStatus === 'PENDING_SENT' ? 'Requested' : 'Connect'}
                       </Text>
                     </TouchableOpacity>
                   )}
