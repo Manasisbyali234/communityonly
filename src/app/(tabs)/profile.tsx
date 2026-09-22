@@ -5,11 +5,14 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  FlatList,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   Share,
@@ -164,6 +167,92 @@ function UpdatesTab() {
   );
 }
 
+function FamilyFilterDropdown({
+  value,
+  onChange,
+}: {
+  value?: string;
+  onChange: (familyName: string | undefined) => void;
+}) {
+  const { colors } = useTheme();
+  const [visible, setVisible] = useState(false);
+  const [search, setSearch] = useState('');
+  const filteredNames = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase();
+    return term ? FAMILY_NAMES.filter((name) => name.toLocaleLowerCase().includes(term)) : FAMILY_NAMES;
+  }, [search]);
+
+  const select = (name?: string) => {
+    onChange(name);
+    setSearch('');
+    setVisible(false);
+  };
+
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={[s.familyFilterLabel, { color: colors.textMuted }]}>Filter members by family name</Text>
+      <TouchableOpacity
+        style={[s.familyFilterControl, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+        onPress={() => setVisible(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Filter family members by family name"
+      >
+        <Ionicons name="people-outline" size={17} color={colors.primary} />
+        <Text style={[s.familyFilterValue, { color: value ? colors.text : colors.textMuted }]} numberOfLines={1}>
+          {value || 'Choose a family name'}
+        </Text>
+        <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+      </TouchableOpacity>
+
+      <Modal visible={visible} animationType="slide" transparent onRequestClose={() => setVisible(false)}>
+        <Pressable style={s.familyFilterBackdrop} onPress={() => setVisible(false)} />
+        <View style={[s.familyFilterSheet, { backgroundColor: colors.surface }]}>
+          <View style={[s.familyFilterHeader, { borderBottomColor: colors.border }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.familyFilterTitle, { color: colors.text }]}>Filter Family Members</Text>
+              <Text style={[s.familyFilterSub, { color: colors.textMuted }]}>Choose a Family / Okka name to view matching members.</Text>
+            </View>
+            <TouchableOpacity onPress={() => setVisible(false)} style={s.familyFilterClose} accessibilityLabel="Close family filter">
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={[s.familyFilterSearch, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+            <TextInput
+              autoFocus
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search family names"
+              placeholderTextColor={colors.textMuted}
+              style={[s.familyFilterSearchInput, { color: colors.text }]}
+            />
+          </View>
+          <FlatList
+            data={filteredNames}
+            keyExtractor={(item) => item}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={s.familyFilterList}
+            ListHeaderComponent={value ? (
+              <TouchableOpacity style={[s.familyFilterOption, { borderBottomColor: colors.border }]} onPress={() => select(undefined)}>
+                <Ionicons name="close-circle-outline" size={19} color={colors.textMuted} />
+                <Text style={[s.familyFilterOptionText, { color: colors.textMuted }]}>Clear family filter</Text>
+              </TouchableOpacity>
+            ) : null}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={[s.familyFilterOption, { borderBottomColor: colors.border }]} onPress={() => select(item)}>
+                <Ionicons name="people-outline" size={17} color={colors.primary} />
+                <Text style={[s.familyFilterOptionText, { color: colors.text }]}>{item}</Text>
+                {value === item ? <Ionicons name="checkmark-circle" size={19} color={colors.primary} /> : null}
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={<Text style={[s.familyFilterEmpty, { color: colors.textMuted }]}>No family name found.</Text>}
+          />
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
 // ── Family Tab ────────────────────────────────────────────────────────────────
 function FamilyTab({ familyName, userId }: { familyName?: string; userId?: string }) {
   const { colors, isDark } = useTheme();
@@ -173,19 +262,29 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [selectedFamilyName, setSelectedFamilyName] = useState<string | undefined>(familyName);
   const G = colors.primary;
+  const activeFamilyName = selectedFamilyName || familyName;
 
   useEffect(() => {
-    if (!familyName) return;
+    setSelectedFamilyName(familyName);
+  }, [familyName]);
+
+  useEffect(() => {
+    if (!activeFamilyName) {
+      setMembers([]);
+      setLoading(false);
+      return;
+    }
     let isCurrent = true;
     setLoading(true);
     // The deployed API exposes member lookup through /search/users; /users is
     // not a public route and returns 404.
-    apiClient.get('/search/users', { params: { q: familyName, limit: 50 } })
+    apiClient.get('/search/users', { params: { q: activeFamilyName, limit: 50 } })
       .then((response) => {
         if (!isCurrent) return;
 
-        const normalisedName = normaliseFamilyName(familyName);
+        const normalisedName = normaliseFamilyName(activeFamilyName);
         const seen = new Set<string>();
         const matches = extractUsers(response.data)
           .filter((member: any) => {
@@ -210,16 +309,16 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
       });
 
     return () => { isCurrent = false; };
-  }, [familyName, userId]);
+  }, [activeFamilyName, userId]);
 
   // Fetch popular family names when no family name is set
   useEffect(() => {
-    if (familyName) return;
+    if (activeFamilyName) return;
     // There is no public endpoint that lists all users. Avoid a failing
     // request here and show the curated Okka names instead.
     setSuggestions(FAMILY_NAMES.slice(0, 12));
     setSuggestionsLoading(false);
-  }, [familyName]);
+  }, [activeFamilyName]);
 
   const handleInvite = async () => {
     const { shareAppLink } = await import('../../utils/shareUtils');
@@ -229,15 +328,16 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
 
   return (
     <SectionCard
-      title={familyName ? `${familyName} Family` : 'Family Directory'}
+      title={activeFamilyName ? `${activeFamilyName} Family` : 'Family Directory'}
       icon="people"
       color={G}
       // Keep sharing available even when registered family members are
       // suggested below, so members can invite relatives who have not joined.
-      action={familyName ? handleInvite : undefined}
-      actionLabel={familyName ? 'Invite' : undefined}
+      action={activeFamilyName ? handleInvite : undefined}
+      actionLabel={activeFamilyName ? 'Invite' : undefined}
     >
-      {!familyName && (
+      <FamilyFilterDropdown value={activeFamilyName} onChange={setSelectedFamilyName} />
+      {!activeFamilyName && (
         <View style={s.emptyState}>
           <View style={[s.emptyIconCircle, { backgroundColor: G + '12' }]}>
             <Ionicons name="people-outline" size={26} color={G} />
@@ -281,23 +381,23 @@ function FamilyTab({ familyName, userId }: { familyName?: string; userId?: strin
             onPress={() => router.push('/(tabs)/edit-profile' as any)} style={{ marginTop: 14 }} />
         </View>
       )}
-      {familyName && loading && (
+      {activeFamilyName && loading && (
         <Text style={{ color: colors.textMuted, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Loading family members...</Text>
       )}
-      {familyName && !loading && members.length === 0 && (
+      {activeFamilyName && !loading && members.length === 0 && (
         <View style={s.emptyState}>
           <View style={[s.emptyIconCircle, { backgroundColor: G + '12' }]}>
             <Ionicons name="people-outline" size={26} color={G} />
           </View>
           <Text style={[s.emptyTitle, { color: colors.text }]}>No Members Found</Text>
-          <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>No other members with the {familyName} family name yet.</Text>
+          <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>No other members with the {activeFamilyName} family name yet.</Text>
           <TouchableOpacity style={[s.inviteBtn, { backgroundColor: G }]} onPress={handleInvite}>
             <Ionicons name="person-add-outline" size={14} color="#FFF" />
             <Text style={s.inviteBtnText}>Invite Family Members</Text>
           </TouchableOpacity>
         </View>
       )}
-      {familyName && !loading && members.length > 0 && (
+      {activeFamilyName && !loading && members.length > 0 && (
         <View>
           <Text style={[s.suggestedFamilyLabel, { color: colors.textMuted }]}>Suggested family members</Text>
       {members.map((member: any, i: number) => (
@@ -482,7 +582,8 @@ export default function ProfileScreen() {
         {/* ── Cover ──────────────────────────────────────────────────── */}
         <View style={{ height: coverHeight, position: 'relative' }}>
           {user?.coverImage || user?.bannerUrl ? (
-            <Image source={{ uri: user.coverImage || user.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="contain" transition={200} />
+            // Fill the banner frame without the empty bands created by `contain`.
+            <Image source={{ uri: user.coverImage || user.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="fill" transition={200} />
           ) : (
             <LinearGradient
               colors={isDark
@@ -1149,6 +1250,27 @@ const s = StyleSheet.create({
   viewLink: { fontSize: 12.5, fontWeight: '700' },
 
   // Family
+  familyFilterLabel: { fontSize: 12, fontWeight: '700', marginBottom: 7 },
+  familyFilterControl: {
+    minHeight: 46, borderWidth: 1, borderRadius: 12, paddingHorizontal: 13,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  familyFilterValue: { flex: 1, fontSize: 14, fontWeight: '600' },
+  familyFilterBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 23, 42, 0.45)' },
+  familyFilterSheet: { marginTop: 'auto', height: '82%', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
+  familyFilterHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 20, borderBottomWidth: StyleSheet.hairlineWidth },
+  familyFilterTitle: { fontSize: 18, fontWeight: '800' },
+  familyFilterSub: { fontSize: 12, marginTop: 3, lineHeight: 17 },
+  familyFilterClose: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19 },
+  familyFilterSearch: {
+    flexDirection: 'row', alignItems: 'center', gap: 9, margin: 16,
+    borderWidth: 1, borderRadius: 12, paddingHorizontal: 12,
+  },
+  familyFilterSearchInput: { flex: 1, fontSize: 14, paddingVertical: 12 },
+  familyFilterList: { paddingHorizontal: 16, paddingBottom: 36 },
+  familyFilterOption: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 11, borderBottomWidth: StyleSheet.hairlineWidth },
+  familyFilterOptionText: { flex: 1, fontSize: 14.5, fontWeight: '600' },
+  familyFilterEmpty: { textAlign: 'center', paddingVertical: 28, fontSize: 14 },
   memberRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 12,

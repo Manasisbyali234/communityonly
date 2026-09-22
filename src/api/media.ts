@@ -6,6 +6,10 @@ import { useAuthStore } from '../store/authStore';
 
 export function toProxyUrl(url?: string): string | undefined {
   if (!url) return undefined;
+  // Local picker/crop results must be rendered directly. Treating these as
+  // object-storage keys turns e.g. a data:image URL into a broken proxy URL,
+  // which makes Avatar fall back to its placeholder while editing a profile.
+  if (/^(data:|blob:|file:)/i.test(url)) return url;
   const BASE = getApiBaseUrl().replace('/api/v1', '');
   // Already correct
   if (url.startsWith(`${BASE}/api/v1/media/proxy/`)) return url;

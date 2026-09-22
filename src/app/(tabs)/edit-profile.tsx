@@ -376,6 +376,12 @@ export default function EditProfile() {
       if (avatarUrl) updated.avatarUrl = avatarUrl;
       if (coverImage !== undefined) updated.coverImage = coverImage;
       updateProfile(updated);
+      // The saved URL is now in auth state; stop rendering the temporary
+      // data/blob URI produced by the cropper.
+      if (avatarUrl) {
+        setLocalAvatarUri(null);
+        setPickedImage(null);
+      }
       setLocalCoverUri(null);
       setPickedCover(null);
       setCoverRemoved(false);
@@ -513,7 +519,9 @@ export default function EditProfile() {
           {/* Cover */}
           <View style={{ height: 180 }}>
             {currentCoverUri ? (
-              <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="contain" />
+              // Fill avoids the letterboxing caused by `contain`; unlike `cover`,
+              // it keeps the entire banner rather than cropping its edges.
+              <ExpoImage source={{ uri: currentCoverUri }} style={StyleSheet.absoluteFill as any} contentFit="fill" />
             ) : (
               <LinearGradient
                 colors={isDark ? [colors.primaryDark, colors.primary, colors.primary] : [colors.primaryDark, colors.primary, colors.primaryLight]}

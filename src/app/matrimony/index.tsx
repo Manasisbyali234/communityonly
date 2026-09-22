@@ -242,8 +242,8 @@ export default function MatrimonyScreen() {
         : smartFilters.minAge ? `Age ${smartFilters.minAge}+` : `Age up to ${smartFilters.maxAge}`;
       pills.push({ label: ageLabel, icon: 'calendar-outline' });
     }
-    if (smartFilters.religion) pills.push({ label: smartFilters.religion, icon: 'prism-outline' });
-    if (smartFilters.caste) pills.push({ label: smartFilters.caste, icon: 'people-outline' });
+    // Religion and caste continue to inform matching, but are intentionally
+    // not exposed as labels in the "Showing for you" strip.
     return pills;
   }, [smartFilters]);
 
